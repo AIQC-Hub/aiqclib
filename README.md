@@ -5,7 +5,7 @@
 [![Check Package](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml/badge.svg)](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml)
 [![Codecov](https://codecov.io/gh/AIQC-Hub/aiqclib/graph/badge.svg?token=N6P5V9KBNJ)](https://codecov.io/gh/AIQC-Hub/aiqclib)
 [![CodeFactor](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib/badge)](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib)
-[![DOI](https://zenodo.org/badge/1003136460.svg)](https://doi.org/10.5281/zenodo.16055323)
+[![DOI](https://zenodo.org/badge/1232803553.svg)](https://doi.org/10.5281/zenodo.20083179)
 
 **aiqclib** is a Python library that provides a configuration-driven workflow for machine learning, simplifying dataset preparation, model training, and data classification. It is a core component of the AIQC project that aims to enhance anomaly detection in CTD (Conductivity, Temperature, Depth) data.
 
@@ -66,9 +66,9 @@ This workflow processes your input data and creates training, validation, and te
 **Step 1: Generate a configuration template.**
 
 ```python
-import aiqclib as dm
+import aiqclib as aq
 
-dm.write_config_template(file_name="/path/to/prepare_config.yaml", stage="prepare")
+aq.write_config_template(file_name="/path/to/prepare_config.yaml", stage="prepare")
 ```
 
 **Step 2: Customize `prepare_config.yaml`.**
@@ -76,10 +76,10 @@ You must edit the file to set the correct input/output paths and define your dat
 
 **Step 3: Run the preparation process.**
 ```python
-import aiqclib as dm
+import aiqclib as aq
 
-config = dm.read_config("/path/to/prepare_config.yaml")
-dm.create_training_dataset(config)
+config = aq.read_config("/path/to/prepare_config.yaml")
+aq.create_training_dataset(config)
 ```
 
 This generates the following output folders:
@@ -96,9 +96,9 @@ This workflow uses the prepared dataset to train a model and evaluate its perfor
 **Step 1: Generate a training configuration template.**
 
 ```python
-import aiqclib as dm
+import aiqclib as aq
 
-dm.write_config_template(file_name="/path/to/training_config.yaml", stage="train")
+aq.write_config_template(file_name="/path/to/training_config.yaml", stage="train")
 ```
 
 **Step 2: Customize `training_config.yaml`.**
@@ -106,10 +106,10 @@ Edit the file to point to your prepared dataset and define training parameters.
 
 **Step 3: Train and evaluate the model.**
 ```python
-import aiqclib as dm
+import aiqclib as aq
 
-config = dm.read_config("/path/to/training_config.yaml")
-dm.train_and_evaluate(config)
+config = aq.read_config("/path/to/training_config.yaml")
+aq.train_and_evaluate(config)
 ```
 
 This generates the following output folders:
@@ -123,9 +123,9 @@ This workflow applies a trained model to classify all observations in a dataset.
 **Step 1: Generate a classification configuration template.**
 
 ```python
-import aiqclib as dm
+import aiqclib as aq
 
-dm.write_config_template(file_name="/path/to/classification_config.yaml", stage="classify")
+aq.write_config_template(file_name="/path/to/classification_config.yaml", stage="classify")
 ```
 
 **Step 2: Customize `classification_config.yaml`.**
@@ -136,7 +136,7 @@ Edit the file to point to the input data and the trained model.
 import aiqclib as aq
 
 config = aq.read_config("/path/to/classification_config.yaml")
-dm.classify_dataset(config)
+aq.classify_dataset(config)
 ```
 
 This workflow processes a dataset using a trained model and generates:
