@@ -2,6 +2,7 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/aiqclib)](https://pypi.org/project/aiqclib/)
 [![Check Package](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml/badge.svg)](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml)
+[![CodeFactor](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib/badge)](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib)
 [![DOI](https://zenodo.org/badge/1232803553.svg)](https://doi.org/10.5281/zenodo.20083179)
 
 **aiqclib** is a Python library that provides a configuration-driven workflow for machine learning, simplifying dataset preparation, model training, and data classification. It is a core component of the AIQC project that aims to enhance anomaly detection in CTD (Conductivity, Temperature, Depth) data.
@@ -273,20 +274,20 @@ We use **Ruff** for linting and formatting.
 Check the library and test code for style issues.
 ```bash
 # Lint the library source code
-uv ruff check src
+uv run ruff check src
 
 # Lint the test code
-ruff check tests
+uv run ruff check tests
 ```
 
 **Formatting:**
 Automatically format the code to match the project's style.
 ```bash
 # Format the library source code
-ruff format src
+uv run ruff format src
 
 # Format the test code
-ruff format tests
+uv run ruff format tests
 ```
 
 ## Documentation (for Maintainers)
