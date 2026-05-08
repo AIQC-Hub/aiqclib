@@ -1,10 +1,7 @@
 # aiqclib
 
 [![PyPI - Version](https://img.shields.io/pypi/v/aiqclib)](https://pypi.org/project/aiqclib/)
-[![Conda - Version](https://img.shields.io/conda/vn/conda-forge/aiqclib)](https://anaconda.org/conda-forge/aiqclib)
 [![Check Package](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml/badge.svg)](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml)
-[![Codecov](https://codecov.io/gh/AIQC-Hub/aiqclib/graph/badge.svg?token=N6P5V9KBNJ)](https://codecov.io/gh/AIQC-Hub/aiqclib)
-[![CodeFactor](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib/badge)](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib)
 [![DOI](https://zenodo.org/badge/1232803553.svg)](https://doi.org/10.5281/zenodo.20083179)
 
 **aiqclib** is a Python library that provides a configuration-driven workflow for machine learning, simplifying dataset preparation, model training, and data classification. It is a core component of the AIQC project that aims to enhance anomaly detection in CTD (Conductivity, Temperature, Depth) data.
