@@ -2,6 +2,7 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/aiqclib)](https://pypi.org/project/aiqclib/)
 [![Check Package](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml/badge.svg)](https://github.com/AIQC-Hub/aiqclib/actions/workflows/check_package.yml)
+[![codecov](https://codecov.io/gh/AIQC-Hub/aiqclib/graph/badge.svg?token=8PSXE3Z28Y)](https://codecov.io/gh/AIQC-Hub/aiqclib)
 [![CodeFactor](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib/badge)](https://www.codefactor.io/repository/github/aiqc-hub/aiqclib)
 [![DOI](https://zenodo.org/badge/1232803553.svg)](https://doi.org/10.5281/zenodo.20083179)
 
