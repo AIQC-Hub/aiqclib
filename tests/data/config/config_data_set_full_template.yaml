@@ -1,0 +1,136 @@
+---
+path_info_sets:
+  - name: data_set_1
+    common:
+      base_path: /path/to/data # EDIT: Root output directory
+    input:
+      base_path: /path/to/input # EDIT: Directory with input files
+      step_folder_name: ""
+    split:
+      step_folder_name: training
+
+target_sets:
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 3, 4, 5, 6, 7, 8, 9 ]
+        neg_flag_values: [ 1, 2 ]
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 3, 4, 5, 6, 7, 8, 9 ]
+        neg_flag_values: [ 1, 2 ]
+      - name: pres
+        flag: pres_qc
+        pos_flag_values: [ 3, 4, 5, 6, 7, 8, 9 ]
+        neg_flag_values: [ 1, 2 ]
+
+summary_stats_sets:
+  - name: summary_stats_set_1
+    stats:
+      - name: location
+        col_names: [ longitude, latitude ]
+      - name: profile_summary_stats
+        col_names: [ temp, psal, pres ]
+      - name: basic_values3
+        col_names: [ temp, psal, pres ]
+
+feature_sets:
+  - name: feature_set_1
+    features:
+      - location
+      - day_of_year
+      - profile_summary_stats
+      - basic_values
+      - flank_up
+      - flank_down
+
+feature_param_sets:
+  - name: feature_set_1_param_set_1
+    params:
+      - feature: location
+        stats_set: { type: min_max, name: location }
+        col_names: [ longitude, latitude ]
+      - feature: day_of_year
+        convert: sine
+        col_names: [ profile_timestamp ]
+      - feature: profile_summary_stats
+        stats_set: { type: min_max,  name: profile_summary_stats }
+        col_names: [ temp, psal, pres ]
+        summary_stats_names: [ mean, median, sd, pct25, pct75 ]
+      - feature: basic_values
+        stats_set: { type: min_max,  name: basic_values3 }
+        col_names: [ temp, psal, pres ]
+      - feature: flank_up
+        flank_up: 5
+        stats_set: { type: min_max, name: basic_values3 }
+        col_names: [ temp, psal, pres ]
+      - feature: flank_down
+        flank_down: 5
+        stats_set: { type: min_max, name: basic_values3 }
+        col_names: [ temp, psal, pres ]
+
+feature_stats_sets:
+  - name: feature_set_1_stats_set_1
+    min_max:
+      - name: location
+        stats: { longitude: { min: 14.5, max: 23.5 },
+                 latitude: { min: 55, max: 66 } }
+      - name: profile_summary_stats
+        stats: { temp: { mean: { min: 0, max: 12.5 },
+                         median: { min: 0, max: 15 },
+                         sd: { min: 0, max: 6.5 },
+                         pct25: { min: 0, max: 12 },
+                         pct75: { min: 1, max: 19 } },
+                 psal: { mean: { min: 2.9, max: 12 },
+                         median: { min: 2.9, max: 12 },
+                         sd: { min: 0, max: 4 },
+                         pct25: { min: 2.5, max: 8.5 },
+                         pct75: { min: 3, max: 16 } },
+                 pres: { mean: { min: 24, max: 105 },
+                         median: { min: 24, max: 105 },
+                         sd: { min: 13, max: 60 },
+                         pct25: { min: 12, max: 53 },
+                         pct75: { min: 35, max: 156 } } }
+      - name: basic_values3
+        stats: { temp: { min: 0, max: 20 },
+                 psal: { min: 0, max: 20 },
+                 pres: { min: 0, max: 200 } }
+
+step_class_sets:
+  - name: data_set_step_set_1
+    steps:
+      input: InputDataSetA
+      summary: SummaryDataSetA
+      select: SelectDataSetA
+      locate: LocateDataSetA
+      extract: ExtractDataSetA
+      split: SplitDataSetA
+
+step_param_sets:
+  - name: data_set_param_set_1
+    steps:
+      input: { sub_steps: { rename_columns: false,
+                            filter_rows: true },
+               rename_dict: { },
+               filter_method_dict: { remove_years: [ 2023 ],
+                                     keep_years: [ ] } }
+      summary: { }
+      select: { neg_pos_ratio: 5 }
+      locate: { neighbor_n: 5 }
+      extract: { }
+      split: { test_set_fraction: 0.1,
+               k_fold: 10 }
+
+data_sets:
+  - name: dataset_0001  # EDIT: Your data set name
+    dataset_folder_name: dataset_0001  # EDIT: Your output folder
+    input_file_name: nrt_cora_bo_4.parquet # EDIT: Your input filename
+    path_info: data_set_1
+    target_set: target_set_1
+    summary_stats_set: summary_stats_set_1
+    feature_set: feature_set_1
+    feature_param_set: feature_set_1_param_set_1
+    feature_stats_set: feature_set_1_stats_set_1
+    step_class_set: data_set_step_set_1
+    step_param_set: data_set_param_set_1

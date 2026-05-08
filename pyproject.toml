@@ -1,0 +1,45 @@
+[project]
+name = "aiqclib"
+version = "0.1.0"
+description = "This package aims to offer helper functions that simplify model building and evaluation"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICEN[CS]E.*"]
+authors = [
+    { name = "Takaya Saito", email = "takaya.saito@outlook.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "joblib>=1.4.2",
+    "jsonschema>=4.23.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.2",
+    "pandas>=2.2",
+    "polars>=1.30.0",
+    "pyarrow>=19.0.0",
+    "pyyaml>=6.0.2",
+    "scikit-learn>=1.6.1",
+    "shap>=0.51.0",
+    "xgboost>=3.0.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.14.0",
+    "sphinx>=8.2.3",
+    "sphinx-autodoc-typehints>=3.2.0",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-tabs>=3.4.7",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"" = ["CHANGELOG.md"]

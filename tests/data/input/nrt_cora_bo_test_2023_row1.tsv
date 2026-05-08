@@ -1,0 +1,2 @@
+platform_code	filename	profile_no	profile_timestamp	profile_time	longitude	latitude	observation_no	temp	temp_dm	temp_qc	temp_qc_dm	psal	psal_dm	psal_qc	psal_qc_dm	pres	pres_dm	pres_qc	pres_qc_dm	dist2coast	bath	na_count	data_source	time_span	obs_count	dup_number	nrt_vs_dm	grid	lon
+MSIH1	BO_PR_CT_MSIH1	8	2023-04-11T16:30:00Z	26763.6875	22.948200225830078	59.452598571777344	1	2.940000057220459	2.940000057220459	1	1	6.5400004386901855	6.5400004386901855	1	1	1	1	1	1	55669.55788454651	-87	0	1	7	5	1	0	22.9x59.5	22.9

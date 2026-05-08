@@ -1,0 +1,172 @@
+---
+path_info_sets:
+  - name: data_set_1
+    common:
+      base_path: /path/to/data_1
+    input:
+      base_path: /path/to/input_1
+      step_folder_name: input_folder_1
+    select:
+      base_path: /path/to/select_1
+      step_folder_name: select_folder_1
+    locate:
+      base_path: /path/to/locate_1
+      step_folder_name: locate_folder_1
+    model:
+      base_path: /path/to/model_1
+      step_folder_name: model_folder_1
+    classify:
+      base_path: /path/to/classify_1
+      step_folder_name: classify_folder_1
+    concat:
+      base_path: /path/to/concat_1
+      step_folder_name: concat_folder_1
+
+target_sets:
+  - name: target_set_1_2
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: pres
+        flag: pres_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+
+summary_stats_sets:
+  - name: summary_stats_set_1
+    stats:
+      - name: location
+        col_names: [ longitude, latitude ]
+      - name: profile_summary_stats
+        col_names: [ temp, psal, pres ]
+      - name: basic_values3
+        col_names: [ temp, psal, pres ]
+
+feature_sets:
+  - name: feature_set_1
+    features:
+      - location
+      - day_of_year
+      - profile_summary_stats
+      - basic_values
+      - flank_up
+      - flank_down
+
+feature_param_sets:
+  - name: feature_set_1_param_set_1
+    params:
+      - feature: location
+        stats_set: { name: location, type: min_max }
+        col_names: [ longitude, latitude ]
+      - feature: day_of_year
+        convert: sine
+        col_names: [ profile_timestamp ]
+      - feature: profile_summary_stats
+        stats_set: { name: profile_summary_stats, type: min_max }
+        col_names: [ temp, psal, pres ]
+        summary_stats_names: [ mean, median, sd, pct25, pct75 ]
+      - feature: basic_values
+        stats_set: { name: basic_values3, type: min_max }
+        col_names: [ temp, psal, pres ]
+      - feature: flank_up
+        flank_up: 5
+        stats_set: { name: basic_values3, type: min_max }
+        col_names: [ temp, psal, pres ]
+      - feature: flank_down
+        flank_down: 5
+        stats_set: { name: basic_values3, type: min_max }
+        col_names: [ temp, psal, pres ]
+
+feature_stats_sets:
+  - name: feature_set_1_stats_set_1
+    min_max:
+      - name: location
+        stats: { longitude: { min: 14.5, max: 23.5 },
+                 latitude: { min: 55, max: 66 } }
+      - name: profile_summary_stats
+        stats: { temp: { mean: { min: 0, max: 12.5 },
+                         median: { min: 0, max: 15 },
+                         sd: { min: 0, max: 6.5 },
+                         pct25: { min: 0, max: 12 },
+                         pct75: { min: 1, max: 19 } },
+                 psal: { mean: { min: 2.9, max: 12 },
+                         median: { min: 2.9, max: 12 },
+                         sd: { min: 0, max: 4 },
+                         pct25: { min: 2.5, max: 8.5 },
+                         pct75: { min: 3, max: 16 } },
+                 pres: { mean: { min: 24, max: 105 },
+                         median: { min: 24, max: 105 },
+                         sd: { min: 13, max: 60 },
+                         pct25: { min: 12, max: 53 },
+                         pct75: { min: 35, max: 156 } } }
+      - name: basic_values3
+        stats: { temp: { min: 0, max: 20 },
+                 psal: { min: 0, max: 20 },
+                 pres: { min: 0, max: 200 } }
+
+step_class_sets:
+  - name: data_set_step_set_1
+    steps:
+      input: InputDataSetAll
+      summary: SummaryDataSetAll
+      select: SelectDataSetAll
+      locate: LocateDataSetAll
+      extract: ExtractDataSetAll
+      model: XGBoost
+      classify: ClassifyAll
+      concat: ConcatDataSetAll
+  - name: data_set_step_set_invalid
+    steps:
+      input: InvalidClass
+      summary: InvalidClass
+      select: InvalidClass
+      locate: InvalidClass
+      extract: InvalidClass
+      model: InvalidClass
+      classify: InvalidClass
+      concat: InvalidClass
+
+step_param_sets:
+  - name: data_set_param_set_1
+    steps:
+      input: { sub_steps: { rename_columns: false,
+                            filter_rows: true },
+               rename_dict: { },
+               filter_method_dict: { remove_years: [ ],
+                                     keep_years: [ 2023 ] } }
+      summary: { }
+      select: { }
+      locate: { }
+      extract: { }
+      model: { }
+      classify: { }
+      concat: { }
+
+classification_sets:
+  - name: NRT_BO_001
+    dataset_folder_name: nrt_bo_001
+    input_file_name: nrt_cora_bo_test.parquet
+    path_info: data_set_1
+    target_set: target_set_1
+    summary_stats_set: summary_stats_set_1
+    feature_set: feature_set_1
+    feature_param_set: feature_set_1_param_set_1
+    feature_stats_set: feature_set_1_stats_set_1
+    step_class_set: data_set_step_set_1
+    step_param_set: data_set_param_set_1

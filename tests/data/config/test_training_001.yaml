@@ -1,0 +1,73 @@
+---
+path_info_sets:
+  - name: data_set_1
+    common:
+      base_path: /path/to/data_1
+    input:
+      base_path: /path/to/input_1
+      step_folder_name: input_folder_1
+    model:
+      base_path: /path/to/model_1
+      step_folder_name: model_folder_1
+    validate:
+      base_path: /path/to/validate_1
+      step_folder_name: validate_folder_1
+    build:
+      base_path: /path/to/build_1
+      step_folder_name: build_folder_1
+
+target_sets:
+  - name: target_set_1_2
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+      - name: pres
+        flag: pres_qc
+        pos_flag_values: [ 4, ]
+        neg_flag_values: [ 1, ]
+
+step_class_sets:
+  - name: training_step_set_1
+    steps:
+      input: InputTrainingSetA
+      validate: KFoldValidation
+      model: XGBoost
+      build: BuildModel
+  - name: training_step_set_invalid
+    steps:
+      input: InvalidClass
+      validate: InvalidClass
+      model: InvalidClass
+      build: InvalidClass
+
+step_param_sets:
+  - name: training_param_set_1
+    steps:
+      input: { }
+      validate: { k_fold: 3 }
+      model: { }
+      build: { }
+
+training_sets:
+  - name: NRT_BO_001
+    dataset_folder_name: nrt_bo_001
+    path_info: data_set_1
+    target_set: target_set_1
+    step_class_set: training_step_set_1
+    step_param_set: training_param_set_1

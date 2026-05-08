@@ -1,0 +1,35 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+/.project
+
+#idea folder
+.idea/
+
+# Conda recipe build scripts (no need to track generated files)
+conda/build.sh
+conda/bld.bat
+
+# Local build and test artifacts
+conda/work/
+conda/__pycache__/
+conda/*.py[cod]
+conda/*.log
+
+# Conda package tarballs or .conda outputs
+conda/*.tar.bz2
+conda/*.conda
+
+# Conda metadata directories created by conda-build
+conda/.built
+conda/.cache
+
+# Ignore Sphinx build output
+docs/build/

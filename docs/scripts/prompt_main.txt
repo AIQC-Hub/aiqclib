@@ -1,0 +1,2 @@
+Please enhance the docstrings in the specified Python module using Sphinx-style formatting. In your updated docstrings, include :param and :type annotations for all arguments. Additionally, add a module-level docstring at the top of the file. If you notice any issues within the code, kindly highlight them; otherwise, do not provide extra details. Present your updated module in plain text format.
+
