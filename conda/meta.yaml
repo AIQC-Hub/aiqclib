@@ -1,0 +1,52 @@
+{% set version = "0.1.0" %}
+
+package:
+  name: aiqclib
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/a/aiqclib/aiqclib-{{ version }}.tar.gz
+  sha256: 5926192464e97d229b6e74d41f59d5c05044fc1d52297a6b0d9d343b00a87c15
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+
+requirements:
+  host:
+    - python >=3.12
+    - hatchling
+    - pip
+  run:
+    - python >=3.12
+    - joblib >=1.4.2
+    - jsonschema >=4.23.0
+    - matplotlib-base >=3.10.8
+    - numpy >=2.2
+    - pandas >=2.2
+    - polars >=1.30.0
+    - pyarrow >=19.0.0
+    - pyyaml >=6.0.2
+    - scikit-learn >=1.6.1
+    - shap >=0.51.0
+    - xgboost >=3.0.2
+
+test:
+  imports:
+    - aiqclib
+  commands:
+    - pip check
+  requires:
+    - pip
+    - python
+
+about:
+  home: https://pypi.org/project/aiqclib/
+  summary: This package aims to offer helper functions that simplify model building and evaluation
+  license: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - takayasaito

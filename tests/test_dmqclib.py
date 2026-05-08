@@ -17,7 +17,7 @@ from pathlib import Path
 
 import polars as pl
 
-import aiqclib as dm
+import aiqclib as aq
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.training_config import TrainingConfig
 
@@ -47,13 +47,13 @@ class TestDMQCLibTemplateConfig(unittest.TestCase):
 
     def test_ds_config_template(self):
         """Verify that a dataset (prepare) configuration template can be written and removed."""
-        dm.write_config_template(self.ds_config_template_file, "prepare")
+        aq.write_config_template(self.ds_config_template_file, "prepare")
         self.assertTrue(os.path.exists(self.ds_config_template_file))
         os.remove(self.ds_config_template_file)
 
     def test_config_train_set_template(self):
         """Verify that a training configuration template can be written and removed."""
-        dm.write_config_template(self.config_train_set_template_file, "train")
+        aq.write_config_template(self.config_train_set_template_file, "train")
         self.assertTrue(os.path.exists(self.config_train_set_template_file))
         os.remove(self.config_train_set_template_file)
 
@@ -83,12 +83,12 @@ class TestDMQCLibReadConfig(unittest.TestCase):
 
     def test_ds_config(self):
         """Verify that reading a dataset configuration returns a DataSetConfig instance."""
-        config = dm.read_config(self.ds_config_file)
+        config = aq.read_config(self.ds_config_file)
         self.assertIsInstance(config, DataSetConfig)
 
     def test_train_config(self):
         """Verify that reading a training configuration returns a TrainingConfig instance."""
-        config = dm.read_config(self.train_config_file)
+        config = aq.read_config(self.train_config_file)
         self.assertIsInstance(config, TrainingConfig)
 
 
@@ -120,11 +120,11 @@ class TestDMQCLibCreateTrainingDataSet(unittest.TestCase):
         }
 
     def test_create_training_data_set(self):
-        """Run the full 'prepare' workflow via `dm.create_training_dataset`.
+        """Run the full 'prepare' workflow via `aq.create_training_dataset`.
 
         Then, confirm that all expected output files and folders are created.
         """
-        dm.create_training_dataset(self.config)
+        aq.create_training_dataset(self.config)
 
         output_folder = (
             self.test_data_location / self.config.data["dataset_folder_name"]
@@ -213,12 +213,12 @@ class TestDMQCLibTrainAndEvaluate(unittest.TestCase):
         }
 
     def test_train_and_evaluate(self):
-        """Run the `dm.train_and_evaluate` function with the loaded configuration.
+        """Run the `aq.train_and_evaluate` function with the loaded configuration.
 
         Then, verify that validation reports, test reports, and trained model
         files are successfully generated.
         """
-        dm.train_and_evaluate(self.config)
+        aq.train_and_evaluate(self.config)
 
         output_folder = (
             self.test_data_location / self.config.data["dataset_folder_name"]
@@ -278,48 +278,48 @@ class TestGetSummaryStats(unittest.TestCase):
         )
 
     def test_get_profile_summary_stats(self):
-        """Verify that `dm.get_summary_stats` returns a DataFrame with profile-level summaries."""
-        ds = dm.get_summary_stats(self.test_data_file, "profiles")
+        """Verify that `aq.get_summary_stats` returns a DataFrame with profile-level summaries."""
+        ds = aq.get_summary_stats(self.test_data_file, "profiles")
         self.assertIsInstance(ds, pl.DataFrame)
 
     def test_get_global_summary_stats(self):
-        """Verify that `dm.get_summary_stats` returns a DataFrame with global summaries."""
-        ds = dm.get_summary_stats(self.test_data_file, "all")
+        """Verify that `aq.get_summary_stats` returns a DataFrame with global summaries."""
+        ds = aq.get_summary_stats(self.test_data_file, "all")
         self.assertIsInstance(ds, pl.DataFrame)
 
     def test_format_profile_summary_stats(self):
-        """Verify that `dm.format_summary_stats` correctly formats profile-level summaries.
+        """Verify that `aq.format_summary_stats` correctly formats profile-level summaries.
 
         Checks for presence/absence of variables and statistics based on filters.
         """
-        ds = dm.get_summary_stats(self.test_data_file, "profiles")
+        ds = aq.get_summary_stats(self.test_data_file, "profiles")
 
-        stats_dict = dm.format_summary_stats(ds)
+        stats_dict = aq.format_summary_stats(ds)
         self.assertIsInstance(stats_dict, str)
         self.assertIn("psal", stats_dict)
         self.assertIn("pct25", stats_dict)
 
-        stats_dict = dm.format_summary_stats(ds, ["pres", "temp"])
+        stats_dict = aq.format_summary_stats(ds, ["pres", "temp"])
         self.assertIsInstance(stats_dict, str)
         self.assertNotIn("psal", stats_dict)
         self.assertIn("pct25", stats_dict)
 
-        stats_dict = dm.format_summary_stats(ds, ["pres", "temp"], ["mean"])
+        stats_dict = aq.format_summary_stats(ds, ["pres", "temp"], ["mean"])
         self.assertIsInstance(stats_dict, str)
         self.assertNotIn("psal", stats_dict)
         self.assertNotIn("pct25", stats_dict)
 
     def test_format_global_summary_stats(self):
-        """Verify that `dm.format_summary_stats` correctly formats global summaries.
+        """Verify that `aq.format_summary_stats` correctly formats global summaries.
 
         Checks for presence/absence of variables based on filters.
         """
-        ds = dm.get_summary_stats(self.test_data_file, "all")
+        ds = aq.get_summary_stats(self.test_data_file, "all")
 
-        stats_dict = dm.format_summary_stats(ds)
+        stats_dict = aq.format_summary_stats(ds)
         self.assertIsInstance(stats_dict, str)
         self.assertIn("psal", stats_dict)
 
-        stats_dict = dm.format_summary_stats(ds, ["pres", "temp"])
+        stats_dict = aq.format_summary_stats(ds, ["pres", "temp"])
         self.assertIsInstance(stats_dict, str)
         self.assertNotIn("psal", stats_dict)
