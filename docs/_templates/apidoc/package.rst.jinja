@@ -1,0 +1,61 @@
+{%- if show_headings %}
+{{- [pkgname, 'package'] | join(' ') | e | heading }}
+{%- endif %}
+
+{%- if modulefirst %}
+.. automodule:: {{ pkgname }}
+{%- if members %}
+   :members:
+   :show-inheritance:
+   :undoc-members:
+{%- endif %}
+
+{% endif %}
+
+{%- if subpackages %}
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: {{ maxdepth }}
+
+{% for subpackage in subpackages %}
+   {{ subpackage }}
+{%- endfor %}
+
+{% endif %}
+
+{%- if submodules %}
+{% if separatemodules %}
+.. toctree::
+   :maxdepth: {{ maxdepth }}
+
+{% for submodule in submodules %}
+   {{ submodule }}
+{%- endfor %}
+
+{% else %}
+{%- for submodule in submodules %}
+{% if show_headings %}
+{{- [submodule, 'module'] | join(' ') | e | heading }}
+{% endif %}
+
+.. automodule:: {{ submodule }}
+{%- if members %}
+   :members:
+   :show-inheritance:
+   :undoc-members:
+{%- endif %}
+
+{% endfor %}
+{%- endif %}
+{%- endif %}
+
+{%- if not modulefirst %}
+.. automodule:: {{ pkgname }}
+{%- if members %}
+   :members:
+   :show-inheritance:
+   :undoc-members:
+{%- endif %}
+{%- endif %}
