@@ -94,7 +94,7 @@ class TestLogisticRegression(unittest.TestCase):
 
     def test_default_params(self):
         ds = LogisticRegression(self.config)
-        self.assertEqual(ds.model_params.get("penalty"), "l2")
+        self.assertEqual(ds.model_params.get("l1_ratio"), 0)
 
     def test_config_params_override(self):
         self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {

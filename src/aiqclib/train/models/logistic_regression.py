@@ -43,7 +43,7 @@ class LogisticRegression(SklearnModelBase):
 
         # Default parameters for Logistic Regression
         self.model_params: Dict[str, Any] = {
-            "penalty": "l2",
+            "l1_ratio": 0,
             "C": 1.0,
             "solver": "lbfgs",
             "class_weight": "balanced",

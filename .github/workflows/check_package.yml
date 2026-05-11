@@ -10,7 +10,7 @@ on:
 # and contain the children of tests/data/ (config/, input/, training/, ...)
 # at its root, not a top-level 'data/' folder.
 env:
-  TEST_DATA_VERSION: test-data-v1.0.0
+  TEST_DATA_VERSION: test-data-v1.0.1
 
 jobs:
   build:
