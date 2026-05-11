@@ -1,6 +1,6 @@
 [project]
 name = "aiqclib"
-version = "0.1.2"
+version = "0.2.0"
 description = "This package aims to offer helper functions that simplify model building and evaluation"
 readme = "README.md"
 license = "MIT"
