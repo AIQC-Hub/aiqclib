@@ -33,3 +33,5 @@ conda/.cache
 
 # Ignore Sphinx build output
 docs/build/
+tests/data/
+test-data.zip
