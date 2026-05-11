@@ -7,7 +7,7 @@ on:
 
 # Keep this version string in sync with check_package.yml.
 env:
-  TEST_DATA_VERSION: test-data-v1.0.0
+  TEST_DATA_VERSION: test-data-v1.0.1
 
 jobs:
   build:
