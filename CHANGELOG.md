@@ -6,6 +6,17 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-11
+
+### Changed
+- `LogisticRegression`: `penalty="l2"` → `l1_ratio=0` for sklearn 1.8.
+- Test fixtures moved to GitHub release assets.
+- Regenerated test models for sklearn 1.8 / current XGBoost.
+
+### Added
+- `scripts/fetch_test_data.sh` for contributors.
+- `scripts/regenerate_test_models.py` for maintainers.
+
 ## [0.1.2] - 2026-05-08
 ### Fixed
 - UV lock
