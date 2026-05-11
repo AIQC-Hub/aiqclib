@@ -1,10 +1,16 @@
 name: Check Package
-
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main", "develop" ]
+
+# Bump this single line when you publish a new test-data release.
+# The matching asset on the GitHub release must be named 'test-data.zip'
+# and contain the children of tests/data/ (config/, input/, training/, ...)
+# at its root, not a top-level 'data/' folder.
+env:
+  TEST_DATA_VERSION: test-data-v1.0.0
 
 jobs:
   build:
@@ -12,20 +18,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v4
+        with:
+          path: tests/data
+          key: test-data-${{ env.TEST_DATA_VERSION }}
+
+      - name: Download test data
+        if: steps.cache-test-data.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p tests/data
+          gh release download "$TEST_DATA_VERSION" \
+            --repo "${{ github.repository }}" \
+            --pattern 'test-data.zip' \
+            --output /tmp/test-data.zip \
+            --clobber
+          unzip -q -o /tmp/test-data.zip -d tests/data
+          rm /tmp/test-data.zip
+          echo "Extracted $(find tests/data -type f | wc -l) test data files."
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: ".python-version"
-
       - name: Install the project
         run: uv sync --locked --all-extras --dev
-
       - name: Run tests
         run: uv run pytest -v tests
