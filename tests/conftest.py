@@ -25,12 +25,20 @@ two files should live in those files, not here.
 """
 
 from pathlib import Path
+from typing import Callable, List, Optional, Tuple
 
 import pytest
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.training_config import TrainingConfig
+from aiqclib.common.loader.classify_loader import (
+    load_classify_step1_input_dataset,
+    load_classify_step2_summary_dataset,
+    load_classify_step3_select_dataset,
+    load_classify_step4_locate_dataset,
+    load_classify_step5_extract_dataset,
+)
 from aiqclib.common.loader.training_loader import load_step1_input_training_set
 
 
@@ -284,3 +292,76 @@ def training_input_001(training_config_001):
 def training_input_negx5(training_config_003):
     """ds_input wired against tests/data/negx5_training/ for training config 003."""
     return _build_training_input(training_config_003, NEGX5_TRAINING_DIR)
+
+
+# ----------------------------------------------------------------------------
+# Classify-pipeline helper — runs prepare steps 1-5 against one or more
+# classify configs and returns the paired (configs, extracts).
+#
+# Used by step6 (classify_all + classify_suite) and may be reused by future
+# step7 (concat) tests. Lives in conftest because two+ files use it.
+# ----------------------------------------------------------------------------
+
+def run_classify_prepare_pipeline(
+    config_files: List[Path],
+    test_data_file: Path,
+    mutate_config: Optional[Callable[[ClassificationConfig], None]] = None,
+) -> Tuple[List[ClassificationConfig], List]:
+    """Run prepare steps 1-5 for each config; return (configs, extracts).
+
+    For each config file: load, select NRT_BO_001, optionally apply
+    ``mutate_config(config)`` (e.g. to inject ModelSuite settings), then run
+    the five prepare steps in order. The returned ``extracts[idx]`` is the
+    ``ds_extract`` whose ``target_features`` is the test set ClassifyAll(Suite)
+    consumes.
+
+    :param config_files: list of YAML paths, one per config to test
+    :param test_data_file: path to the input parquet (typically
+        ``nrt_cora_bo_test.parquet``)
+    :param mutate_config: optional callback applied to each config after
+        select() but before the pipeline runs. Used by suite tests to inject
+        ``ClassifyAllSuite`` / ``ModelSuite`` settings.
+    :returns: ``(configs, extracts)`` lists in the input order.
+    """
+    configs = []
+    extracts = []
+    for path in config_files:
+        config = ClassificationConfig(str(path))
+        config.select(_DEFAULT_SELECT)
+        if mutate_config is not None:
+            mutate_config(config)
+
+        ds_input = load_classify_step1_input_dataset(config)
+        ds_input.input_file_name = str(test_data_file)
+        ds_input.read_input_data()
+
+        ds_summary = load_classify_step2_summary_dataset(
+            config, input_data=ds_input.input_data
+        )
+        ds_summary.calculate_stats()
+
+        ds_select = load_classify_step3_select_dataset(
+            config, input_data=ds_input.input_data
+        )
+        ds_select.label_profiles()
+
+        ds_locate = load_classify_step4_locate_dataset(
+            config,
+            input_data=ds_input.input_data,
+            selected_profiles=ds_select.selected_profiles,
+        )
+        ds_locate.process_targets()
+
+        ds_extract = load_classify_step5_extract_dataset(
+            config,
+            input_data=ds_input.input_data,
+            selected_profiles=ds_select.selected_profiles,
+            selected_rows=ds_locate.selected_rows,
+            summary_stats=ds_summary.summary_stats,
+        )
+        ds_extract.process_targets()
+
+        configs.append(config)
+        extracts.append(ds_extract)
+
+    return configs, extracts

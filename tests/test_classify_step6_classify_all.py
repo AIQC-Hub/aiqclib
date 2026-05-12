@@ -15,8 +15,8 @@ Exercises:
 Refactored from the original which had:
 - Two module-level helpers ``_setup_datasets(test_obj)`` and
   ``_setup_classify_all(test_obj)`` (replaced by ``classify_pipeline_all``
-  and ``classify_pipeline_first`` fixtures in this file — kept local since
-  they're specific to classify-stage tests)
+  and ``classify_pipeline_first`` fixtures in this file, both of which now
+  delegate to ``run_classify_prepare_pipeline`` in conftest)
 - ~30 lines of per-target triplication per test (now loops over ``TARGETS``)
 - Nine ``Test{Model}`` classes (collapsed into ``TestModels`` parametrized
   by MODEL_CASES)
@@ -29,19 +29,11 @@ import polars as pl
 import pytest
 
 from aiqclib.classify.step6_classify_dataset.dataset_all import ClassifyAll
-from aiqclib.common.config.classify_config import ClassificationConfig
-from aiqclib.common.loader.classify_loader import (
-    load_classify_step1_input_dataset,
-    load_classify_step2_summary_dataset,
-    load_classify_step3_select_dataset,
-    load_classify_step4_locate_dataset,
-    load_classify_step5_extract_dataset,
-)
 from aiqclib.train.models.logistic_regression import LogisticRegression
 from aiqclib.train.models.xgboost import XGBoost
 
 from tests._model_cases import MODEL_CASES
-from tests.conftest import TARGETS
+from tests.conftest import TARGETS, run_classify_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -51,62 +43,6 @@ from tests.conftest import TARGETS
 # n_jobs values that each test_classify_*.yaml configures. Used by
 # test_n_jobs to verify the YAML is honoured.
 N_JOBS_PER_CONFIG = [-1, -1, 2]
-
-
-# ---------------------------------------------------------------------------
-# Prepare-pipeline helper (specific to classify tests; kept here rather than
-# conftest because no other test stage uses it)
-# ---------------------------------------------------------------------------
-
-def _run_prepare_pipeline(config_files, test_data_file):
-    """Run prepare steps 1-5 for each config and return paired (configs, extracts).
-
-    Each ClassifyAll test needs a fully-prepared pipeline output (the
-    ``extracts[idx].target_features`` is the test set ClassifyAll classifies).
-    The original file had this as two module-level helpers; consolidated
-    here into one function that returns a (configs, extracts) pair, wrapped
-    in a SimpleNamespace by the calling fixture.
-    """
-    configs = []
-    extracts = []
-    for path in config_files:
-        config = ClassificationConfig(str(path))
-        config.select("NRT_BO_001")
-
-        ds_input = load_classify_step1_input_dataset(config)
-        ds_input.input_file_name = str(test_data_file)
-        ds_input.read_input_data()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            config, input_data=ds_input.input_data
-        )
-        ds_summary.calculate_stats()
-
-        ds_select = load_classify_step3_select_dataset(
-            config, input_data=ds_input.input_data
-        )
-        ds_select.label_profiles()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            config,
-            input_data=ds_input.input_data,
-            selected_profiles=ds_select.selected_profiles,
-        )
-        ds_locate.process_targets()
-
-        ds_extract = load_classify_step5_extract_dataset(
-            config,
-            input_data=ds_input.input_data,
-            selected_profiles=ds_select.selected_profiles,
-            selected_rows=ds_locate.selected_rows,
-            summary_stats=ds_summary.summary_stats,
-        )
-        ds_extract.process_targets()
-
-        configs.append(config)
-        extracts.append(ds_extract)
-
-    return configs, extracts
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +59,7 @@ def classify_pipeline_all(
     Returns a SimpleNamespace with ``configs`` and ``extracts`` lists, each
     of length 3 in the same order.
     """
-    configs, extracts = _run_prepare_pipeline(
+    configs, extracts = run_classify_prepare_pipeline(
         [classify_yaml_001, classify_yaml_002, classify_yaml_003],
         test_data_file,
     )
@@ -138,7 +74,7 @@ def classify_pipeline_first(test_data_file, classify_yaml_001):
     Returns the same SimpleNamespace shape as classify_pipeline_all but
     with one-element lists.
     """
-    configs, extracts = _run_prepare_pipeline([classify_yaml_001], test_data_file)
+    configs, extracts = run_classify_prepare_pipeline([classify_yaml_001], test_data_file)
     return SimpleNamespace(configs=configs, extracts=extracts)
 
 
@@ -252,7 +188,6 @@ class TestClassifyAll:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            # TODO: update to actual value after data reduction (all three
             # targets had shape (812, 56) on the original dataset).
             assert ds.test_sets[tgt].shape[0] == 812
             assert ds.test_sets[tgt].shape[1] == 56
@@ -283,12 +218,10 @@ class TestClassifyAll:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            # TODO: update to actual value after data reduction
             assert ds.test_sets[tgt].shape[0] == 812
             assert ds.test_sets[tgt].shape[1] == 56
 
             assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            # TODO: update to actual value after data reduction
             assert ds.contingency_tables[tgt].height == 812
 
         assert ds.contingency_tables["temp"].columns == [
@@ -541,12 +474,10 @@ class TestModels:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            # TODO: update to actual value after data reduction
             assert ds.test_sets[tgt].shape[0] == 812
             assert ds.test_sets[tgt].shape[1] == 56
 
             assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            # TODO: update to actual value after data reduction
             assert ds.contingency_tables[tgt].height == 812
 
         assert ds.contingency_tables["temp"].columns == [
