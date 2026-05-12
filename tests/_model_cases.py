@@ -11,8 +11,9 @@ Different test files need different subsets of the fields:
   only need ``wrapper_cls`` and ``config_name`` to check ``isinstance`` against
   ``ds.base_model``.
 - ``test_training_step4_build_a.py``'s ``test_write_model`` and
-  ``test_classify_step6_classify_all.py``'s write tests also need
-  ``joblib_suffix`` to produce unique per-model filenames.
+  ``test_classify_step6_classify_all.py``'s per-model tests need
+  ``joblib_suffix`` to either produce per-model output filenames (step4) or
+  match production fixture names (step6's ``model_{tgt}_{suffix}.joblib``).
 - ``test_training_models.py`` exercises the wrapper APIs directly and needs
   the full set (``sklearn_cls``, ``defaults``, ``override``, ``missing``).
 
@@ -56,7 +57,9 @@ class ModelCase:
         config_name: String used in YAML's ``step_class_set.steps.model``.
         wrapper_cls: The aiqclib wrapper class.
         joblib_suffix: Short string used in per-model output filenames in
-            step4/step6 write tests (e.g. ``"xgboost"``, ``"logit"``, ``"lda"``).
+            step4 (``test_model_{tgt}_{suffix}.joblib``) and to read existing
+            per-model fixture files in step6 (``model_{tgt}_{suffix}.joblib``).
+            Matches the production fixture naming convention.
         sklearn_cls: Underlying scikit/xgboost class ``_get_model_class`` returns.
         defaults: Subset of default params that must be present with these values.
         override: Params injected via config and verified to round-trip.
@@ -78,7 +81,7 @@ MODEL_CASES: list[ModelCase] = [
     ModelCase(
         config_name="XGBoost",
         wrapper_cls=XGBoost,
-        joblib_suffix="xgboost",
+        joblib_suffix="xgb",
         sklearn_cls=xgb.XGBClassifier,
         defaults={"n_estimators": 100, "n_jobs": -1},
         override={"max_depth": 10, "n_jobs": 4},
