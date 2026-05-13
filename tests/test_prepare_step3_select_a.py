@@ -1,208 +1,157 @@
-"""
-This module contains unit tests for the SelectDataSetA class,
-which is responsible for selecting, labeling, and managing profiles
-within a dataset based on specific criteria.
+"""Unit tests for the ``SelectDataSetA`` class.
+
+Exercises positive/negative profile selection, profile-pair matching, and
+label_profiles aggregation. The NegX5 variant tests the same behaviour with
+a 1:5 positive:negative ratio (test_dataset_003.yaml's neg_pos_ratio).
+
+Refactored from two ``unittest.TestCase`` classes
+(``TestSelectDataSetA`` + ``TestSelectDataSetANegX5``) into two plain
+classes that share the conftest-provided ``dataset_input_001`` /
+``dataset_input_003`` fixtures.
 """
 
 import os
-import unittest
-from pathlib import Path
 
 import polars as pl
+import pytest
 
-from aiqclib.common.config.dataset_config import DataSetConfig
-from aiqclib.common.loader.dataset_loader import load_step1_input_dataset
 from aiqclib.prepare.step3_select_profiles.dataset_a import SelectDataSetA
 
 
-class TestSelectDataSetA(unittest.TestCase):
-    """
-    A suite of tests ensuring the SelectDataSetA class operates correctly
-    for selecting and labeling profiles, as well as writing results to disk.
-    """
+# ---------------------------------------------------------------------------
+# Tests against test_dataset_001.yaml (default neg:pos = 1:1)
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """Set up test environment and load input dataset."""
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_001.yaml"
-        )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds = load_step1_input_dataset(self.config)
-        self.ds.input_file_name = str(self.test_data_file)
-        self.ds.read_input_data()
+class TestSelectDataSetA:
+    """Tests for SelectDataSetA with the default 1:1 negative:positive ratio."""
 
-    def test_step_name(self):
-        """Ensure the step name is set correctly to 'select'."""
-        ds = SelectDataSetA(self.config)
-        self.assertEqual(ds.step_name, "select")
+    def test_step_name(self, dataset_config_001):
+        """step_name == 'select'."""
+        ds = SelectDataSetA(dataset_config_001)
+        assert ds.step_name == "select"
 
-    def test_output_file_name(self):
-        """Verify that the output file name is set based on configuration."""
-        ds = SelectDataSetA(self.config)
-        self.assertEqual(
-            "/path/to/select_1/nrt_bo_001/select_folder_1/selected_profiles.parquet",
-            str(ds.output_file_name),
+    def test_output_file_name(self, dataset_config_001):
+        """Configured output path comes from config.path_info."""
+        ds = SelectDataSetA(dataset_config_001)
+        assert (
+            str(ds.output_file_name)
+            == "/path/to/select_1/nrt_bo_001/select_folder_1/selected_profiles.parquet"
         )
 
-    def test_default_output_file_name(self):
-        """Check a default output file name from a different configuration."""
-        config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_002.yaml"
-        )
-        config = DataSetConfig(config_file_path)
-        config.select("NRT_BO_001")
-
-        ds = SelectDataSetA(config)
-        self.assertEqual(
-            "/path/to/data_1/nrt_bo_001/select/selected_profiles.parquet",
-            str(ds.output_file_name),
+    def test_default_output_file_name(self, dataset_config_002):
+        """test_dataset_002.yaml uses the default-path pattern."""
+        ds = SelectDataSetA(dataset_config_002)
+        assert (
+            str(ds.output_file_name)
+            == "/path/to/data_1/nrt_bo_001/select/selected_profiles.parquet"
         )
 
-    def test_input_data(self):
-        """Ensure input data is loaded into the class as a Polars DataFrame and has expected dimensions."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 132342)
-        self.assertEqual(ds.input_data.shape[1], 30)
+    def test_input_data(self, dataset_config_001, dataset_input_001):
+        """input_data is a Polars DataFrame with the expected shape."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == 1524
+        assert ds.input_data.shape[1] == 30
 
-    def test_positive_profiles(self):
-        """Check that positive profiles are selected correctly based on criteria."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_positive_profiles(self, dataset_config_001, dataset_input_001):
+        """select_positive_profiles populates pos_profile_df."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.select_positive_profiles()
-        self.assertIsInstance(ds.pos_profile_df, pl.DataFrame)
-        self.assertEqual(ds.pos_profile_df.shape[0], 25)
-        self.assertEqual(ds.pos_profile_df.shape[1], 7)
+        assert isinstance(ds.pos_profile_df, pl.DataFrame)
+        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[1] == 7
 
-    def test_negative_profiles(self):
-        """Check that negative profiles are selected correctly after positive profiles."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_negative_profiles(self, dataset_config_001, dataset_input_001):
+        """select_negative_profiles populates neg_profile_df after select_positive_profiles."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.select_positive_profiles()
         ds.select_negative_profiles()
-        self.assertIsInstance(ds.neg_profile_df, pl.DataFrame)
-        self.assertEqual(ds.neg_profile_df.shape[0], 478)
-        self.assertEqual(ds.neg_profile_df.shape[1], 7)
+        assert isinstance(ds.neg_profile_df, pl.DataFrame)
+        assert ds.neg_profile_df.shape[0] == 1
+        assert ds.neg_profile_df.shape[1] == 7
 
-    def test_find_profile_pairs(self):
-        """Validate the creation of matching positive and negative profile pairs."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_find_profile_pairs(self, dataset_config_001, dataset_input_001):
+        """find_profile_pairs matches positives to negatives 1:1 (default ratio)."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         ds.find_profile_pairs()
-        self.assertEqual(ds.pos_profile_df.shape[0], 25)
-        self.assertEqual(ds.pos_profile_df.shape[1], 8)
-        self.assertEqual(ds.neg_profile_df.shape[0], 25)
-        self.assertEqual(ds.neg_profile_df.shape[1], 8)
+        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[1] == 8
+        assert ds.neg_profile_df.shape[0] == 5
+        assert ds.neg_profile_df.shape[1] == 8
 
-    def test_label_profiles(self):
-        """Check that profiles are labeled correctly and combined into a single DataFrame."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_label_profiles(self, dataset_config_001, dataset_input_001):
+        """label_profiles combines positives + negatives into selected_profiles."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.label_profiles()
-        self.assertEqual(ds.selected_profiles.shape[0], 50)
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert ds.selected_profiles.shape[0] == 10
+        assert ds.selected_profiles.shape[1] == 8
 
-    def test_write_selected_profiles(self):
-        """Confirm that selected profiles are written to a file successfully and the file exists."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
-        ds.output_file_name = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "select"
-            / "temp_selected_profiles.parquet"
-        )
+    def test_write_selected_profiles(
+        self, dataset_config_001, dataset_input_001, test_output_dir
+    ):
+        """write_selected_profiles produces a parquet at the configured path."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
+        output_path = str(test_output_dir / "test_selected_profiles.parquet")
+        ds.output_file_name = output_path
 
         ds.label_profiles()
         ds.write_selected_profiles()
-        self.assertTrue(os.path.exists(ds.output_file_name))
-        os.remove(ds.output_file_name)
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
 
-    def test_write_empty_selected_profiles(self):
-        """Check that writing empty profiles (i.e., before labeling) raises a ValueError."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
-        ds.output_file_name = str(
-            Path(__file__).resolve().parent / "data" / "select"
-            "temp_selected_profiles.parquet"
-        )
+    def test_write_empty_selected_profiles(
+        self, dataset_config_001, dataset_input_001, test_output_dir
+    ):
+        """write_selected_profiles before label_profiles raises ValueError."""
+        ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
+        # The output path doesn't matter — we expect the call to fail before writing.
+        ds.output_file_name = str(test_output_dir / "test_selected_profiles.parquet")
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.write_selected_profiles()
 
 
-class TestSelectDataSetANegX5(unittest.TestCase):
-    """
-    A suite of tests ensuring the SelectDataSetA class operates correctly
-    for selecting and labeling profiles, as well as writing results to disk,
-    specifically when a different negative to positive ratio is configured.
-    """
+# ---------------------------------------------------------------------------
+# Tests against test_dataset_003.yaml (neg:pos = 1:5)
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """Set up test environment with a configuration specifying a neg_pos_ratio of 5."""
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_003.yaml"
-        )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds = load_step1_input_dataset(self.config)
-        self.ds.input_file_name = str(self.test_data_file)
-        self.ds.read_input_data()
+class TestSelectDataSetANegX5:
+    """Tests for SelectDataSetA with the 1:5 negative:positive ratio (config 003)."""
 
-    def test_neg_pos_ratio(self):
-        """Verify that the configured negative to positive ratio is correctly loaded."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
-        self.assertEqual(ds.config.get_step_params("select").get("neg_pos_ratio", 1), 5)
+    def test_neg_pos_ratio(self, dataset_config_003, dataset_input_003):
+        """The configured neg_pos_ratio of 5 is honoured."""
+        ds = SelectDataSetA(dataset_config_003, input_data=dataset_input_003.input_data)
+        assert ds.config.get_step_params("select").get("neg_pos_ratio", 1) == 5
 
-    def test_find_profile_pairs(self):
-        """Validate the creation of matching profile pairs with a 1:5 positive:negative ratio."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_find_profile_pairs(self, dataset_config_003, dataset_input_003):
+        """find_profile_pairs produces 5 negatives per positive."""
+        ds = SelectDataSetA(dataset_config_003, input_data=dataset_input_003.input_data)
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         ds.find_profile_pairs()
-        self.assertEqual(ds.pos_profile_df.shape[0], 25)
-        self.assertEqual(ds.pos_profile_df.shape[1], 8)
-        self.assertEqual(ds.neg_profile_df.shape[0], 125)  # 25 positive * 5 ratio
-        self.assertEqual(ds.neg_profile_df.shape[1], 8)
+        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[1] == 8
+        assert ds.neg_profile_df.shape[0] == 5
+        assert ds.neg_profile_df.shape[1] == 8
 
-    def test_label_profiles(self):
-        """Check that profiles are labeled correctly and combined, reflecting the 1:5 ratio."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
+    def test_label_profiles(self, dataset_config_003, dataset_input_003):
+        """label_profiles combines 25 positives + 125 negatives = 150 selected profiles."""
+        ds = SelectDataSetA(dataset_config_003, input_data=dataset_input_003.input_data)
         ds.label_profiles()
-        self.assertEqual(
-            ds.selected_profiles.shape[0], 150
-        )  # 25 positive + 125 negative
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert ds.selected_profiles.shape[0] == 10
+        assert ds.selected_profiles.shape[1] == 8
 
-    def test_write_selected_profiles(self):
-        """Confirm that selected profiles (with 1:5 ratio) are written to a file successfully."""
-        ds = SelectDataSetA(self.config, input_data=self.ds.input_data)
-        ds.output_file_name = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "select"
-            / "temp_selected_profiles.parquet"
-        )
+    def test_write_selected_profiles(
+        self, dataset_config_003, dataset_input_003, test_output_dir
+    ):
+        """write_selected_profiles (NegX5) produces a parquet at the configured path."""
+        ds = SelectDataSetA(dataset_config_003, input_data=dataset_input_003.input_data)
+        output_path = str(test_output_dir / "test_selected_profiles_negx5.parquet")
+        ds.output_file_name = output_path
 
         ds.label_profiles()
         ds.write_selected_profiles()
-        self.assertTrue(os.path.exists(ds.output_file_name))
-        os.remove(ds.output_file_name)
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug

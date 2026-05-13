@@ -63,7 +63,8 @@ class ModelCase:
         sklearn_cls: Underlying scikit/xgboost class ``_get_model_class`` returns.
         defaults: Subset of default params that must be present with these values.
         override: Params injected via config and verified to round-trip.
-        missing: Params that must NOT appear in defaults (e.g. ``n_jobs`` for LDA).
+        missing: Params that must NOT appear in defaults (e.g. ``n_jobs`` for LDA,
+            ``penalty`` for LogisticRegression after the sklearn 1.8 deprecation).
     """
 
     config_name: str
@@ -93,6 +94,7 @@ MODEL_CASES: list[ModelCase] = [
         sklearn_cls=SklearnLR,
         defaults={"C": 1.0, "solver": "lbfgs", "l1_ratio": 0},
         override={"C": 0.5, "max_iter": 500},
+        missing=("penalty",),
     ),
     ModelCase(
         config_name="LinearDiscriminantAnalysis",

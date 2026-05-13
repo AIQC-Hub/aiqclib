@@ -39,6 +39,10 @@ from aiqclib.common.loader.classify_loader import (
     load_classify_step4_locate_dataset,
     load_classify_step5_extract_dataset,
 )
+from aiqclib.common.loader.dataset_loader import (
+    load_step1_input_dataset,
+    load_step3_select_dataset,
+)
 from aiqclib.common.loader.training_loader import load_step1_input_training_set
 
 
@@ -252,6 +256,68 @@ def classify_config_002() -> ClassificationConfig:
 @pytest.fixture
 def classify_config_003() -> ClassificationConfig:
     return _load_classify_config("test_classify_003.yaml")
+
+
+# ----------------------------------------------------------------------------
+# Dataset-pipeline wiring (prepare-stage step1 + step3 outputs)
+#
+# These fixtures mirror the legacy setUp pattern: load step1 input dataset
+# against the test parquet, optionally chain into step3 select. Used by
+# tests for prepare steps 2-6, each of which depends on outputs from earlier
+# steps in the same pipeline.
+# ----------------------------------------------------------------------------
+
+def _build_dataset_input(config: DataSetConfig, test_data_file: Path):
+    """Construct a step1 input dataset and read the input parquet.
+
+    Returns the populated ds_input. The legacy setUp in every prepare-stage
+    test does this exact sequence; here it lives once.
+    """
+    ds = load_step1_input_dataset(config)
+    ds.input_file_name = str(test_data_file)
+    ds.read_input_data()
+    return ds
+
+
+def _build_dataset_select(config: DataSetConfig, input_data):
+    """Construct a step3 select dataset and run label_profiles().
+
+    Returns the populated ds_select with ``selected_profiles`` ready to use
+    downstream. Step4+ tests typically need this.
+    """
+    ds = load_step3_select_dataset(config, input_data=input_data)
+    ds.label_profiles()
+    return ds
+
+
+@pytest.fixture
+def dataset_input_001(dataset_config_001, test_data_file):
+    """step1 input dataset for test_dataset_001.yaml."""
+    return _build_dataset_input(dataset_config_001, test_data_file)
+
+
+@pytest.fixture
+def dataset_input_003(dataset_config_003, test_data_file):
+    """step1 input dataset for test_dataset_003.yaml (NegX5 variant)."""
+    return _build_dataset_input(dataset_config_003, test_data_file)
+
+
+@pytest.fixture
+def dataset_input_004(dataset_config_004, test_data_file):
+    """step1 input dataset for test_dataset_004.yaml."""
+    return _build_dataset_input(dataset_config_004, test_data_file)
+
+
+@pytest.fixture
+def dataset_select_001(dataset_config_001, dataset_input_001):
+    """step3 select dataset (labelled profiles) for test_dataset_001.yaml."""
+    return _build_dataset_select(dataset_config_001, dataset_input_001.input_data)
+
+
+@pytest.fixture
+def dataset_select_003(dataset_config_003, dataset_input_003):
+    """step3 select dataset (labelled profiles) for test_dataset_003.yaml (NegX5)."""
+    return _build_dataset_select(dataset_config_003, dataset_input_003.input_data)
 
 
 # ----------------------------------------------------------------------------
