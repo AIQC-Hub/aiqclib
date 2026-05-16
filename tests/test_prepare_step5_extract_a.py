@@ -239,7 +239,6 @@ class TestExtractDataSetAwithAll:
         assert ds.summary_stats.shape[1] == 12
 
         assert isinstance(ds.selected_profiles, pl.DataFrame)
-        # TODO: update to actual value after data reduction (was 503 × 8)
         assert ds.selected_profiles.shape[0] == 12
         assert ds.selected_profiles.shape[1] == 8
 

@@ -181,7 +181,6 @@ class TestBuildModelSuite:
             assert ds.final_models[f"xgb_{tgt}"] is not ds.final_models[f"dt_{tgt}"]
 
         # final_models combine train + test data. Temp had 116 train + 12 test rows.
-        # TODO: update to actual value after data reduction (116 + 12 = 128)
         assert ds.final_models["xgb_temp"].training_set.height == 116 + 12
 
     def test_build_targets(self, training_config_001_suite, training_input_001):
@@ -199,7 +198,6 @@ class TestBuildModelSuite:
             assert ds.models[f"xgb_{tgt}"] is not ds.models[f"dt_{tgt}"]
 
         # models use train-only data
-        # TODO: update to actual value after data reduction
         assert ds.models["xgb_temp"].training_set.height == 116
 
     def test_test_targets(self, training_config_001_suite, training_input_001):
@@ -216,7 +214,6 @@ class TestBuildModelSuite:
         ds.test_targets()
 
         # Aggregated predictions: include 'method' column, 2x rows per target
-        # TODO: update to actual values after data reduction.
         # Temp: 12 test rows × 2 methods = 24
         # Psal: 14 test rows × 2 methods = 28
         # Pres: 12 test rows × 2 methods = 24

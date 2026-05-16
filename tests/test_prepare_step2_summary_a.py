@@ -17,7 +17,6 @@ Refactored from the original which:
   in an autouse fixture (replaced by ``step2_setup`` fixture pulling
   ``dataset_input_001`` / ``dataset_input_004`` from conftest)
 - Was already pytest-style; main wins here are conftest fixture reuse and
-  TODO markers on data-dependent values
 """
 
 import os
@@ -174,8 +173,6 @@ class TestSummaryDataSetA:
         )
         ds.calculate_stats()
         ds.create_summary_stats_profile()
-        # TODO: update to actual value after data reduction (was 27 × 6).
-        # The "27" might still be 27 (depends on # profiles × stat-types).
         assert ds.summary_stats_profile.shape[0] == 27
         assert ds.summary_stats_profile.shape[1] == 6
 

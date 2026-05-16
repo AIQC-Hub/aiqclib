@@ -350,6 +350,12 @@ def dataset_input_004(dataset_config_004, test_data_file):
 
 
 @pytest.fixture
+def dataset_input_005(dataset_config_005, test_data_file):
+    """step1 input dataset for test_dataset_005.yaml (select-all variant)."""
+    return _build_dataset_input(dataset_config_005, test_data_file)
+
+
+@pytest.fixture
 def dataset_select_001(dataset_config_001, dataset_input_001):
     """step3 select dataset (labelled profiles) for test_dataset_001.yaml."""
     return _build_dataset_select(dataset_config_001, dataset_input_001.input_data)
@@ -359,6 +365,12 @@ def dataset_select_001(dataset_config_001, dataset_input_001):
 def dataset_select_003(dataset_config_003, dataset_input_003):
     """step3 select dataset (labelled profiles) for test_dataset_003.yaml (NegX5)."""
     return _build_dataset_select(dataset_config_003, dataset_input_003.input_data)
+
+
+@pytest.fixture
+def dataset_select_005(dataset_config_005, dataset_input_005):
+    """step3 select dataset (labelled profiles) for test_dataset_005.yaml (select-all)."""
+    return _build_dataset_select(dataset_config_005, dataset_input_005.input_data)
 
 
 # ----------------------------------------------------------------------------

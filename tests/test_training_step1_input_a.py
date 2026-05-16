@@ -64,8 +64,6 @@ class TestInputTrainingSetA:
         ds.input_file_names = _build_input_file_names(training_dir)
         ds.process_targets()
 
-        # TODO: update per-target rows after data reduction.
-        # Was train=(116, 126, 110) with 57 cols, test=(12, 14, 12) with 56 cols.
         expected_train_rows = {"temp": 22, "psal": 34, "pres": 18}
         expected_test_rows = {"temp": 2, "psal": 2, "pres": 0}
         for tgt in TARGETS:

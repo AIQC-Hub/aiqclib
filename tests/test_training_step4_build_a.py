@@ -80,8 +80,8 @@ def _run_test_with_trained_model(ds: BuildModel) -> None:
 
     # Test sets / predictions: per-target shapes.
     expected_test_shapes = {
-        "temp": (2, 56),  # TODO: update to actual value after data reduction
-        "psal": (2, 56),  # TODO: update to actual value after data reduction
+        "temp": (2, 56),
+        "psal": (2, 56),
     }
     for tgt in TARGETS_NONEMPTY:
         assert isinstance(ds.test_sets[tgt], pl.DataFrame)
@@ -89,8 +89,8 @@ def _run_test_with_trained_model(ds: BuildModel) -> None:
 
     # Contingency tables: height matches the test set rows; columns fixed.
     expected_heights = {
-        "temp": 2,  # TODO: update to actual value after data reduction
-        "psal": 2,  # TODO: update to actual value after data reduction
+        "temp": 2,
+        "psal": 2,
     }
     for tgt in TARGETS_NONEMPTY:
         assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
@@ -162,12 +162,12 @@ class TestBuildModel:
         )
 
         expected_train = {
-            "temp": (22, 57),  # TODO: update to actual value after data reduction
-            "psal": (34, 57),  # TODO: update to actual value after data reduction
+            "temp": (22, 57),
+            "psal": (34, 57),
         }
         expected_test = {
-            "temp": (2, 56),  # TODO: update to actual value after data reduction
-            "psal": (2, 56),  # TODO: update to actual value after data reduction
+            "temp": (2, 56),
+            "psal": (2, 56),
         }
         for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.training_sets[tgt], pl.DataFrame)
@@ -237,8 +237,8 @@ class TestBuildModel:
         ds.test_targets()
 
         expected_shapes = {
-            "temp": (2, 56),  # TODO: update to actual value after data reduction
-            "psal": (2, 56),  # TODO: update to actual value after data reduction
+            "temp": (2, 56),
+            "psal": (2, 56),
         }
         for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)

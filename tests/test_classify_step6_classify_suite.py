@@ -249,7 +249,6 @@ class TestClassifyAllSuite:
 
         # 812 test rows × 2 methods = 1624. After data reduction this
         # becomes (new_test_size × 2).
-        # TODO: update to actual value after data reduction
         expected_aggregated_height = 1624
 
         # predictions
