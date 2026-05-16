@@ -86,7 +86,7 @@ class TestSummaryDataSetA:
             step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data
         )
         assert isinstance(ds.input_data, pl.DataFrame)
-        assert ds.input_data.shape[0] == 1524
+        assert ds.input_data.shape[0] == 3267
         assert ds.input_data.shape[1] == 30
 
     @pytest.mark.parametrize("idx", range(2))
@@ -109,7 +109,7 @@ class TestSummaryDataSetA:
         )
         grouped_df = ds.input_data.group_by(ds.profile_col_names)
         df = ds.calculate_profile_stats(grouped_df, "temp")
-        assert df.shape[0] == 6
+        assert df.shape[0] == 12
         assert df.shape[1] == 12
 
     @pytest.mark.parametrize("idx", range(2))
@@ -119,7 +119,7 @@ class TestSummaryDataSetA:
             step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data
         )
         ds.calculate_stats()
-        assert ds.summary_stats.shape[0] == 35
+        assert ds.summary_stats.shape[0] == 65
         assert ds.summary_stats.shape[1] == 12
 
     @pytest.mark.parametrize("idx", range(2))

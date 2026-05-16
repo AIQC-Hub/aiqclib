@@ -50,7 +50,7 @@ class TestSelectDataSetA:
         """input_data is a Polars DataFrame with the expected shape."""
         ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         assert isinstance(ds.input_data, pl.DataFrame)
-        assert ds.input_data.shape[0] == 1524
+        assert ds.input_data.shape[0] == 3267
         assert ds.input_data.shape[1] == 30
 
     def test_positive_profiles(self, dataset_config_001, dataset_input_001):
@@ -58,7 +58,7 @@ class TestSelectDataSetA:
         ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.select_positive_profiles()
         assert isinstance(ds.pos_profile_df, pl.DataFrame)
-        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[0] == 7
         assert ds.pos_profile_df.shape[1] == 7
 
     def test_negative_profiles(self, dataset_config_001, dataset_input_001):
@@ -67,7 +67,7 @@ class TestSelectDataSetA:
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         assert isinstance(ds.neg_profile_df, pl.DataFrame)
-        assert ds.neg_profile_df.shape[0] == 1
+        assert ds.neg_profile_df.shape[0] == 5
         assert ds.neg_profile_df.shape[1] == 7
 
     def test_find_profile_pairs(self, dataset_config_001, dataset_input_001):
@@ -76,16 +76,16 @@ class TestSelectDataSetA:
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         ds.find_profile_pairs()
-        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[0] == 7
         assert ds.pos_profile_df.shape[1] == 8
-        assert ds.neg_profile_df.shape[0] == 5
+        assert ds.neg_profile_df.shape[0] == 7
         assert ds.neg_profile_df.shape[1] == 8
 
     def test_label_profiles(self, dataset_config_001, dataset_input_001):
         """label_profiles combines positives + negatives into selected_profiles."""
         ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
         ds.label_profiles()
-        assert ds.selected_profiles.shape[0] == 10
+        assert ds.selected_profiles.shape[0] == 14
         assert ds.selected_profiles.shape[1] == 8
 
     def test_write_selected_profiles(
@@ -131,16 +131,16 @@ class TestSelectDataSetANegX5:
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         ds.find_profile_pairs()
-        assert ds.pos_profile_df.shape[0] == 5
+        assert ds.pos_profile_df.shape[0] == 7
         assert ds.pos_profile_df.shape[1] == 8
-        assert ds.neg_profile_df.shape[0] == 5
+        assert ds.neg_profile_df.shape[0] == 35
         assert ds.neg_profile_df.shape[1] == 8
 
     def test_label_profiles(self, dataset_config_003, dataset_input_003):
         """label_profiles combines 25 positives + 125 negatives = 150 selected profiles."""
         ds = SelectDataSetA(dataset_config_003, input_data=dataset_input_003.input_data)
         ds.label_profiles()
-        assert ds.selected_profiles.shape[0] == 10
+        assert ds.selected_profiles.shape[0] == 42
         assert ds.selected_profiles.shape[1] == 8
 
     def test_write_selected_profiles(

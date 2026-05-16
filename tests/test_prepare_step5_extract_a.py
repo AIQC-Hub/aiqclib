@@ -1,565 +1,282 @@
-"""
-This module contains unit tests for the ExtractDataSetA class,
-verifying its functionality in processing and extracting features from
-various intermediate datasets (input, summary, select, and locate)
-generated in previous data quality control steps.
+"""Unit tests for the ``ExtractDataSetA`` class.
+
+ExtractDataSetA gathers outputs from steps 1–4 (input, summary, select,
+locate) and produces per-target feature DataFrames keyed by target name.
+
+Refactored from three ``unittest.TestCase``/pytest classes
+(``TestExtractDataSetA`` over configs 001+004, ``TestExtractDataSetANegX5``
+for config 003, ``TestExtractDataSetAwithAll`` for config 005) into three
+plain pytest classes that share ``build_prepare_pipeline()`` from conftest.
+Per-target triplication collapses to ``for tgt in TARGETS:`` loops.
 """
 
 import os
-import unittest
-import pytest
-from pathlib import Path
 
 import polars as pl
+import pytest
 
-from aiqclib.common.config.dataset_config import DataSetConfig
-from aiqclib.common.loader.dataset_loader import (
-    load_step1_input_dataset,
-    load_step2_summary_dataset,
-    load_step3_select_dataset,
-    load_step4_locate_dataset,
-)
 from aiqclib.prepare.step5_extract_features.dataset_a import ExtractDataSetA
 
+from tests.conftest import TARGETS, build_prepare_pipeline
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _make_extract(pipeline) -> ExtractDataSetA:
+    """Construct an ExtractDataSetA from a build_prepare_pipeline result.
+
+    The four upstream stages (input, summary, select, locate) all live on
+    the SimpleNamespace returned by build_prepare_pipeline(..., stop_after="locate").
+    """
+    return ExtractDataSetA(
+        pipeline.config,
+        input_data=pipeline.input.input_data,
+        selected_profiles=pipeline.select.selected_profiles,
+        selected_rows=pipeline.locate.selected_rows,
+        summary_stats=pipeline.summary.summary_stats,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests against configs 001 + 004
+# ---------------------------------------------------------------------------
 
 class TestExtractDataSetA:
+    """Tests parametrized over configs 001 and 004.
+
+    Both configs use the default selection ratio. Each test runs against
+    both via ``@pytest.mark.parametrize("idx", range(2))``.
     """
-    A suite of tests verifying that the ExtractDataSetA class gathers
-    and outputs extracted features from multiple prior steps (input, summary,
-    select, locate).
-    """
 
-    def _setup_configs(self):
-        self.configs = []
-        for x in self.config_file_paths:
-            c = DataSetConfig(str(x))
-            c.select("NRT_BO_001")
-            self.configs.append(c)
-
-    def _setup_input_datasets(self):
-        self.ds_input = []
-        for x in self.configs:
-            ds = load_step1_input_dataset(x)
-            ds.input_file_name = str(self.test_data_file)
-            ds.read_input_data()
-            self.ds_input.append(ds)
-
-    def _setup_summary_datasets(self):
-        self.ds_summary = []
-        for x, y in zip(self.configs, self.ds_input):
-            ds = load_step2_summary_dataset(x, input_data=y.input_data)
-            ds.calculate_stats()
-            self.ds_summary.append(ds)
-
-    def _setup_select_datasets(self):
-        self.ds_select = []
-        for x, y in zip(self.configs, self.ds_input):
-            ds = load_step3_select_dataset(x, input_data=y.input_data)
-            ds.label_profiles()
-            self.ds_select.append(ds)
-
-    def _setup_locate_datasets(self):
-        self.ds_locate = []
-        for x, y, z in zip(self.configs, self.ds_input, self.ds_select):
-            ds = load_step4_locate_dataset(
-                x, input_data=y.input_data, selected_profiles=z.selected_profiles
-            )
-            ds.process_targets()
-            self.ds_locate.append(ds)
-
-    @pytest.fixture(autouse=True)
-    def setup_datasets(self):
-        """
-        Set up test environment and load input, summary, select, and locate data.
-        Initializes `DataSetConfig` and pre-processes data using prior steps
-        to prepare for `ExtractDataSetA` testing.
-        """
-        self.config_file_paths = [
-            (
-                Path(__file__).resolve().parent
-                / "data"
-                / "config"
-                / "test_dataset_001.yaml"
-            ),
-            (
-                Path(__file__).resolve().parent
-                / "data"
-                / "config"
-                / "test_dataset_004.yaml"
-            ),
+    @pytest.fixture
+    def pipelines(self, dataset_config_001, dataset_config_004, test_data_file):
+        """Two pipelines, one per config, each run through step4 (locate)."""
+        return [
+            build_prepare_pipeline(c, test_data_file, stop_after="locate")
+            for c in [dataset_config_001, dataset_config_004]
         ]
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-        self._setup_configs()
-        self._setup_input_datasets()
-        self._setup_summary_datasets()
-        self._setup_select_datasets()
-        self._setup_locate_datasets()
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_output_file_names(self, idx):
-        """
-        Check that the output file names are set according to the configuration.
-        Verifies the `output_file_names` attribute is correctly initialized.
-        """
-        ds = ExtractDataSetA(self.configs[idx])
-        assert (
-            "/path/to/data_1/nrt_bo_001/extract/extracted_features_temp.parquet"
-            == str(ds.output_file_names["temp"])
-        )
-        assert (
-            "/path/to/data_1/nrt_bo_001/extract/extracted_features_psal.parquet"
-            == str(ds.output_file_names["psal"])
-        )
+    def test_output_file_names(self, idx, pipelines):
+        """Default per-target output paths derive from config.path_info."""
+        ds = ExtractDataSetA(pipelines[idx].config)
+        base = "/path/to/data_1/nrt_bo_001/extract"
+        for tgt in TARGETS:
+            assert (
+                str(ds.output_file_names[tgt])
+                == f"{base}/extracted_features_{tgt}.parquet"
+            )
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_step_name(self, idx):
-        """
-        Ensure the step name is set to 'extract'.
-        Confirms the `step_name` attribute matches the expected value.
-        """
-        ds = ExtractDataSetA(self.configs[idx])
+    def test_step_name(self, idx, pipelines):
+        """step_name == 'extract'."""
+        ds = ExtractDataSetA(pipelines[idx].config)
         assert ds.step_name == "extract"
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_init_arguments(self, idx):
-        """
-        Validate that input data, selected profiles, target rows, and summary stats are set.
-        Checks if the `ExtractDataSetA` constructor correctly initializes and filters
-        its internal data attributes based on provided inputs.
-        """
-        ds = ExtractDataSetA(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
+    def test_init_arguments(self, idx, pipelines):
+        """All four upstream inputs land on the ExtractDataSetA instance."""
+        ds = _make_extract(pipelines[idx])
 
         assert isinstance(ds.input_data, pl.DataFrame)
-        assert ds.input_data.shape[0] == 132342
+        assert ds.input_data.shape[0] == 3267
         assert ds.input_data.shape[1] == 30
 
         assert isinstance(ds.summary_stats, pl.DataFrame)
-        assert ds.summary_stats.shape[0] == 2520
+        assert ds.summary_stats.shape[0] == 65
         assert ds.summary_stats.shape[1] == 12
 
         assert isinstance(ds.selected_profiles, pl.DataFrame)
-        assert ds.selected_profiles.shape[0] == 50
+        assert ds.selected_profiles.shape[0] == 14
         assert ds.selected_profiles.shape[1] == 8
 
         assert isinstance(ds.filtered_input, pl.DataFrame)
-        assert ds.filtered_input.shape[0] == 10683
+        assert ds.filtered_input.shape[0] == 2879
         assert ds.filtered_input.shape[1] == 30
 
-        assert isinstance(ds.selected_rows["temp"], pl.DataFrame)
-        assert ds.selected_rows["temp"].shape[0] == 128
-        assert ds.selected_rows["temp"].shape[1] == 9
-
-        assert isinstance(ds.selected_rows["psal"], pl.DataFrame)
-        assert ds.selected_rows["psal"].shape[0] == 140
-        assert ds.selected_rows["psal"].shape[1] == 9
-
-        assert isinstance(ds.selected_rows["pres"], pl.DataFrame)
-        assert ds.selected_rows["pres"].shape[0] == 122
-        assert ds.selected_rows["pres"].shape[1] == 9
+        expected_rows = {"temp": 24, "psal": 36, "pres": 18}
+        for tgt in TARGETS:
+            assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
+            assert ds.selected_rows[tgt].shape[0] == expected_rows[tgt]
+            assert ds.selected_rows[tgt].shape[1] == 9
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_location_features(self, idx):
-        """
-        Check that features are correctly processed for temp and psal targets.
-        Tests the `process_targets` method to ensure the correct generation
-        and dimensions of extracted features for different target variables.
-        """
-        ds = ExtractDataSetA(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
-
+    def test_location_features(self, idx, pipelines):
+        """process_targets populates target_features per target."""
+        ds = _make_extract(pipelines[idx])
         ds.process_targets()
 
-        assert isinstance(ds.target_features["temp"], pl.DataFrame)
-        assert ds.target_features["temp"].shape[0] == 128
-        assert ds.target_features["temp"].shape[1] == 58
-
-        assert isinstance(ds.target_features["psal"], pl.DataFrame)
-        assert ds.target_features["psal"].shape[0] == 140
-        assert ds.target_features["psal"].shape[1] == 58
-
-        assert isinstance(ds.target_features["pres"], pl.DataFrame)
-        assert ds.target_features["pres"].shape[0] == 122
-        assert ds.target_features["pres"].shape[1] == 58
+        expected_rows = {"temp": 24, "psal": 36, "pres": 18}
+        for tgt in TARGETS:
+            assert isinstance(ds.target_features[tgt], pl.DataFrame)
+            assert ds.target_features[tgt].shape[0] == expected_rows[tgt]
+            assert ds.target_features[tgt].shape[1] == 58
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_write_target_features(self, idx):
-        """
-        Confirm that target features are written to parquet files as expected.
-        Verifies the `write_target_features` method successfully creates
-        output files and cleans them up.
-        """
-        ds = ExtractDataSetA(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
-
-        data_path = Path(__file__).resolve().parent / "data" / "extract"
-        ds.output_file_names["temp"] = str(
-            data_path / "temp_extracted_features_temp.parquet"
-        )
-        ds.output_file_names["psal"] = str(
-            data_path / "temp_extracted_features_psal.parquet"
-        )
-        ds.output_file_names["pres"] = str(
-            data_path / "temp_extracted_features_pres.parquet"
-        )
+    def test_write_target_features(self, idx, pipelines, test_output_dir):
+        """write_target_features produces a parquet per target."""
+        ds = _make_extract(pipelines[idx])
+        output_paths = {
+            tgt: str(test_output_dir / f"test_extracted_features_{tgt}.parquet")
+            for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_target_features()
 
-        assert os.path.exists(ds.output_file_names["temp"])
-        assert os.path.exists(ds.output_file_names["psal"])
-        assert os.path.exists(ds.output_file_names["pres"])
-        os.remove(ds.output_file_names["temp"])
-        os.remove(ds.output_file_names["psal"])
-        os.remove(ds.output_file_names["pres"])
+        for tgt in TARGETS:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_write_no_target_features(self, idx):
-        """
-        Check that calling write_target_features with empty features raises ValueError.
-        Ensures `write_target_features` handles cases where no features have been processed yet.
-        """
-        ds = ExtractDataSetA(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
-
-        # target_features attribute is not populated without calling process_targets()
+    def test_write_no_target_features(self, idx, pipelines):
+        """write_target_features before process_targets raises ValueError."""
+        ds = _make_extract(pipelines[idx])
         with pytest.raises(ValueError):
             ds.write_target_features()
 
 
-class TestExtractDataSetANegX5(unittest.TestCase):
-    """
-    A suite of tests verifying that the ExtractDataSetA class gathers
-    and outputs extracted features from multiple prior steps (input, summary,
-    select, locate). This suite uses a different configuration file
-    (`test_dataset_003.yaml`) to test different dataset characteristics.
-    """
+# ---------------------------------------------------------------------------
+# Tests against config 003 (NegX5)
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Set up test environment and load input, summary, select, and locate data.
-        Initializes `DataSetConfig` using `test_dataset_003.yaml` and pre-processes
-        data to prepare for `ExtractDataSetA` testing under different configurations.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_003.yaml"
-        )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
+class TestExtractDataSetANegX5:
+    """Tests against the NegX5 variant (config 003, neg_x_multiplier active)."""
 
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds_input = load_step1_input_dataset(self.config)
-        self.ds_input.input_file_name = str(self.test_data_file)
-        self.ds_input.read_input_data()
-
-        self.ds_summary = load_step2_summary_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_summary.calculate_stats()
-
-        self.ds_select = load_step3_select_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_select.label_profiles()
-
-        self.ds_locate = load_step4_locate_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-        )
-        self.ds_locate.process_targets()
-
-    def test_init_arguments(self):
-        """
-        Validate that input data, selected profiles, target rows, and summary stats are set.
-        Checks if the `ExtractDataSetA` constructor correctly initializes and filters
-        its internal data attributes with data derived from `test_dataset_003.yaml` configuration.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
+    @pytest.fixture
+    def pipeline(self, dataset_config_003, test_data_file):
+        return build_prepare_pipeline(
+            dataset_config_003, test_data_file, stop_after="locate",
         )
 
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 115872)
-        self.assertEqual(ds.input_data.shape[1], 30)
+    def test_init_arguments(self, pipeline):
+        """All four upstream inputs are present with NegX5-scaled dimensions."""
+        ds = _make_extract(pipeline)
 
-        self.assertIsInstance(ds.summary_stats, pl.DataFrame)
-        self.assertEqual(ds.summary_stats.shape[0], 2185)
-        self.assertEqual(ds.summary_stats.shape[1], 12)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == 3267
+        assert ds.input_data.shape[1] == 30
 
-        self.assertIsInstance(ds.selected_profiles, pl.DataFrame)
-        self.assertEqual(ds.selected_profiles.shape[0], 150)
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert isinstance(ds.summary_stats, pl.DataFrame)
+        assert ds.summary_stats.shape[0] == 65
+        assert ds.summary_stats.shape[1] == 12
 
-        self.assertIsInstance(ds.filtered_input, pl.DataFrame)
-        self.assertEqual(ds.filtered_input.shape[0], 26362)
-        self.assertEqual(ds.filtered_input.shape[1], 30)
+        assert isinstance(ds.selected_profiles, pl.DataFrame)
+        assert ds.selected_profiles.shape[0] == 42
+        assert ds.selected_profiles.shape[1] == 8
 
-        self.assertIsInstance(ds.selected_rows["temp"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["temp"].shape[0], 831)
-        self.assertEqual(ds.selected_rows["temp"].shape[1], 9)
+        assert isinstance(ds.filtered_input, pl.DataFrame)
+        assert ds.filtered_input.shape[0] == 3267
+        assert ds.filtered_input.shape[1] == 30
 
-        self.assertIsInstance(ds.selected_rows["psal"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["psal"].shape[0], 903)
-        self.assertEqual(ds.selected_rows["psal"].shape[1], 9)
+        expected_rows = {"temp": 177, "psal": 249, "pres": 129}
+        for tgt in TARGETS:
+            assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
+            assert ds.selected_rows[tgt].shape[0] == expected_rows[tgt]
+            assert ds.selected_rows[tgt].shape[1] == 9
 
-        self.assertIsInstance(ds.selected_rows["pres"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["pres"].shape[0], 783)
-        self.assertEqual(ds.selected_rows["pres"].shape[1], 9)
-
-    def test_location_features(self):
-        """
-        Check that features are correctly processed for temp and psal targets.
-        Tests the `process_targets` method to ensure the correct generation
-        and dimensions of extracted features for different target variables
-        using `test_dataset_003.yaml` configuration.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-
+    def test_location_features(self, pipeline):
+        """NegX5: process_targets produces the multiplied-negative feature counts."""
+        ds = _make_extract(pipeline)
         ds.process_targets()
 
-        self.assertIsInstance(ds.target_features["temp"], pl.DataFrame)
-        self.assertEqual(ds.target_features["temp"].shape[0], 831)
-        self.assertEqual(ds.target_features["temp"].shape[1], 58)
+        expected_rows = {"temp": 177, "psal": 249, "pres": 129}
+        for tgt in TARGETS:
+            assert isinstance(ds.target_features[tgt], pl.DataFrame)
+            assert ds.target_features[tgt].shape[0] == expected_rows[tgt]
+            assert ds.target_features[tgt].shape[1] == 58
 
-        self.assertIsInstance(ds.target_features["psal"], pl.DataFrame)
-        self.assertEqual(ds.target_features["psal"].shape[0], 903)
-        self.assertEqual(ds.target_features["psal"].shape[1], 58)
-
-        self.assertIsInstance(ds.target_features["pres"], pl.DataFrame)
-        self.assertEqual(ds.target_features["pres"].shape[0], 783)
-        self.assertEqual(ds.target_features["pres"].shape[1], 58)
-
-    def test_write_target_features(self):
-        """
-        Confirm that target features are written to parquet files as expected.
-        Verifies the `write_target_features` method successfully creates
-        output files for the `test_dataset_003.yaml` configuration and cleans them up.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-        data_path = Path(__file__).resolve().parent / "data" / "extract"
-        ds.output_file_names["temp"] = str(
-            data_path / "temp_extracted_features_temp.parquet"
-        )
-        ds.output_file_names["psal"] = str(
-            data_path / "temp_extracted_features_psal.parquet"
-        )
-        ds.output_file_names["pres"] = str(
-            data_path / "temp_extracted_features_pres.parquet"
-        )
+    def test_write_target_features(self, pipeline, test_output_dir):
+        """write_target_features (NegX5) produces a parquet per target."""
+        ds = _make_extract(pipeline)
+        output_paths = {
+            tgt: str(test_output_dir / f"test_extracted_features_negx5_{tgt}.parquet")
+            for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_target_features()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["pres"]))
-        os.remove(ds.output_file_names["temp"])
-        os.remove(ds.output_file_names["psal"])
-        os.remove(ds.output_file_names["pres"])
+        for tgt in TARGETS:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug
 
 
-class TestExtractDataSetAwithAll(unittest.TestCase):
+# ---------------------------------------------------------------------------
+# Tests against config 005 (selects all profiles)
+# ---------------------------------------------------------------------------
+
+class TestExtractDataSetAwithAll:
+    """Tests against config 005, which selects all profiles (no filtering).
+
+    With no profile filtering, ``filtered_input`` is the full input data,
+    ``selected_rows`` per target equals the full input row count, and
+    ``target_features`` rows match the input.
     """
-    A suite of tests verifying that the ExtractDataSetA class gathers
-    and outputs extracted features from multiple prior steps (input, summary,
-    select, locate). This suite uses a different configuration file
-    (`test_dataset_005.yaml`) to test different dataset characteristics.
-    """
 
-    def setUp(self):
-        """
-        Set up test environment and load input, summary, select, and locate data.
-        Initializes `DataSetConfig` using `test_dataset_003.yaml` and pre-processes
-        data to prepare for `ExtractDataSetA` testing under different configurations.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_005.yaml"
-        )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds_input = load_step1_input_dataset(self.config)
-        self.ds_input.input_file_name = str(self.test_data_file)
-        self.ds_input.read_input_data()
-
-        self.ds_summary = load_step2_summary_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_summary.calculate_stats()
-
-        self.ds_select = load_step3_select_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_select.label_profiles()
-
-        self.ds_locate = load_step4_locate_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-        )
-        self.ds_locate.process_targets()
-
-    def test_init_arguments(self):
-        """
-        Validate that input data, selected profiles, target rows, and summary stats are set.
-        Checks if the `ExtractDataSetA` constructor correctly initializes and filters
-        its internal data attributes with data derived from `test_dataset_003.yaml` configuration.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
+    @pytest.fixture
+    def pipeline(self, dataset_config_005, test_data_file):
+        return build_prepare_pipeline(
+            dataset_config_005, test_data_file, stop_after="locate",
         )
 
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 132342)
-        self.assertEqual(ds.input_data.shape[1], 30)
+    def test_init_arguments(self, pipeline):
+        """With select-all config, filtered_input and selected_rows equal full input."""
+        ds = _make_extract(pipeline)
 
-        self.assertIsInstance(ds.summary_stats, pl.DataFrame)
-        self.assertEqual(ds.summary_stats.shape[0], 2520)
-        self.assertEqual(ds.summary_stats.shape[1], 12)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == 3267
+        assert ds.input_data.shape[1] == 30
 
-        self.assertIsInstance(ds.selected_profiles, pl.DataFrame)
-        self.assertEqual(ds.selected_profiles.shape[0], 503)
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert isinstance(ds.summary_stats, pl.DataFrame)
+        assert ds.summary_stats.shape[0] == 65
+        assert ds.summary_stats.shape[1] == 12
 
-        self.assertIsInstance(ds.filtered_input, pl.DataFrame)
-        self.assertEqual(ds.filtered_input.shape[0], 132342)
-        self.assertEqual(ds.filtered_input.shape[1], 30)
+        assert isinstance(ds.selected_profiles, pl.DataFrame)
+        # TODO: update to actual value after data reduction (was 503 × 8)
+        assert ds.selected_profiles.shape[0] == 12
+        assert ds.selected_profiles.shape[1] == 8
 
-        self.assertIsInstance(ds.selected_rows["temp"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["temp"].shape[0], 132342)
-        self.assertEqual(ds.selected_rows["temp"].shape[1], 9)
+        # filtered_input == input_data when all profiles are selected.
+        assert isinstance(ds.filtered_input, pl.DataFrame)
+        assert ds.filtered_input.shape[0] == 3267
+        assert ds.filtered_input.shape[1] == 30
 
-        self.assertIsInstance(ds.selected_rows["psal"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["psal"].shape[0], 132342)
-        self.assertEqual(ds.selected_rows["psal"].shape[1], 9)
+        # All three targets have the full input as their selected_rows.
+        for tgt in TARGETS:
+            assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
+            assert ds.selected_rows[tgt].shape[0] == 3267
+            assert ds.selected_rows[tgt].shape[1] == 9
 
-        self.assertIsInstance(ds.selected_rows["pres"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["pres"].shape[0], 132342)
-        self.assertEqual(ds.selected_rows["pres"].shape[1], 9)
-
-    def test_location_features(self):
-        """
-        Check that features are correctly processed for temp and psal targets.
-        Tests the `process_targets` method to ensure the correct generation
-        and dimensions of extracted features for different target variables
-        using `test_dataset_003.yaml` configuration.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-
+    def test_location_features(self, pipeline):
+        """With select-all config, target_features rows match input rows."""
+        ds = _make_extract(pipeline)
         ds.process_targets()
 
-        self.assertIsInstance(ds.target_features["temp"], pl.DataFrame)
-        self.assertEqual(ds.target_features["temp"].shape[0], 132342)
-        self.assertEqual(ds.target_features["temp"].shape[1], 58)
+        for tgt in TARGETS:
+            assert isinstance(ds.target_features[tgt], pl.DataFrame)
+            assert ds.target_features[tgt].shape[0] == 3267
+            assert ds.target_features[tgt].shape[1] == 58
 
-        self.assertIsInstance(ds.target_features["psal"], pl.DataFrame)
-        self.assertEqual(ds.target_features["psal"].shape[0], 132342)
-        self.assertEqual(ds.target_features["psal"].shape[1], 58)
-
-        self.assertIsInstance(ds.target_features["pres"], pl.DataFrame)
-        self.assertEqual(ds.target_features["pres"].shape[0], 132342)
-        self.assertEqual(ds.target_features["pres"].shape[1], 58)
-
-    def test_write_target_features(self):
-        """
-        Confirm that target features are written to parquet files as expected.
-        Verifies the `write_target_features` method successfully creates
-        output files for the `test_dataset_003.yaml` configuration and cleans them up.
-        """
-        ds = ExtractDataSetA(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-        data_path = Path(__file__).resolve().parent / "data" / "extract"
-        ds.output_file_names["temp"] = str(
-            data_path / "temp_extracted_features_all_temp.parquet"
-        )
-        ds.output_file_names["psal"] = str(
-            data_path / "temp_extracted_features_all_psal.parquet"
-        )
-        ds.output_file_names["pres"] = str(
-            data_path / "temp_extracted_features_all_pres.parquet"
-        )
+    def test_write_target_features(self, pipeline, test_output_dir):
+        """write_target_features (select-all variant) produces a parquet per target."""
+        ds = _make_extract(pipeline)
+        output_paths = {
+            tgt: str(test_output_dir / f"test_extracted_features_all_{tgt}.parquet")
+            for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_target_features()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["pres"]))
-        os.remove(ds.output_file_names["temp"])
-        os.remove(ds.output_file_names["psal"])
-        os.remove(ds.output_file_names["pres"])
+        for tgt in TARGETS:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug

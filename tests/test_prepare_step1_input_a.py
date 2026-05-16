@@ -64,21 +64,21 @@ class TestInputDataSetA:
         """An explicit ``file_type='parquet'`` produces a DataFrame of the expected shape."""
         df = _read(dataset_config_001, test_data_file, file_type="parquet", read_file_options={})
         assert isinstance(df, pl.DataFrame)
-        assert df.shape[0] == 1524
+        assert df.shape[0] == 3267
         assert df.shape[1] == 30
 
     def test_read_input_data_infer_type(self, dataset_config_001, test_data_file):
         """File type is inferred from extension when not set explicitly."""
         df = _read(dataset_config_001, test_data_file, file_type=None, read_file_options={})
         assert isinstance(df, pl.DataFrame)
-        assert df.shape[0] == 1524
+        assert df.shape[0] == 3267
         assert df.shape[1] == 30
 
     def test_read_input_data_missing_options(self, dataset_config_001, test_data_file):
         """Missing read_file_options is equivalent to an empty dict."""
         df = _read(dataset_config_001, test_data_file, file_type="parquet", read_file_options=None)
         assert isinstance(df, pl.DataFrame)
-        assert df.shape[0] == 1524
+        assert df.shape[0] == 3267
         assert df.shape[1] == 30
 
     def test_read_input_data_file_not_found(self, dataset_config_001, test_data_file):
@@ -144,7 +144,7 @@ class TestInputDataSetAFilter:
         """When filter_rows=False, no year filtering occurs."""
         dataset_config_002.get_step_params("input")["sub_steps"]["filter_rows"] = False
         df = _read(dataset_config_002, test_data_file, file_type="parquet", read_file_options={})
-        assert _uniq_years(df) == [2021, 2023]
+        assert _uniq_years(df) == [2017, 2021, 2023]
 
     def test_remove_years_with_empty_array(self, dataset_config_002, test_data_file):
         """Empty remove_years + empty keep_years means no filtering."""
@@ -154,7 +154,7 @@ class TestInputDataSetAFilter:
         params["filter_method_dict"]["keep_years"] = []
 
         df = _read(dataset_config_002, test_data_file, file_type="parquet", read_file_options={})
-        assert _uniq_years(df) == [2021, 2023]
+        assert _uniq_years(df) == [2017, 2021, 2023]
 
     def test_remove_years(self, dataset_config_002, test_data_file):
         """``remove_years=[2022, 2023]`` excludes those two years."""
@@ -164,7 +164,7 @@ class TestInputDataSetAFilter:
         params["filter_method_dict"]["keep_years"] = []
 
         df = _read(dataset_config_002, test_data_file, file_type="parquet", read_file_options={})
-        assert _uniq_years(df) == [2021]
+        assert _uniq_years(df) == [2017, 2021]
 
     def test_keep_years(self, dataset_config_002, test_data_file):
         """``keep_years=[2022, 2023]`` retains only those years."""

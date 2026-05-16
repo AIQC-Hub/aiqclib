@@ -56,9 +56,9 @@ def _run_fold_validation(ds: KFoldValidation) -> None:
     # Contingency tables: row count equals the training set's row count for that target.
     # The original test asserted these one-per-target, each with a different number.
     expected_heights = {
-        "temp": 116,  # TODO: update to actual value after data reduction
-        "psal": 126,  # TODO: update to actual value after data reduction
-        "pres": 110,  # TODO: update to actual value after data reduction
+        "temp": 22,  # TODO: update to actual value after data reduction
+        "psal": 34,  # TODO: update to actual value after data reduction
+        "pres": 18,  # TODO: update to actual value after data reduction
     }
     for tgt in TARGETS:
         assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
@@ -113,9 +113,9 @@ class TestKFoldValidation:
         ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
 
         expected_shapes = {
-            "temp": (116, 57),  # TODO: update to actual value after data reduction
-            "psal": (126, 57),  # TODO: update to actual value after data reduction
-            "pres": (110, 57),  # TODO: update to actual value after data reduction
+            "temp": (22, 57),  # TODO: update to actual value after data reduction
+            "psal": (34, 57),  # TODO: update to actual value after data reduction
+            "pres": (18, 57),  # TODO: update to actual value after data reduction
         }
         for tgt in TARGETS:
             assert isinstance(ds.training_sets[tgt], pl.DataFrame)

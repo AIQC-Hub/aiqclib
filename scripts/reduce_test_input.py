@@ -36,6 +36,12 @@ KEEP_PROFILES: list[tuple[str, int]] = [
     ("SMHIBCSIII10",   320),
     ("SMHIBCSIII10",   316),
     ("SMFBY29",         92),
+    ("SMHIBY32",        338),
+    ("SMHIBY32",        335),
+    ("SMHIBY20",        345),
+    ("SMHIBY20",        346),
+    ("UMFF3A5",         207),
+    ("SYKELL12",        148),
 ]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

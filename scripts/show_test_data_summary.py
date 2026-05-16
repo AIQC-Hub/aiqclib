@@ -1,7 +1,7 @@
 import polars as pl
 from pathlib import Path
 
-src = Path("../tests/data/input/nrt_cora_bo_test.parquet")
+src = Path("tests/data/input/nrt_cora_bo_test.parquet")
 df = pl.read_parquet(src)
 
 # Per-profile QC summary: for each (platform, profile), what does its QC look like?
@@ -20,4 +20,4 @@ qc_summary = (
 )
 
 pl.Config.set_tbl_rows(-1)
-print(qc_summary.sort("n_distinct_qc", descending=True).head(30))
+print(qc_summary.sort("n_distinct_qc", descending=True).head(1000))

@@ -73,11 +73,11 @@ class TestLocateDataSetA:
         )
 
         assert isinstance(ds.input_data, pl.DataFrame)
-        assert ds.input_data.shape[0] == 1524
+        assert ds.input_data.shape[0] == 3267
         assert ds.input_data.shape[1] == 30
 
         assert isinstance(ds.selected_profiles, pl.DataFrame)
-        assert ds.selected_profiles.shape[0] == 10
+        assert ds.selected_profiles.shape[0] == 14
         assert ds.selected_profiles.shape[1] == 8
 
     def test_positive_rows(
@@ -92,7 +92,7 @@ class TestLocateDataSetA:
         for tgt in TARGETS:
             ds.select_positive_rows(tgt, TARGET_VALUES[tgt])
 
-        expected_pos = {"temp": 5, "psal": 11, "pres": 2}
+        expected_pos = {"temp": 12, "psal": 18, "pres": 9}
         for tgt in TARGETS:
             assert isinstance(ds.positive_rows[tgt], pl.DataFrame)
             assert ds.positive_rows[tgt].shape[0] == expected_pos[tgt]
@@ -111,7 +111,7 @@ class TestLocateDataSetA:
             ds.select_positive_rows(tgt, TARGET_VALUES[tgt])
             ds.select_negative_rows(tgt, TARGET_VALUES[tgt])
 
-        expected_neg = {"temp": 5, "psal": 11, "pres": 2}
+        expected_neg = {"temp": 12, "psal": 18, "pres": 9}
         for tgt in TARGETS:
             assert isinstance(ds.negative_rows[tgt], pl.DataFrame)
             assert ds.negative_rows[tgt].shape[0] == expected_neg[tgt]
@@ -128,7 +128,7 @@ class TestLocateDataSetA:
         )
         ds.process_targets()
 
-        expected = {"temp": 10, "psal": 22, "pres": 4}
+        expected = {"temp": 24, "psal": 36, "pres": 18}
         for tgt in TARGETS:
             assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
             assert ds.selected_rows[tgt].shape[0] == expected[tgt]
@@ -193,7 +193,7 @@ class TestLocateDataSetANegX5:
         for tgt in TARGETS:
             ds.select_positive_rows(tgt, TARGET_VALUES[tgt])
 
-        expected_pos = {"temp": 5, "psal": 11, "pres": 2}
+        expected_pos = {"temp": 12, "psal": 18, "pres": 9}
         for tgt in TARGETS:
             assert isinstance(ds.positive_rows[tgt], pl.DataFrame)
             assert ds.positive_rows[tgt].shape[0] == expected_pos[tgt]
@@ -212,7 +212,7 @@ class TestLocateDataSetANegX5:
             ds.select_positive_rows(tgt, TARGET_VALUES[tgt])
             ds.select_negative_rows(tgt, TARGET_VALUES[tgt])
 
-        expected_neg = {"temp": 51, "psal": 93, "pres": 18}
+        expected_neg = {"temp": 165, "psal": 231, "pres": 120}
         for tgt in TARGETS:
             assert isinstance(ds.negative_rows[tgt], pl.DataFrame)
             assert ds.negative_rows[tgt].shape[0] == expected_neg[tgt]
@@ -229,7 +229,7 @@ class TestLocateDataSetANegX5:
         )
         ds.process_targets()
 
-        expected = {"temp": 56, "psal": 104, "pres": 20}
+        expected = {"temp": 177, "psal": 249, "pres": 129}
         for tgt in TARGETS:
             assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
             assert ds.selected_rows[tgt].shape[0] == expected[tgt]
