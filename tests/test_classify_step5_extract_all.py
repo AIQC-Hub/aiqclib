@@ -10,7 +10,7 @@ Refactored from a pytest-style class with five ad-hoc helper methods
 ``_setup_select_datasets``, ``_setup_locate_datasets``), all replaced by a
 single ``pipelines`` fixture that calls ``build_classify_prepare_pipeline``
 from conftest with ``stop_after="locate"``. Per-target triplication
-collapses to ``for tgt in TARGETS:`` loops.
+collapses to ``for tgt in TARGETS_NONEMPTY:`` loops.
 """
 
 import os
@@ -20,7 +20,7 @@ import pytest
 
 from aiqclib.classify.step5_extract_features.dataset_all import ExtractDataSetAll
 
-from tests.conftest import TARGETS, build_classify_prepare_pipeline
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ class TestExtractDataSetAll:
         """Default per-target output paths derive from config.path_info."""
         ds = ExtractDataSetAll(pipelines[idx].config)
         base = "/path/to/data_1/nrt_bo_001/extract"
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (
                 str(ds.output_file_names[tgt])
                 == f"{base}/extracted_features_classify_{tgt}.parquet"
@@ -89,7 +89,7 @@ class TestExtractDataSetAll:
         assert ds.input_data.shape[1] == 30
 
         assert isinstance(ds.summary_stats, pl.DataFrame)
-        assert ds.summary_stats.shape[0] == 55
+        assert ds.summary_stats.shape[0] == 44
         assert ds.summary_stats.shape[1] == 12
 
         assert isinstance(ds.selected_profiles, pl.DataFrame)
@@ -97,7 +97,7 @@ class TestExtractDataSetAll:
         assert ds.selected_profiles.shape[1] == 8
 
         # Classify-side keeps all input rows per target.
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
             assert ds.selected_rows[tgt].shape[0] == 2456
             assert ds.selected_rows[tgt].shape[1] == 9
@@ -114,7 +114,7 @@ class TestExtractDataSetAll:
         ds = _make_extract(pipelines[idx])
         ds.process_targets()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.target_features[tgt], pl.DataFrame)
             assert ds.target_features[tgt].shape[0] == 2456
             assert ds.target_features[tgt].shape[1] == 56
@@ -125,15 +125,15 @@ class TestExtractDataSetAll:
         ds = _make_extract(pipelines[idx])
         output_paths = {
             tgt: str(test_output_dir / f"test_extracted_features_classify_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_target_features()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 

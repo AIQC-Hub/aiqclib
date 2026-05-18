@@ -1,94 +1,71 @@
-"""Unit tests for the summary statistics utility functions.
+"""Unit tests for the ``get_summary_stats`` and ``format_summary_stats`` interface functions.
 
-This module contains unit tests for the `get_summary_stats` and
-`format_summary_stats` functions, ensuring they correctly calculate and
-format statistical summaries from Polars DataFrames.
+This file exercises the public-facing summary-stats utility, not the
+pipeline-internal ``SummaryDataSetA`` class (that's
+``test_prepare_step2_summary_a.py``). The interface functions take a file
+path and a "kind" string (``"profiles"`` or ``"all"``) and return either a
+Polars DataFrame (``get_summary_stats``) or a formatted string
+(``format_summary_stats``).
+
+Refactored from ``unittest.TestCase`` to plain pytest class; uses
+``test_data_file`` from conftest.
 """
-
-import unittest
-from pathlib import Path
 
 import polars as pl
 
-from aiqclib.interface.stats import get_summary_stats, format_summary_stats
+from aiqclib.interface.stats import format_summary_stats, get_summary_stats
 
 
-class TestSummaryStats(unittest.TestCase):
-    """A test suite for the summary statistics functions.
+class TestSummaryStats:
+    """Tests for ``get_summary_stats`` and ``format_summary_stats``.
 
-    This suite includes tests for both `get_summary_stats` and
-    `format_summary_stats` functions, covering different types of
-    summary statistics (profile-level and global) and various
-    formatting options.
+    Coverage:
+    - get_summary_stats returns a DataFrame for both ``"profiles"`` and ``"all"`` modes
+    - format_summary_stats produces a string with expected variable/stat names
+    - The optional ``variables`` and ``summary_stats`` filter parameters work
     """
 
-    def setUp(self):
-        """Set up the test environment by defining the sample input file path.
+    def test_get_profile_summary_stats(self, test_data_file):
+        """``"profiles"`` mode returns a Polars DataFrame."""
+        ds = get_summary_stats(test_data_file, "profiles")
+        assert isinstance(ds, pl.DataFrame)
 
-        This method prepares the path to a sample Parquet data file used
-        for testing the summary statistics functions.
-        """
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
+    def test_get_global_summary_stats(self, test_data_file):
+        """``"all"`` mode returns a Polars DataFrame."""
+        ds = get_summary_stats(test_data_file, "all")
+        assert isinstance(ds, pl.DataFrame)
 
-    def test_get_profile_summary_stats(self):
-        """Verify that `get_summary_stats` returns correct profile-level statistics.
+    def test_format_profile_summary_stats(self, test_data_file):
+        """``format_summary_stats`` filters by ``variables`` and ``summary_stats``."""
+        ds = get_summary_stats(test_data_file, "profiles")
 
-        This test calls `get_summary_stats` with the "profiles" type and
-        asserts that the returned object is a Polars DataFrame.
-        """
-        ds = get_summary_stats(self.test_data_file, "profiles")
-        self.assertIsInstance(ds, pl.DataFrame)
-
-    def test_get_global_summary_stats(self):
-        """Verify that `get_summary_stats` returns correct global statistics.
-
-        This test calls `get_summary_stats` with the "all" type and asserts
-        that the returned object is a Polars DataFrame.
-        """
-        ds = get_summary_stats(self.test_data_file, "all")
-        self.assertIsInstance(ds, pl.DataFrame)
-
-    def test_format_profile_summary_stats(self):
-        """Verify that `format_summary_stats` correctly formats profile-level statistics.
-
-        This test checks the output string for expected variable names and
-        statistic types, including filtering by `variables` and `summary_stats`.
-        """
-        ds = get_summary_stats(self.test_data_file, "profiles")
-
+        # Unfiltered: all variables and stats appear.
         stats_str = format_summary_stats(ds)
-        self.assertIsInstance(stats_str, str)
-        self.assertIn("psal", stats_str)
-        self.assertIn("pct25", stats_str)
+        assert isinstance(stats_str, str)
+        assert "psal" in stats_str
+        assert "pct25" in stats_str
 
+        # variables=["pres", "temp"] excludes psal.
         stats_str_filtered_vars = format_summary_stats(ds, ["pres", "temp"])
-        self.assertIsInstance(stats_str_filtered_vars, str)
-        self.assertNotIn("psal", stats_str_filtered_vars)
-        self.assertIn("pct25", stats_str_filtered_vars)
+        assert isinstance(stats_str_filtered_vars, str)
+        assert "psal" not in stats_str_filtered_vars
+        assert "pct25" in stats_str_filtered_vars
 
+        # summary_stats=["mean"] further restricts to mean only.
         stats_str_filtered_stats = format_summary_stats(ds, ["pres", "temp"], ["mean"])
-        self.assertIsInstance(stats_str_filtered_stats, str)
-        self.assertNotIn("psal", stats_str_filtered_stats)
-        self.assertNotIn("pct25", stats_str_filtered_stats)
-        self.assertIn("mean", stats_str_filtered_stats)
+        assert isinstance(stats_str_filtered_stats, str)
+        assert "psal" not in stats_str_filtered_stats
+        assert "pct25" not in stats_str_filtered_stats
+        assert "mean" in stats_str_filtered_stats
 
-    def test_format_global_summary_stats(self):
-        """Verify that `format_summary_stats` correctly formats global statistics.
-
-        This test checks the output string for expected variable names,
-        including filtering by `variables`.
-        """
-        ds = get_summary_stats(self.test_data_file, "all")
+    def test_format_global_summary_stats(self, test_data_file):
+        """``format_summary_stats`` on ``"all"`` mode filters the same way."""
+        ds = get_summary_stats(test_data_file, "all")
 
         stats_str = format_summary_stats(ds)
-        self.assertIsInstance(stats_str, str)
-        self.assertIn("psal", stats_str)
+        assert isinstance(stats_str, str)
+        assert "psal" in stats_str
 
         stats_str_filtered_vars = format_summary_stats(ds, ["pres", "temp"])
-        self.assertIsInstance(stats_str_filtered_vars, str)
-        self.assertNotIn("psal", stats_str_filtered_vars)
+        assert isinstance(stats_str_filtered_vars, str)
+        assert "psal" not in stats_str_filtered_vars

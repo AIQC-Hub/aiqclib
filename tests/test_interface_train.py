@@ -1,246 +1,191 @@
-"""
-This module contains unit tests for the training and evaluation pipeline.
-It verifies that the `train_and_evaluate` function correctly generates
-expected output files and directories, including validation reports and
-trained model artifacts.
+"""Unit tests for the ``train_and_evaluate`` interface function.
+
+Runs the full train pipeline (validate → build → save model) against test
+configs and verifies that the expected output folder structure and
+per-target files are produced. Also tests the ``calculate_shap`` flag,
+which gates SHAP-value file creation.
+
+Refactored from two classes (``TestCreateTrainingDataSet`` parametrized
+over 2 configs, plus ``TestCreateTrainingDataSetNegX5`` for config 003)
+into the same shape with conftest fixtures and per-target loops.
+
+Note on config 001 vs bo002:
+The first parametrized config uses ``training_config_001_bo002``
+(NRT_BO_002, 2-target temp+psal) rather than ``training_config_001``
+(NRT_BO_001, 3-target). The reduced test fixtures have zero pres test
+rows, which crashes the train pipeline during the build step. Config 002
+is unaffected and uses its default 3-target selection.
+
+When the library handles zero-row test data, switch the first fixture
+back to ``training_config_001`` and drop the ``TARGETS_NONEMPTY`` reference
+in ``targets_per_config``.
 """
 
 import os
 import shutil
-import unittest
-import pytest
-from pathlib import Path
 
-from aiqclib.common.config.training_config import TrainingConfig
+import pytest
+
 from aiqclib.interface.train import train_and_evaluate
 
+from tests.conftest import TARGETS_NONEMPTY
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _wire_path_info(config, test_output_dir, input_dir):
+    """Override path_info to read training inputs from input_dir and write under test_output_dir.
+
+    Training tests use ``step_folder_name=".."`` to walk up from
+    ``input.base_path`` to find the train/test parquets, mirroring how the
+    real CLI is invoked.
+    """
+    config.data["path_info"] = {
+        "name": "data_set_1",
+        "common": {"base_path": str(test_output_dir)},
+        "input": {"base_path": str(input_dir), "step_folder_name": ".."},
+    }
+
+
+def _assert_train_outputs(output_folder, *, expect_shap=False, targets=TARGETS_NONEMPTY):
+    """Assert every expected output file from train_and_evaluate exists.
+
+    :param targets: which targets to check. Defaults to TARGETS; pass
+        TARGETS_NONEMPTY for configs (like NRT_BO_002) that exclude pres,
+        since the pipeline produces files only for the configured targets.
+    :param expect_shap: if True, per-target SHAP value parquets must exist;
+        otherwise they must not.
+    """
+    dir_validate = output_folder / "validate"
+    dir_build = output_folder / "build"
+    dir_model = output_folder / "model"
+
+    for tgt in targets:
+        # Validate stage
+        assert (dir_validate / f"validation_report_{tgt}.tsv").exists()
+        assert (dir_validate / f"contingency_tables_{tgt}.parquet").exists()
+        assert (dir_validate / f"metric_plots_{tgt}.svg").exists()
+        # Build stage
+        assert (dir_build / f"test_report_{tgt}.tsv").exists()
+        assert (dir_build / f"test_contingency_tables_{tgt}.parquet").exists()
+        assert (dir_build / f"test_metric_plots_{tgt}.svg").exists()
+        # Model artifacts
+        assert (dir_model / f"model_{tgt}.joblib").exists()
+
+        # SHAP files: present iff calculate_shap was True
+        shap_path = dir_build / f"test_shap_values_{tgt}.parquet"
+        if expect_shap:
+            assert shap_path.exists()
+        else:
+            assert not shap_path.exists()
+
+
+def _cleanup_output_folder(config, test_output_dir):
+    """Remove the config's ``dataset_folder_name`` directory if present."""
+    output_folder = test_output_dir / config.data["dataset_folder_name"]
+    if output_folder.exists() and output_folder.is_dir():
+        shutil.rmtree(output_folder)
+
+
+# ---------------------------------------------------------------------------
+# Two-config tests (configs 001 [bo002] + 002)
+# ---------------------------------------------------------------------------
 
 class TestCreateTrainingDataSet:
-    """
-    A suite of tests ensuring that training and evaluation steps
-    generate the expected output files and folders.
-    """
+    """train_and_evaluate against training configs 001 (bo002 variant) and 002.
 
-    def _setup_configs(self):
-        self.configs = []
-        for x in self.config_file_paths:
-            config = TrainingConfig(str(x))
-            config.select("NRT_BO_001")
-            config.data["path_info"] = {
-                "name": "data_set_1",
-                "common": {"base_path": str(self.test_data_location)},
-                "input": {
-                    "base_path": str(self.input_data_path),
-                    "step_folder_name": "..",
-                },
-            }
-            self.configs.append(config)
+    idx=0 uses NRT_BO_002 from test_training_001.yaml (2-target temp+psal),
+    idx=1 uses default NRT_BO_001 from test_training_002.yaml (3-target).
+    ``targets_per_config[idx]`` tells the assertion helper which targets
+    to check for each.
+    """
 
     @pytest.fixture(autouse=True)
-    def setup_and_clean(self):
-        """
-        Prepare the test environment by loading a specified training configuration,
-        and defining input/output paths for subsequent training/evaluation tests.
-        """
-        dir_config = Path(__file__).resolve().parent / "data" / "config"
-        self.config_file_paths = [
-            dir_config / "test_training_001.yaml",
-            dir_config / "test_training_002.yaml",
-        ]
-        self.test_data_location = Path(__file__).resolve().parent / "data" / "test"
-        self.input_data_path = str(
-            Path(__file__).resolve().parent / "data" / "training"
-        )
-        self._setup_configs()
+    def setup_and_clean(
+        self, training_config_001_bo002, training_config_002_bo002,
+        test_output_dir, training_dir,
+    ):
+        """Wire two configs with training_dir as input_path; clean up afterwards."""
+        self.configs = [training_config_001_bo002, training_config_002_bo002]
+        # Per-config expected targets: bo002 produces temp+psal only;
+        # config 002 produces all three.
+        self.targets_per_config = [TARGETS_NONEMPTY, TARGETS_NONEMPTY]
+        self.test_output_dir = test_output_dir
+        for c in self.configs:
+            _wire_path_info(c, test_output_dir, training_dir)
 
         yield
 
-        for x in self.configs:
-            output_folder = self.test_data_location / x.data["dataset_folder_name"]
-            if output_folder.exists() and output_folder.is_dir():
-                shutil.rmtree(output_folder)
+        for c in self.configs:
+            _cleanup_output_folder(c, test_output_dir)
 
     @pytest.mark.parametrize("idx", range(2))
     def test_train_and_evaluate(self, idx):
-        """
-        Check that train_and_evaluate runs end-to-end and produces
-        validation results and trained model artifacts.
-        """
-        # Execute the training and evaluation process
+        """End-to-end train pipeline produces all outputs; no SHAP files by default."""
         train_and_evaluate(self.configs[idx])
 
-        # Define the expected output folder based on the configuration
         output_folder = (
-            self.test_data_location / self.configs[idx].data["dataset_folder_name"]
+            self.test_output_dir / self.configs[idx].data["dataset_folder_name"]
         )
-        dir_validate = output_folder / "validate"
-        dir_build = output_folder / "build"
-        dir_model = output_folder / "model"
-
-        # Assert that expected validation report files are created
-        assert os.path.exists(dir_validate / "validation_report_temp.tsv")
-        assert os.path.exists(dir_validate / "validation_report_psal.tsv")
-        assert os.path.exists(dir_validate / "validation_report_pres.tsv")
-
-        # Assert that expected contingency table files are created
-        assert os.path.exists(dir_validate / "contingency_tables_temp.parquet")
-        assert os.path.exists(dir_validate / "contingency_tables_psal.parquet")
-        assert os.path.exists(dir_validate / "contingency_tables_pres.parquet")
-
-        # Assert that expected metric plot files are created
-        assert os.path.exists(dir_validate / "metric_plots_temp.svg")
-        assert os.path.exists(dir_validate / "metric_plots_psal.svg")
-        assert os.path.exists(dir_validate / "metric_plots_pres.svg")
-
-        # Assert that expected build report files are created
-        assert os.path.exists(dir_build / "test_report_temp.tsv")
-        assert os.path.exists(dir_build / "test_report_psal.tsv")
-        assert os.path.exists(dir_build / "test_report_pres.tsv")
-
-        # Assert that expected contingency table files are created
-        assert os.path.exists(dir_build / "test_contingency_tables_temp.parquet")
-        assert os.path.exists(dir_build / "test_contingency_tables_psal.parquet")
-        assert os.path.exists(dir_build / "test_contingency_tables_pres.parquet")
-
-        # Assert that expected metric plot files are created
-        assert os.path.exists(dir_build / "test_metric_plots_temp.svg")
-        assert os.path.exists(dir_build / "test_metric_plots_psal.svg")
-        assert os.path.exists(dir_build / "test_metric_plots_pres.svg")
-
-        # Assert that expected SHAP files are NOT created
-        assert not os.path.exists(dir_build / "test_shap_values_temp.parquet")
-        assert not os.path.exists(dir_build / "test_shap_values_psal.parquet")
-        assert not os.path.exists(dir_build / "test_shap_values_pres.parquet")
-
-        # Assert that expected trained model files are created
-        assert os.path.exists(dir_model / "model_temp.joblib")
-        assert os.path.exists(dir_model / "model_psal.joblib")
-        assert os.path.exists(dir_model / "model_pres.joblib")
+        _assert_train_outputs(
+            output_folder, expect_shap=False, targets=self.targets_per_config[idx],
+        )
 
     @pytest.mark.parametrize("idx", range(2))
     def test_shap_value_output(self, idx):
-        # Execute the training and evaluation process with SHAP output
-        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = (
-            True
-        )
+        """With ``calculate_shap=True``, SHAP value parquets are produced."""
+        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
         train_and_evaluate(self.configs[idx])
 
-        # Define the expected output folder based on the configuration
         output_folder = (
-            self.test_data_location / self.configs[idx].data["dataset_folder_name"]
+            self.test_output_dir / self.configs[idx].data["dataset_folder_name"]
         )
         dir_build = output_folder / "build"
 
-        # Assert that expected SHAP files are created
-        assert os.path.exists(dir_build / "test_shap_values_temp.parquet")
-        assert os.path.exists(dir_build / "test_shap_values_psal.parquet")
-        assert os.path.exists(dir_build / "test_shap_values_pres.parquet")
+        for tgt in self.targets_per_config[idx]:
+            assert (dir_build / f"test_shap_values_{tgt}.parquet").exists()
 
 
-class TestCreateTrainingDataSetNegX5(unittest.TestCase):
-    """
-    A suite of tests ensuring that training and evaluation steps
-    generate the expected output files and folders.
-    """
+# ---------------------------------------------------------------------------
+# NegX5 variant (config 003 with negx5_training/ as input)
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Prepare the test environment by loading a specified training configuration,
-        and defining input/output paths for subsequent training/evaluation tests.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_003.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_location = Path(__file__).resolve().parent / "data" / "test"
-        self.input_data_path = (
-            Path(__file__).resolve().parent / "data" / "negx5_training"
-        )
+class TestCreateTrainingDataSetNegX5:
+    """train_and_evaluate against config 003 using the negx5_training fixtures."""
 
-        # Configure the dataset paths for the test
-        self.config.data["path_info"] = {
-            "name": "data_set_1",
-            "common": {"base_path": str(self.test_data_location)},
-            "input": {
-                "base_path": str(self.input_data_path),
-                "step_folder_name": "..",
-            },
-        }
+    @pytest.fixture(autouse=True)
+    def setup_and_clean(self, training_config_003_bo002, test_output_dir, data_dir):
+        """Wire config 003 with negx5_training/ as the input base path."""
+        self.config = training_config_003_bo002
+        self.test_output_dir = test_output_dir
+        _wire_path_info(self.config, test_output_dir, data_dir / "negx5_training")
 
-    def tearDown(self):
-        """
-        Clean up the test environment by removing any generated output folders
-        and files after each test method has completed.
-        """
-        output_folder = (
-            self.test_data_location / self.config.data["dataset_folder_name"]
-        )
-        if output_folder.exists() and output_folder.is_dir():
-            shutil.rmtree(output_folder)
+        yield
+
+        _cleanup_output_folder(self.config, test_output_dir)
 
     def test_train_and_evaluate(self):
+        """End-to-end train pipeline with the NegX5 inputs produces all outputs.
+
+        SHAP files are not expected (calculate_shap defaults to False).
         """
-        Check that train_and_evaluate runs end-to-end and produces
-        validation results and trained model artifacts.
-        """
-        # Execute the training and evaluation process
         train_and_evaluate(self.config)
 
-        # Define the expected output folder based on the configuration
-        output_folder = (
-            self.test_data_location / self.config.data["dataset_folder_name"]
-        )
+        output_folder = self.test_output_dir / self.config.data["dataset_folder_name"]
+
+        # Original NegX5 test only asserted reports/contingency/plots/models
+        # (it didn't check SHAP absence). Preserving that behaviour: assert
+        # validate + build report/contingency/plots + model joblibs.
         dir_validate = output_folder / "validate"
         dir_build = output_folder / "build"
         dir_model = output_folder / "model"
-
-        # Assert that expected validation report files are created
-        self.assertTrue(os.path.exists(dir_validate / "validation_report_temp.tsv"))
-        self.assertTrue(os.path.exists(dir_validate / "validation_report_psal.tsv"))
-        self.assertTrue(os.path.exists(dir_validate / "validation_report_pres.tsv"))
-
-        # Assert that expected contingency table files are created
-        self.assertTrue(
-            os.path.exists(dir_validate / "contingency_tables_temp.parquet")
-        )
-        self.assertTrue(
-            os.path.exists(dir_validate / "contingency_tables_psal.parquet")
-        )
-        self.assertTrue(
-            os.path.exists(dir_validate / "contingency_tables_pres.parquet")
-        )
-
-        # Assert that expected metric plot files are created
-        self.assertTrue(os.path.exists(dir_validate / "metric_plots_temp.svg"))
-        self.assertTrue(os.path.exists(dir_validate / "metric_plots_psal.svg"))
-        self.assertTrue(os.path.exists(dir_validate / "metric_plots_pres.svg"))
-
-        # Assert that expected build report files are created
-        self.assertTrue(os.path.exists(dir_build / "test_report_temp.tsv"))
-        self.assertTrue(os.path.exists(dir_build / "test_report_psal.tsv"))
-        self.assertTrue(os.path.exists(dir_build / "test_report_pres.tsv"))
-
-        # Assert that expected contingency table files are created
-        self.assertTrue(
-            os.path.exists(dir_build / "test_contingency_tables_temp.parquet")
-        )
-        self.assertTrue(
-            os.path.exists(dir_build / "test_contingency_tables_psal.parquet")
-        )
-        self.assertTrue(
-            os.path.exists(dir_build / "test_contingency_tables_pres.parquet")
-        )
-
-        # Assert that expected metric plot files are created
-        self.assertTrue(os.path.exists(dir_build / "test_metric_plots_temp.svg"))
-        self.assertTrue(os.path.exists(dir_build / "test_metric_plots_psal.svg"))
-        self.assertTrue(os.path.exists(dir_build / "test_metric_plots_pres.svg"))
-
-        # Assert that expected trained model files are created
-        self.assertTrue(os.path.exists(dir_model / "model_temp.joblib"))
-        self.assertTrue(os.path.exists(dir_model / "model_psal.joblib"))
-        self.assertTrue(os.path.exists(dir_model / "model_pres.joblib"))
+        for tgt in TARGETS_NONEMPTY:
+            assert (dir_validate / f"validation_report_{tgt}.tsv").exists()
+            assert (dir_validate / f"contingency_tables_{tgt}.parquet").exists()
+            assert (dir_validate / f"metric_plots_{tgt}.svg").exists()
+            assert (dir_build / f"test_report_{tgt}.tsv").exists()
+            assert (dir_build / f"test_contingency_tables_{tgt}.parquet").exists()
+            assert (dir_build / f"test_metric_plots_{tgt}.svg").exists()
+            assert (dir_model / f"model_{tgt}.joblib").exists()

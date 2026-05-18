@@ -1,144 +1,109 @@
-"""
-Unit tests for configuration management functionalities,
-including writing configuration templates and reading existing configuration files.
+"""Unit tests for the public config interface: ``read_config`` and ``write_config_template``.
+
+Coverage:
+- write_config_template produces a file at the requested path for each
+  (module, variant) combination; invalid module/path inputs raise.
+- read_config returns the appropriate config class (DataSetConfig,
+  TrainingConfig, ClassificationConfig) based on the file's contents;
+  invalid module/path inputs raise.
+
+Refactored from two pytest classes (already pytest, not unittest) into the
+same structure with conftest fixtures for paths. The template-list data is
+hoisted to a module-level constant since the test bodies index into it by
+the parametrized ``idx``.
 """
 
 import os
+
 import pytest
-from pathlib import Path
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.interface.config import read_config
-from aiqclib.interface.config import write_config_template
+from aiqclib.interface.config import read_config, write_config_template
+
+
+# (module, variant, filename) triples for the write_config_template parametrize.
+# Variant "" means the default template for that module.
+TEMPLATE_SPECS = [
+    ("prepare", "",        "temp_dataset_template.yaml"),
+    ("prepare", "full",    "temp_dataset_full_template.yaml"),
+    ("prepare", "reduced", "temp_dataset_reduced_template.yaml"),
+    ("train",   "",        "temp_training_template.yaml"),
+    ("classify", "",       "temp_classification_template.yaml"),
+    ("classify", "full",   "temp_classification_template.yaml"),
+]
 
 
 class TestTemplateConfig:
-    """
-    Tests for verifying that configuration templates can be correctly
-    written to disk for 'prepare' (dataset) and 'train' modules.
-    """
+    """Tests for ``write_config_template``."""
 
-    @pytest.fixture(autouse=True)
-    def setup_clearup(self):
-        """
-        Set up test environment by defining sample file paths
-        for dataset, training, and classification configuration templates.
-        """
-        config_path = Path(__file__).resolve().parent / "data" / "config"
-        self.templates = [
-            ("prepare", "", config_path / "temp_dataset_template.yaml"),
-            ("prepare", "full", config_path / "temp_dataset_full_template.yaml"),
-            (
-                "prepare",
-                "reduced",
-                config_path / "temp_dataset_reduced_template.yaml",
-            ),
-            ("train", "", config_path / "temp_training_template.yaml"),
-            ("classify", "", config_path / "temp_classification_template.yaml"),
-            (
-                "classify",
-                "full",
-                config_path / "temp_classification_template.yaml",
-            ),
-        ]
+    @pytest.mark.parametrize("idx", range(len(TEMPLATE_SPECS)))
+    def test_write_config_template(self, idx, test_output_dir):
+        """Each (module, variant) writes a template file to the requested path."""
+        module, variant, filename = TEMPLATE_SPECS[idx]
+        path = test_output_dir / filename
+        write_config_template(str(path), module, variant)
+        assert os.path.exists(path)
+        os.remove(path)  # comment out to debug
 
-    @pytest.mark.parametrize("idx", range(6))
-    def test_write_config_template(self, idx):
-        """
-        Check that a configuration template can be written
-        to the specified path and removed afterward.
-        """
-        write_config_template(
-            self.templates[idx][2], self.templates[idx][0], self.templates[idx][1]
-        )
-        assert os.path.exists(self.templates[idx][2])
-        os.remove(self.templates[idx][2])
-
-    def test_config_template_with_invalid_module(self):
-        """
-        Ensure that requesting a template for an invalid module name
-        raises ValueError.
-        """
+    def test_config_template_with_invalid_module(self, test_output_dir):
+        """An unknown module name raises ValueError."""
         with pytest.raises(ValueError):
-            write_config_template(self.templates[0][2], "prepare2")
+            write_config_template(
+                str(test_output_dir / "temp_dataset_template.yaml"),
+                "prepare2",
+            )
 
     def test_config_template_with_invalid_path(self):
-        """
-        Ensure that attempting to write a template to an invalid path
-        raises IOError.
-        """
+        """An unwritable path (under a non-existent root) raises IOError."""
         with pytest.raises(IOError):
-            write_config_template("/abc" + str(self.templates[0][2]), "prepare")
+            write_config_template("/abc/temp_dataset_template.yaml", "prepare")
 
 
 class TestReadConfig:
-    """
-    Tests for verifying that reading an existing config file returns
-    the appropriate DataSetConfig or TrainingConfig object, while
-    invalid inputs raise errors.
-    """
+    """Tests for ``read_config``."""
 
-    @pytest.fixture(autouse=True)
-    def setup_clearup(self):
-        """
-        Define sample file paths for dataset, training, and classification
-        configuration files used in subsequent tests.
-        """
-
-        dir_config = Path(__file__).resolve().parent / "data" / "config"
-        self.ds_config_files = [
-            dir_config / "test_dataset_001.yaml",
-            dir_config / "test_dataset_004.yaml",
-        ]
-
-        self.train_config_file = dir_config / "test_training_001.yaml"
-
-        self.classification_config_files = [
-            dir_config / "test_classify_001.yaml",
-            dir_config / "test_classify_002.yaml",
-        ]
-
-        self.invalid_config_file = dir_config / "test_dataset_invalid.yaml"
-
-    @pytest.mark.parametrize("idx", range(2))
-    def test_ds_config(self, idx):
-        """
-        Verify that reading a dataset (prepare) config file returns
-        a DataSetConfig instance.
-        """
-        config = read_config(self.ds_config_files[idx])
+    @pytest.mark.parametrize(
+        "config_fixture_name",
+        ["dataset_yaml_001", "dataset_yaml_004"],
+    )
+    def test_ds_config(self, config_fixture_name, request):
+        """Reading a dataset config file returns a DataSetConfig instance."""
+        path = request.getfixturevalue(config_fixture_name)
+        config = read_config(path)
         assert isinstance(config, DataSetConfig)
 
-    def test_train_config(self):
-        """
-        Verify that reading a training config file returns
-        a TrainingConfig instance.
-        """
-        config = read_config(self.train_config_file)
+    def test_train_config(self, training_yaml_001):
+        """Reading a training config file returns a TrainingConfig instance."""
+        config = read_config(training_yaml_001, "NRT_BO_001", False)
         assert isinstance(config, TrainingConfig)
 
-    @pytest.mark.parametrize("idx", range(2))
-    def test_classify_config(self, idx):
-        """
-        Verify that reading a classification config file returns
-        a ClassificationConfig instance.
-        """
-        config = read_config(self.classification_config_files[idx])
+    def test_train_config_with_multiple_entries(self, training_yaml_001):
+        """Reading a training config file returns a TrainingConfig instance."""
+        with pytest.raises(ValueError):
+            _ = read_config(training_yaml_001, "NRT_BO_001")
+
+    @pytest.mark.parametrize(
+        "config_fixture_name",
+        ["classify_yaml_001", "classify_yaml_002"],
+    )
+    def test_classify_config(self, config_fixture_name, request):
+        """Reading a classify config file returns a ClassificationConfig instance."""
+        path = request.getfixturevalue(config_fixture_name)
+        config = read_config(path)
         assert isinstance(config, ClassificationConfig)
 
-    def test_config_with_invalid_module(self):
-        """
-        Check that specifying an invalid module name (config_type within file)
-        raises ValueError.
+    def test_config_with_invalid_module(self, config_dir):
+        """A YAML file with an unrecognized config_type raises ValueError.
+
+        Relies on tests/data/config/test_dataset_invalid.yaml being a fixture
+        file with a bad ``config_type`` field.
         """
         with pytest.raises(ValueError):
-            _ = read_config(self.invalid_config_file)
+            _ = read_config(config_dir / "test_dataset_invalid.yaml")
 
-    def test_config_with_invalid_path(self):
-        """
-        Check that providing an invalid file path raises IOError.
-        """
+    def test_config_with_invalid_path(self, dataset_yaml_001):
+        """A non-existent file path raises IOError."""
         with pytest.raises(IOError):
-            _ = read_config(str(self.ds_config_files[0]) + "abc")
+            _ = read_config(str(dataset_yaml_001) + "abc")

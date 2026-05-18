@@ -103,7 +103,7 @@ class TestSplitDataSetA:
 
         for tgt in TARGETS:
             assert os.path.exists(output_paths[tgt])
-            #os.remove(output_paths[tgt])  # comment out to debug
+            os.remove(output_paths[tgt])  # comment out to debug
 
     def test_write_empty_training_sets(self, pipeline):
         """write_training_sets with training_sets=None raises ValueError."""
@@ -128,7 +128,7 @@ class TestSplitDataSetA:
 
         for tgt in TARGETS:
             assert os.path.exists(output_paths[tgt])
-            #os.remove(output_paths[tgt])  # comment out to debug
+            os.remove(output_paths[tgt])  # comment out to debug
 
     def test_write_empty_test_sets(self, pipeline):
         """write_test_sets with test_sets=None raises ValueError."""
@@ -227,4 +227,4 @@ class TestSplitDataSetANegX5:
         for kind in ("train", "test"):
             for tgt in TARGETS:
                 assert os.path.exists(output_paths[kind][tgt])
-                #os.remove(output_paths[kind][tgt])  # comment out to debug
+                os.remove(output_paths[kind][tgt])  # comment out to debug

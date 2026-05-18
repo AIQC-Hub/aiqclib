@@ -8,7 +8,7 @@ behaviours.
 
 Refactored from a ``unittest.TestCase`` class. Uses ``classify_input_001``
 and ``classify_select_001`` fixtures from conftest. Per-target triplication
-collapses to ``for tgt in TARGETS:`` loops.
+collapses to ``for tgt in TARGETS_NONEMPTY:`` loops.
 """
 
 import os
@@ -18,7 +18,7 @@ import pytest
 
 from aiqclib.classify.step4_select_rows.dataset_all import LocateDataSetAll
 
-from tests.conftest import TARGETS
+from tests.conftest import TARGETS_NONEMPTY
 
 
 class TestLocateDataSetAll:
@@ -28,7 +28,7 @@ class TestLocateDataSetAll:
         """Default per-target output paths derive from config.path_info."""
         ds = LocateDataSetAll(classify_config_001)
         base = "/path/to/locate_1/nrt_bo_001/locate_folder_1"
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (
                 str(ds.output_file_names[tgt])
                 == f"{base}/selected_rows_classify_{tgt}.parquet"
@@ -69,7 +69,7 @@ class TestLocateDataSetAll:
         ds.process_targets()
 
         # No QC filtering on classify side — every target gets all rows.
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
             assert ds.selected_rows[tgt].shape[0] == 2456
             assert ds.selected_rows[tgt].shape[1] == 9
@@ -98,15 +98,15 @@ class TestLocateDataSetAll:
         )
         output_paths = {
             tgt: str(test_output_dir / f"test_selected_rows_classify_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_selected_rows()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 

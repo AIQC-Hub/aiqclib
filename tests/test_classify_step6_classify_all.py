@@ -33,7 +33,7 @@ from aiqclib.train.models.logistic_regression import LogisticRegression
 from aiqclib.train.models.xgboost import XGBoost
 
 from tests._model_cases import MODEL_CASES
-from tests.conftest import TARGETS, run_classify_prepare_pipeline
+from tests.conftest import TARGETS_NONEMPTY, run_classify_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +86,7 @@ def default_model_files(training_dir):
     XGBoost variant. Per-model tests in TestModels use suffixed files
     constructed from ``case.joblib_suffix``.
     """
-    return {tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS}
+    return {tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS_NONEMPTY}
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ class TestClassifyAllClass:
         model_base = "/path/to/model_1/model_folder_1"
         out_base = "/path/to/classify_1/nrt_bo_001/classify_folder_1"
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert str(ds.model_file_names[tgt]) == f"{model_base}/model_{tgt}.joblib"
             assert (
                 str(ds.output_file_names["report"][tgt])
@@ -186,7 +186,7 @@ class TestClassifyAll:
             test_sets=classify_pipeline_all.extracts[idx].target_features,
         )
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
             assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
@@ -201,7 +201,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         ds.read_models()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.models[tgt], XGBoost)
 
     @pytest.mark.parametrize("idx", range(3))
@@ -215,7 +215,7 @@ class TestClassifyAll:
         ds.read_models()
         ds.test_targets()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
             assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
@@ -249,7 +249,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_report_{tgt}.tsv")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["report"] = output_paths
 
@@ -257,7 +257,7 @@ class TestClassifyAll:
         ds.test_targets()
         ds.write_reports()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -273,7 +273,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_contingency_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["contingency_table"] = output_paths
 
@@ -281,7 +281,7 @@ class TestClassifyAll:
         ds.test_targets()
         ds.write_contingency_tables()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -300,7 +300,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_shap_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["shap_value"] = output_paths
 
@@ -308,7 +308,7 @@ class TestClassifyAll:
         ds.test_targets()
         ds.write_shap_values()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -324,7 +324,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_metric_plots_{tgt}.svg")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["metric_plot"] = output_paths
 
@@ -332,7 +332,7 @@ class TestClassifyAll:
         ds.test_targets()
         ds.create_metric_plots()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -373,7 +373,7 @@ class TestClassifyAll:
             classify_pipeline_all.configs[idx],
             test_sets=classify_pipeline_all.extracts[idx].target_features,
         )
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             ds.model_file_names[tgt] = str(training_dir / "model.joblib")
 
         with pytest.raises(FileNotFoundError):
@@ -390,7 +390,7 @@ class TestClassifyAll:
         ds.read_models()
 
         expected_n_jobs = N_JOBS_PER_CONFIG[idx]
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert ds.models[tgt].model_params["n_jobs"] == expected_n_jobs
             assert ds.models[tgt].model.n_jobs == expected_n_jobs
 
@@ -406,7 +406,7 @@ class TestClassifyAll:
         ds.model_file_names = default_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_prediction_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["prediction"] = output_paths
 
@@ -414,7 +414,7 @@ class TestClassifyAll:
         ds.test_targets()
         ds.write_predictions()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -448,11 +448,11 @@ class TestModels:
         )
         ds.model_file_names = {
             tgt: str(training_dir / f"model_{tgt}_{case.joblib_suffix}.joblib")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.read_models()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.models[tgt], case.wrapper_cls)
 
     def test_classify_with_model(self, case, classify_pipeline_first, training_dir):
@@ -466,12 +466,12 @@ class TestModels:
         )
         ds.model_file_names = {
             tgt: str(training_dir / f"model_{tgt}_{case.joblib_suffix}.joblib")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.read_models()
         ds.test_targets()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
             assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56

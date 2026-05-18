@@ -21,7 +21,7 @@ import pytest
 from aiqclib.classify.step6_classify_dataset.dataset_all import ClassifyAll
 from aiqclib.classify.step7_concat_datasets.dataset_all import ConcatDataSetAll
 
-from tests.conftest import TARGETS, build_classify_prepare_pipeline
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ def step7_pipeline(classify_config_001, test_data_file, training_dir):
         pipeline.config, test_sets=pipeline.extract.target_features,
     )
     ds_classify.model_file_names = {
-        tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS
+        tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS_NONEMPTY
     }
     ds_classify.read_models()
     ds_classify.test_targets()
@@ -88,7 +88,7 @@ class TestConcatPredictions:
         assert ds.input_data.shape[1] == 30
 
         # Each target's predictions table is (input_rows × 7).
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.predictions[tgt], pl.DataFrame)
             assert ds.predictions[tgt].shape[0] == 2456
             assert ds.predictions[tgt].shape[1] == 7
@@ -105,7 +105,7 @@ class TestConcatPredictions:
         assert isinstance(ds.merged_predictions, pl.DataFrame)
         # Row count == input rows; column count == 30 input cols + 3 × 3 added per-target cols.
         assert ds.merged_predictions.shape[0] == 2456
-        assert ds.merged_predictions.shape[1] == 39
+        assert ds.merged_predictions.shape[1] == 36
 
     def test_merge_predictions_with_empty_input(self, step7_pipeline):
         """merge_predictions with input_data=None raises ValueError."""

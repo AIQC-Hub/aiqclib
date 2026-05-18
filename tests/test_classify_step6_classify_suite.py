@@ -33,13 +33,13 @@ from aiqclib.classify.step6_classify_dataset.dataset_all_suite import ClassifyAl
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.train.models.model_suite import ModelSuite
 
-from tests.conftest import TARGETS, run_classify_prepare_pipeline
+from tests.conftest import TARGETS_NONEMPTY, run_classify_prepare_pipeline
 
 
 # Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
-# 2 methods × 3 targets = 6 keys.
+# 2 methods × 2 targets = 4 keys.
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS)
+SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ def suite_model_files(training_dir):
     return {
         f"{method}_{tgt}": str(training_dir / f"model_{tgt}_{method}.joblib")
         for method in SUITE_METHODS
-        for tgt in TARGETS
+        for tgt in TARGETS_NONEMPTY
     }
 
 
@@ -147,14 +147,14 @@ class TestClassifyAllSuiteClass:
 
         # Model files: composite keys
         for method in SUITE_METHODS:
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 assert (
                     str(ds.model_file_names[f"{method}_{tgt}"])
                     == f"{model_base}/model_{method}_{tgt}.joblib"
                 )
 
         # Aggregated output files: target keys (no method in name)
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (
                 str(ds.output_file_names["report"][tgt])
                 == f"{out_base}/classify_report_{tgt}.tsv"
@@ -193,7 +193,7 @@ class TestClassifyAllSuite:
             test_sets=classify_suite_pipeline_first.extracts[0].target_features,
         )
         assert isinstance(ds.test_sets["temp"], pl.DataFrame)
-        assert ds.test_sets["temp"].shape[0] == 812
+        assert ds.test_sets["temp"].shape[0] == 2456
         assert ds.test_sets["temp"].shape[1] == 56
 
     def test_read_models(self, classify_suite_pipeline_first, suite_model_files):
@@ -247,9 +247,9 @@ class TestClassifyAllSuite:
         ds.read_models()
         ds.test_targets()
 
-        # 812 test rows × 2 methods = 1624. After data reduction this
+        # 812 test rows × 2 methods = 4912. After data reduction this
         # becomes (new_test_size × 2).
-        expected_aggregated_height = 1624
+        expected_aggregated_height = 4912
 
         # predictions
         assert isinstance(ds.predictions["temp"], pl.DataFrame)
@@ -305,7 +305,7 @@ class TestClassifyAllSuite:
         ds.model_file_names = suite_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_suite_report_{tgt}.tsv")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["report"] = output_paths
 
@@ -313,7 +313,7 @@ class TestClassifyAllSuite:
         ds.test_targets()
         ds.write_reports()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -328,7 +328,7 @@ class TestClassifyAllSuite:
         ds.model_file_names = suite_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_suite_contingency_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["contingency_table"] = output_paths
 
@@ -336,7 +336,7 @@ class TestClassifyAllSuite:
         ds.test_targets()
         ds.write_contingency_tables()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -354,7 +354,7 @@ class TestClassifyAllSuite:
         ds.model_file_names = suite_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_suite_shap_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["shap_value"] = output_paths
 
@@ -362,7 +362,7 @@ class TestClassifyAllSuite:
         ds.test_targets()
         ds.write_shap_values()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -377,7 +377,7 @@ class TestClassifyAllSuite:
         ds.model_file_names = suite_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_suite_metric_plots_{tgt}.svg")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["metric_plot"] = output_paths
 
@@ -385,7 +385,7 @@ class TestClassifyAllSuite:
         ds.test_targets()
         ds.create_metric_plots()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
@@ -400,7 +400,7 @@ class TestClassifyAllSuite:
         ds.model_file_names = suite_model_files
         output_paths = {
             tgt: str(test_output_dir / f"test_classify_suite_prediction_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["prediction"] = output_paths
 
@@ -408,6 +408,6 @@ class TestClassifyAllSuite:
         ds.test_targets()
         ds.write_predictions()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug

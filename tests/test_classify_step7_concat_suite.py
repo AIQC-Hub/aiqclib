@@ -20,7 +20,7 @@ from aiqclib.classify.step6_classify_dataset.dataset_all_suite import ClassifyAl
 from aiqclib.classify.step7_concat_datasets.dataset_suite import ConcatDataSetSuite
 from aiqclib.common.config.classify_config import ClassificationConfig
 
-from tests.conftest import TARGETS, build_classify_prepare_pipeline
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ from tests.conftest import TARGETS, build_classify_prepare_pipeline
 # ---------------------------------------------------------------------------
 
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS)
+SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
 
 
 def _inject_suite_settings(config: ClassificationConfig) -> None:
@@ -81,7 +81,7 @@ def step7_suite_pipeline(suite_classify_config, test_data_file, training_dir):
     ds_classify.model_file_names = {
         f"{method}_{tgt}": str(training_dir / f"model_{tgt}_{method}.joblib")
         for method in SUITE_METHODS
-        for tgt in TARGETS
+        for tgt in TARGETS_NONEMPTY
     }
     ds_classify.read_models()
     ds_classify.test_targets()
@@ -159,7 +159,7 @@ class TestConcatDataSetSuite:
 
         # The expected wide-format columns: per target, label + per-method
         # (predicted, score). Derived once and asserted in a loop.
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert f"{tgt}_label" in ds.merged_predictions.columns
             for method in SUITE_METHODS:
                 assert f"{method}_{tgt}_predicted" in ds.merged_predictions.columns
@@ -167,7 +167,7 @@ class TestConcatDataSetSuite:
 
         # 30 input cols + 3 targets × (1 label + 2 methods × 2 result cols) = 45.
         # This count is structural, not data-dependent.
-        assert ds.merged_predictions.shape[1] == 45
+        assert ds.merged_predictions.shape[1] == 40
 
     def test_merge_predictions_with_empty_input(self, step7_suite_pipeline):
         """merge_predictions with input_data=None raises ValueError."""

@@ -102,7 +102,7 @@ class TestSummaryDataSetAll:
             step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
         )
         ds.calculate_stats()
-        assert ds.summary_stats.shape[0] == 55
+        assert ds.summary_stats.shape[0] == 44
         assert ds.summary_stats.shape[1] == 12
 
     @pytest.mark.parametrize("idx", range(2))

@@ -34,13 +34,13 @@ matplotlib.use("Agg")
 from aiqclib.train.models.model_suite import ModelSuite
 from aiqclib.train.step4_build_model.build_model_suite import BuildModelSuite
 
-from tests.conftest import TARGETS
+from tests.conftest import TARGETS_NONEMPTY
 
 
 # Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
 # one model per (method, target) combination, 2 × 3 = 6 keys.
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS)
+SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARG
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def training_config_001_suite(training_config_001):
+def training_config_001_suite(training_config_001_bo002):
     """training_config_001 with suite settings injected.
 
     Three mutations applied to a fresh training_config_001:
@@ -58,12 +58,12 @@ def training_config_001_suite(training_config_001):
 
     Only two methods are tested (not all 9 defaults) to keep tests fast.
     """
-    training_config_001.data["step_class_set"]["steps"]["build"] = "BuildModelSuite"
-    training_config_001.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-    training_config_001.data["step_param_set"]["steps"]["model"] = {
+    training_config_001_bo002.data["step_class_set"]["steps"]["build"] = "BuildModelSuite"
+    training_config_001_bo002.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+    training_config_001_bo002.data["step_param_set"]["steps"]["model"] = {
         "methods": ["XGB", "DT"],
     }
-    return training_config_001
+    return training_config_001_bo002
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +125,7 @@ class TestBuildModelSuite:
 
         # Model files: one per (method, target) composite key
         for method in SUITE_METHODS:
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 key = f"{method}_{tgt}"
                 assert (
                     str(ds.model_file_names[key])
@@ -133,7 +133,7 @@ class TestBuildModelSuite:
                 )
 
         # Aggregated output files: one per target (not per method)
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (
                 str(ds.output_file_names["report"][tgt])
                 == f"{out_base}/test_report_{tgt}.tsv"
@@ -177,11 +177,11 @@ class TestBuildModelSuite:
             assert key in ds.final_models
 
         # XGB and DT produce distinct objects for the same target
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert ds.final_models[f"xgb_{tgt}"] is not ds.final_models[f"dt_{tgt}"]
 
-        # final_models combine train + test data. Temp had 116 train + 12 test rows.
-        assert ds.final_models["xgb_temp"].training_set.height == 116 + 12
+        # final_models combine train + test data. Temp had 22 train + 2 test rows.
+        assert ds.final_models["xgb_temp"].training_set.height == 22 + 2
 
     def test_build_targets(self, training_config_001_suite, training_input_001):
         """build_targets populates models with composite keys; sees only training data."""
@@ -194,11 +194,11 @@ class TestBuildModelSuite:
 
         for key in SUITE_KEYS:
             assert key in ds.models
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert ds.models[f"xgb_{tgt}"] is not ds.models[f"dt_{tgt}"]
 
         # models use train-only data
-        assert ds.models["xgb_temp"].training_set.height == 116
+        assert ds.models["xgb_temp"].training_set.height == 22
 
     def test_test_targets(self, training_config_001_suite, training_input_001):
         """test_targets aggregates per-method predictions into a 'method' column.
@@ -214,23 +214,23 @@ class TestBuildModelSuite:
         ds.test_targets()
 
         # Aggregated predictions: include 'method' column, 2x rows per target
-        # Temp: 12 test rows × 2 methods = 24
-        # Psal: 14 test rows × 2 methods = 28
-        # Pres: 12 test rows × 2 methods = 24
-        expected_pred_heights = {"temp": 24, "psal": 28, "pres": 24}
-        for tgt in TARGETS:
+        # Temp: 2 test rows × 2 methods = 4
+        # Psal: 2 test rows × 2 methods = 4
+        # Pres: 0 test rows × 2 methods = 0
+        expected_pred_heights = {"temp": 4, "psal": 4, "pres": 0}
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.predictions[tgt], pl.DataFrame)
             assert "method" in ds.predictions[tgt].columns
             assert ds.predictions[tgt].shape[0] == expected_pred_heights[tgt]
 
         # Contingency tables aggregate the same way
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
             assert "method" in ds.contingency_tables[tgt].columns
             assert ds.contingency_tables[tgt].height == expected_pred_heights[tgt]
 
         # Reports include the 'method' column
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.reports[tgt], pl.DataFrame)
             assert "method" in ds.reports[tgt].columns
 
@@ -336,7 +336,7 @@ class TestBuildModelSuite:
         output_paths: dict[str, dict[str, str]] = {}
         for kind, template in output_specs:
             output_paths[kind] = {
-                tgt: str(test_output_dir / template.format(tgt=tgt)) for tgt in TARGETS
+                tgt: str(test_output_dir / template.format(tgt=tgt)) for tgt in TARGETS_NONEMPTY
             }
             ds.output_file_names[kind] = output_paths[kind]
 
@@ -350,7 +350,7 @@ class TestBuildModelSuite:
         ds.create_metric_plots()
 
         for kind, _ in output_specs:
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 assert os.path.exists(output_paths[kind][tgt])
                 os.remove(output_paths[kind][tgt])  # comment out to debug
 

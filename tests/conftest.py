@@ -280,8 +280,32 @@ def training_config_002() -> TrainingConfig:
 
 
 @pytest.fixture
+def training_config_002_bo002() -> TrainingConfig:
+    """test_training_002.yaml with NRT_BO_002 selected — 2-target (temp, psal).
+
+    NRT_BO_002 uses target_set_2 which excludes pres. Useful for tests
+    that exercise build/test pipelines where the reduced fixtures have zero
+    rows for pres in the test split. Same YAML, same path_info, different
+    target_set.
+    """
+    return _load_training_config("test_training_002.yaml", select="NRT_BO_002")
+
+
+@pytest.fixture
 def training_config_003() -> TrainingConfig:
     return _load_training_config("test_training_003.yaml")
+
+
+@pytest.fixture
+def training_config_003_bo002() -> TrainingConfig:
+    """test_training_003.yaml with NRT_BO_002 selected — 2-target (temp, psal).
+
+    NRT_BO_002 uses target_set_2 which excludes pres. Useful for tests
+    that exercise build/test pipelines where the reduced fixtures have zero
+    rows for pres in the test split. Same YAML, same path_info, different
+    target_set.
+    """
+    return _load_training_config("test_training_003.yaml", select="NRT_BO_002")
 
 
 @pytest.fixture
