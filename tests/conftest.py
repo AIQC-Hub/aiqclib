@@ -374,12 +374,54 @@ def dataset_select_005(dataset_config_005, dataset_input_005):
 
 
 # ----------------------------------------------------------------------------
-# Full-pipeline helper for prepare-stage tests
+# Classify-pipeline wiring (classify-stage step1 + step3 outputs)
 #
-# build_prepare_pipeline mirrors the classify-side run_classify_prepare_pipeline
-# helper. Used by prepare-stage tests (step5_extract, step6_split, etc.) that
-# need multiple upstream outputs in the same test. ``stop_after`` lets a test
-# avoid running unneeded later stages.
+# Parallel structure to the dataset-pipeline wiring above, but uses
+# classify_loader's step1/step3 functions and ClassificationConfig instances.
+# Used by classify_step3_select_all and classify_step4_locate_all (and other
+# classify-stage `_all` tests that need step1 or step3 output).
+# ----------------------------------------------------------------------------
+
+def _build_classify_input(config: ClassificationConfig, test_data_file: Path):
+    """Construct a classify-side step1 input dataset and read the input parquet."""
+    ds = load_classify_step1_input_dataset(config)
+    ds.input_file_name = str(test_data_file)
+    ds.read_input_data()
+    return ds
+
+
+def _build_classify_select(config: ClassificationConfig, input_data):
+    """Construct a classify-side step3 select dataset and run label_profiles()."""
+    ds = load_classify_step3_select_dataset(config, input_data=input_data)
+    ds.label_profiles()
+    return ds
+
+
+@pytest.fixture
+def classify_input_001(classify_config_001, test_data_file):
+    """classify-side step1 input dataset for test_classify_001.yaml."""
+    return _build_classify_input(classify_config_001, test_data_file)
+
+
+@pytest.fixture
+def classify_input_002(classify_config_002, test_data_file):
+    """classify-side step1 input dataset for test_classify_002.yaml."""
+    return _build_classify_input(classify_config_002, test_data_file)
+
+
+@pytest.fixture
+def classify_select_001(classify_config_001, classify_input_001):
+    """classify-side step3 select dataset (labelled profiles) for test_classify_001.yaml."""
+    return _build_classify_select(classify_config_001, classify_input_001.input_data)
+
+
+# ----------------------------------------------------------------------------
+# Full-pipeline helpers for prepare- and classify-stage tests
+#
+# build_prepare_pipeline / build_classify_prepare_pipeline run the full
+# pipeline up to a chosen stage. Used by tests (step5_extract, step6_split,
+# etc.) that need multiple upstream outputs in the same test. ``stop_after``
+# lets a test avoid running unneeded later stages.
 # ----------------------------------------------------------------------------
 
 _STAGES_ORDER: tuple[str, ...] = ("input", "summary", "select", "locate", "extract")
@@ -442,6 +484,81 @@ def build_prepare_pipeline(
         return result
 
     ds_extract = load_step5_extract_dataset(
+        config,
+        input_data=ds_input.input_data,
+        selected_profiles=ds_select.selected_profiles,
+        selected_rows=ds_locate.selected_rows,
+        summary_stats=ds_summary.summary_stats,
+    )
+    ds_extract.process_targets()
+    result.extract = ds_extract
+    return result
+
+
+def build_classify_prepare_pipeline(
+    config: ClassificationConfig,
+    test_data_file: Path,
+    *,
+    stop_after: str = "extract",
+) -> SimpleNamespace:
+    """Run the classify-side prepare pipeline through the chosen stage.
+
+    Parallel to ``build_prepare_pipeline`` but for ClassificationConfig.
+    Returns a SimpleNamespace with attributes for each stage that ran:
+    ``config`` (always), and any of ``input``, ``summary``, ``select``,
+    ``locate``, ``extract``.
+
+    The classify-side ``run_classify_prepare_pipeline`` (further down) is
+    the multi-config-file variant used by step6/step7 tests; this is the
+    single-config variant suitable for step1-step5 tests.
+
+    :param config: a fresh, select()-ed ClassificationConfig
+    :param test_data_file: path to the input parquet
+    :param stop_after: one of "input", "summary", "select", "locate", "extract"
+    :returns: SimpleNamespace with config + per-stage output datasets
+    """
+    if stop_after not in _STAGES_ORDER:
+        raise ValueError(
+            f"stop_after must be one of {_STAGES_ORDER}, got {stop_after!r}"
+        )
+    final_idx = _STAGES_ORDER.index(stop_after)
+
+    result = SimpleNamespace(config=config)
+
+    ds_input = load_classify_step1_input_dataset(config)
+    ds_input.input_file_name = str(test_data_file)
+    ds_input.read_input_data()
+    result.input = ds_input
+    if final_idx == _STAGES_ORDER.index("input"):
+        return result
+
+    ds_summary = load_classify_step2_summary_dataset(
+        config, input_data=ds_input.input_data
+    )
+    ds_summary.calculate_stats()
+    result.summary = ds_summary
+    if final_idx == _STAGES_ORDER.index("summary"):
+        return result
+
+    ds_select = load_classify_step3_select_dataset(
+        config, input_data=ds_input.input_data
+    )
+    ds_select.label_profiles()
+    result.select = ds_select
+    if final_idx == _STAGES_ORDER.index("select"):
+        return result
+
+    ds_locate = load_classify_step4_locate_dataset(
+        config,
+        input_data=ds_input.input_data,
+        selected_profiles=ds_select.selected_profiles,
+    )
+    ds_locate.process_targets()
+    result.locate = ds_locate
+    if final_idx == _STAGES_ORDER.index("locate"):
+        return result
+
+    ds_extract = load_classify_step5_extract_dataset(
         config,
         input_data=ds_input.input_data,
         selected_profiles=ds_select.selected_profiles,
@@ -532,6 +649,9 @@ def run_classify_prepare_pipeline(
     the five prepare steps in order. The returned ``extracts[idx]`` is the
     ``ds_extract`` whose ``target_features`` is the test set ClassifyAll(Suite)
     consumes.
+
+    See also ``build_classify_prepare_pipeline`` — the single-config variant
+    that returns a SimpleNamespace instead of a (configs, extracts) tuple.
 
     :param config_files: list of YAML paths, one per config to test
     :param test_data_file: path to the input parquet (typically
