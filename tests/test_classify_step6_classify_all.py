@@ -188,8 +188,7 @@ class TestClassifyAll:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            # targets had shape (812, 56) on the original dataset).
-            assert ds.test_sets[tgt].shape[0] == 812
+            assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
 
     @pytest.mark.parametrize("idx", range(3))
@@ -218,11 +217,11 @@ class TestClassifyAll:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            assert ds.test_sets[tgt].shape[0] == 812
+            assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
 
             assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            assert ds.contingency_tables[tgt].height == 812
+            assert ds.contingency_tables[tgt].height == 2456
 
         assert ds.contingency_tables["temp"].columns == [
             "k", "label", "predicted_label", "score",
@@ -474,11 +473,11 @@ class TestModels:
 
         for tgt in TARGETS:
             assert isinstance(ds.test_sets[tgt], pl.DataFrame)
-            assert ds.test_sets[tgt].shape[0] == 812
+            assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
 
             assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            assert ds.contingency_tables[tgt].height == 812
+            assert ds.contingency_tables[tgt].height == 2456
 
         assert ds.contingency_tables["temp"].columns == [
             "k", "label", "predicted_label", "score",

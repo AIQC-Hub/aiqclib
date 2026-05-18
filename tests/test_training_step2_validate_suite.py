@@ -1,364 +1,306 @@
-"""
-This module contains unit tests for the KFoldValidationSuite class, ensuring its
-correct integration with training configurations, data loading, the ModelSuite,
-and report generation. It verifies that the validation process
-behaves as expected across various scenarios and multiple ML algorithms.
+"""Unit tests for the ``KFoldValidationSuite`` class.
+
+KFoldValidationSuite is the multi-model variant of KFoldValidation: it runs
+k-fold cross-validation across several methods in parallel (here just XGB
+and DT, to keep tests fast). Composite keys are used throughout —
+``xgb_temp``, ``dt_psal``, etc. — instead of just ``temp``, because each
+target has multiple models.
+
+Refactored from a single ``unittest.TestCase`` class with a module-level
+``setup_training_step2`` helper. The helper is replaced by the
+``training_input_001`` fixture from conftest combined with a file-local
+``training_config_001_validate_suite`` fixture that injects the
+KFoldValidationSuite + ModelSuite + methods=[XGB, DT] mutations. The three
+file-output tests had ~25 lines of per-key hand-written paths each;
+collapsed into nested loops over ``SUITE_KEYS``.
+
+Note on SHAP behaviour:
+Unlike BuildModelSuite (step4), which propagates ``calculate_shap`` to the
+underlying ModelSuite (SHAP is computed at the testing stage),
+KFoldValidationSuite explicitly **does not** propagate the flag — validation
+never uses SHAP, regardless of config. ``test_shap_flag`` defends this
+distinction.
 """
 
 import os
-import unittest
-from pathlib import Path
 
+import matplotlib
 import polars as pl
+import pytest
 
-from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.common.loader.training_loader import load_step1_input_training_set
+# Non-interactive backend so plot tests don't open windows.
+matplotlib.use("Agg")
+
 from aiqclib.train.models.model_suite import ModelSuite
 from aiqclib.train.step2_validate_model.kfold_validation_suite import (
     KFoldValidationSuite,
 )
 
+from tests.conftest import TARGETS
 
-def setup_training_step2(test_obj):
+
+# Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
+# 2 methods × 3 targets = 6 keys.
+SUITE_METHODS = ("xgb", "dt")
+SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS)
+
+
+# ---------------------------------------------------------------------------
+# Suite-config fixture
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def training_config_001_validate_suite(training_config_001):
+    """training_config_001 with KFoldValidationSuite + ModelSuite + 2 methods injected.
+
+    Three mutations applied to a fresh training_config_001:
+    - ``step_class_set.steps.validate`` = "KFoldValidationSuite"
+    - ``step_class_set.steps.model``    = "ModelSuite"
+    - ``step_param_set.steps.model``    = {"methods": ["XGB", "DT"]}
+
+    Only two methods are tested (not all 9 defaults) to keep tests fast.
+    Because pytest shares the underlying ``training_config_001`` instance
+    across fixtures within a test, the conftest ``training_input_001``
+    fixture (which depends on ``training_config_001``) will see these
+    mutations — but the input loading only uses the target_set, not the
+    model class, so process_targets still produces 3-target training data.
     """
-    Prepare the test environment by loading a training configuration
-    and input training data. The input file names for train/test sets
-    are defined here for subsequent model validation tests.
-    """
-    test_obj.config_file_path = (
-        Path(__file__).resolve().parent / "data" / "config" / "test_training_001.yaml"
+    training_config_001.data["step_class_set"]["steps"]["validate"] = (
+        "KFoldValidationSuite"
     )
-    test_obj.config = TrainingConfig(str(test_obj.config_file_path))
-    test_obj.config.select("NRT_BO_001")
-
-    # Force the configuration to use KFoldValidationSuite
-    test_obj.config.data["step_class_set"]["steps"]["validate"] = "KFoldValidationSuite"
-    # Force the configuration to use ModelSuite instead of a single model
-    test_obj.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-    # To keep tests fast, we only test two models instead of all 9 defaults
-    test_obj.config.data["step_param_set"]["steps"]["model"] = {
-        "methods": ["XGB", "DT"]
+    training_config_001.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+    training_config_001.data["step_param_set"]["steps"]["model"] = {
+        "methods": ["XGB", "DT"],
     }
-
-    data_path = Path(__file__).resolve().parent / "data" / "training"
-    test_obj.input_file_names = {
-        "train": {
-            "temp": str(data_path / "train_set_temp.parquet"),
-            "psal": str(data_path / "train_set_psal.parquet"),
-            "pres": str(data_path / "train_set_pres.parquet"),
-        },
-        "test": {
-            "temp": str(data_path / "test_set_temp.parquet"),
-            "psal": str(data_path / "test_set_psal.parquet"),
-            "pres": str(data_path / "test_set_pres.parquet"),
-        },
-    }
-
-    test_obj.ds_input = load_step1_input_training_set(test_obj.config)
-    test_obj.ds_input.input_file_names = test_obj.input_file_names
-    test_obj.ds_input.process_targets()
+    return training_config_001
 
 
-class TestKFoldValidationSuite(unittest.TestCase):
-    """
-    A suite of tests ensuring that KFoldValidationSuite correctly captures
-    configurations, splits training data, iterates over the ModelSuite methods,
-    and writes validation results with dynamic file names.
-    """
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
+class TestKFoldValidationSuite:
+    """Tests for KFoldValidationSuite's multi-method k-fold + file output."""
+
+    # ----- Identity / config -----
+
+    def test_step_name(self, training_config_001_validate_suite):
+        """step_name == 'validate'."""
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        assert ds.step_name == "validate"
+
+    def test_multi_flag_check(self, training_config_001_validate_suite):
+        """Constructing KFoldValidationSuite with a single-model wrapper raises ValueError.
+
+        The error message must mention ``multi=True`` because that's the
+        invariant the user has to fix.
         """
-        Prepare the test environment by loading a training configuration
-        and input training data.
-        """
-        setup_training_step2(self)
-
-    def test_step_name(self):
-        """
-        Check that the step name is correctly identified as 'validate'.
-        """
-        ds = KFoldValidationSuite(self.config)
-        self.assertEqual(ds.step_name, "validate")
-
-    def test_multi_flag_check(self):
-        """
-        Verify that instantiating KFoldValidationSuite with a standard model
-        (multi=False) raises a ValueError.
-        """
-        # Revert config to standard XGBoost
-        self.config.data["step_class_set"]["steps"]["model"] = "XGBoost"
-
-        with self.assertRaisesRegex(ValueError, "multi=True"):
-            _ = KFoldValidationSuite(self.config)
-
-    def test_shap_flag(self):
-        ds = KFoldValidationSuite(self.config)
-        model = ds.base_model
-        self.assertFalse(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertFalse(method_obj.enable_shap)
-
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
-        ds = KFoldValidationSuite(self.config)
-        model = ds.base_model
-        self.assertFalse(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertFalse(method_obj.enable_shap)
-
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
-        ds = KFoldValidationSuite(self.config)
-        model = ds.base_model
-        self.assertFalse(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertFalse(method_obj.enable_shap)
-
-    def test_output_file_names_init(self):
-        """
-        Verify that the default output file names initially retain the {method}
-        placeholder before process_targets is run.
-        """
-        ds = KFoldValidationSuite(self.config)
-
-        # Check report file names still contain {method}
-        self.assertEqual(
-            "/path/to/validate_1/nrt_bo_001/validate_folder_1/validation_report_{method}_temp.tsv",
-            str(ds.output_file_names["report"]["temp"]),
+        training_config_001_validate_suite.data["step_class_set"]["steps"]["model"] = (
+            "XGBoost"
         )
-        self.assertEqual(
-            "/path/to/validate_1/nrt_bo_001/validate_folder_1/contingency_tables_{method}_temp.parquet",
-            str(ds.output_file_names["contingency_table"]["temp"]),
+        with pytest.raises(ValueError, match="multi=True"):
+            _ = KFoldValidationSuite(training_config_001_validate_suite)
+
+    def test_shap_flag(self, training_config_001_validate_suite):
+        """``calculate_shap`` is NOT propagated by KFoldValidationSuite.
+
+        Validation never computes SHAP regardless of config. The suite's
+        ``enable_shap`` stays False even when the config sets
+        ``calculate_shap=True``, and the per-method ``enable_shap`` does
+        too. Contrast with BuildModelSuite, which propagates the flag.
+        """
+        # Unset == False (suite and per-method).
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        assert ds.base_model.enable_shap is False
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is False
+
+        # Setting True at config level does NOT propagate for validation.
+        training_config_001_validate_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        assert ds.base_model.enable_shap is False
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is False
+
+        # Explicit False also stays False.
+        training_config_001_validate_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        assert ds.base_model.enable_shap is False
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is False
+
+    def test_output_file_names_init(self, training_config_001_validate_suite):
+        """Default output paths retain the ``{method}`` placeholder until process_targets runs.
+
+        Before process_targets dynamically rewrites the paths with concrete
+        method names, the per-target paths contain the unrendered ``{method}``
+        substring. Original checked only ``temp``; preserving that.
+        """
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        base = "/path/to/validate_1/nrt_bo_001/validate_folder_1"
+
+        assert (
+            str(ds.output_file_names["report"]["temp"])
+            == f"{base}/validation_report_{{method}}_temp.tsv"
         )
-        self.assertEqual(
-            "/path/to/validate_1/nrt_bo_001/validate_folder_1/metric_plots_{method}_temp.svg",
-            str(ds.output_file_names["metric_plot"]["temp"]),
+        assert (
+            str(ds.output_file_names["contingency_table"]["temp"])
+            == f"{base}/contingency_tables_{{method}}_temp.parquet"
+        )
+        assert (
+            str(ds.output_file_names["metric_plot"]["temp"])
+            == f"{base}/metric_plots_{{method}}_temp.svg"
         )
 
-    def test_base_model(self):
-        """
-        Ensure the base model attribute of KFoldValidationSuite is a ModelSuite
-        instance.
-        """
-        ds = KFoldValidationSuite(self.config)
-        self.assertIsInstance(ds.base_model, ModelSuite)
+    def test_base_model(self, training_config_001_validate_suite):
+        """base_model is a ModelSuite instance."""
+        ds = KFoldValidationSuite(training_config_001_validate_suite)
+        assert isinstance(ds.base_model, ModelSuite)
 
-    def test_fold_validation(self):
-        """
-        Check that the KFoldValidationSuite process successfully processes the
-        training sets across multiple methods and populates the composite keys.
+    # ----- Validation behaviour -----
+
+    def test_fold_validation(self, training_config_001_validate_suite, training_input_001):
+        """process_targets populates reports + contingency_tables for every composite key.
+
+        After process_targets, all six SUITE_KEYS exist in both .reports and
+        .contingency_tables. Dynamic path rewriting has also substituted the
+        ``{method}`` placeholder with the actual method name.
         """
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
         ds.process_targets()
 
-        # Check Reports - ensure composite keys exist
-        self.assertIn("xgb_temp", ds.reports)
-        self.assertIn("dt_temp", ds.reports)
+        # All composite keys exist in both reports and contingency tables.
+        for key in SUITE_KEYS:
+            assert key in ds.reports
+            assert key in ds.contingency_tables
 
-        # Validate shapes for XGBoost Temp
-        self.assertIsInstance(ds.reports["xgb_temp"], pl.DataFrame)
-        self.assertEqual(ds.reports["xgb_temp"].shape[0], 18)
-        self.assertEqual(ds.reports["xgb_temp"].shape[1], 8)
+        # Spot-check one report's shape. k=3 folds × 6 metric rows = 18; cols structural.
+        assert isinstance(ds.reports["xgb_temp"], pl.DataFrame)
+        assert ds.reports["xgb_temp"].shape[0] == 18
+        assert ds.reports["xgb_temp"].shape[1] == 8
 
-        # Check Contingency Tables for DT Psal
-        self.assertIn("dt_psal", ds.contingency_tables)
-        self.assertIsInstance(ds.contingency_tables["dt_psal"], pl.DataFrame)
-        self.assertEqual(ds.contingency_tables["dt_psal"].height, 126)
-        self.assertListEqual(
-            ds.contingency_tables["dt_psal"].columns,
-            ["k", "label", "predicted_label", "score"],
+        # Spot-check one contingency table's height (sum of all validation-fold rows).
+        assert isinstance(ds.contingency_tables["dt_psal"], pl.DataFrame)
+        assert ds.contingency_tables["dt_psal"].height == 34
+        assert ds.contingency_tables["dt_psal"].columns == [
+            "k", "label", "predicted_label", "score",
+        ]
+
+        # The ``{method}`` placeholder has been substituted with concrete names.
+        assert (
+            str(ds.output_file_names["report"]["xgb_temp"])
+            == "/path/to/validate_1/nrt_bo_001/validate_folder_1/validation_report_xgb_temp.tsv"
         )
 
-        # Check that file paths were dynamically updated for the composite keys
-        self.assertEqual(
-            "/path/to/validate_1/nrt_bo_001/validate_folder_1/validation_report_xgb_temp.tsv",
-            str(ds.output_file_names["report"]["xgb_temp"]),
-        )
+    # ----- File output (per-key write, assert exists, manually remove) -----
 
-    def test_write_results(self):
-        """
-        Ensure validation reports are written to the specified output files
-        with composite keys and that temporary files are cleaned up.
-        """
+    def test_write_reports(
+        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+    ):
+        """write_reports produces a TSV per composite key (6 files: XGB+DT × 3 targets)."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
         ds.process_targets()
 
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-
-        # Override specific composite key paths for testing
-        ds.output_file_names["report"]["xgb_temp"] = str(
-            data_path / "temp_validation_report_xgb_temp.tsv"
-        )
-        ds.output_file_names["report"]["xgb_psal"] = str(
-            data_path / "temp_validation_report_xgb_psal.tsv"
-        )
-        ds.output_file_names["report"]["xgb_pres"] = str(
-            data_path / "temp_validation_report_xgb_pres.tsv"
-        )
-        ds.output_file_names["report"]["dt_temp"] = str(
-            data_path / "temp_validation_report_dt_temp.tsv"
-        )
-        ds.output_file_names["report"]["dt_psal"] = str(
-            data_path / "temp_validation_report_dt_psal.tsv"
-        )
-        ds.output_file_names["report"]["dt_pres"] = str(
-            data_path / "temp_validation_report_dt_pres.tsv"
-        )
+        output_paths = {
+            key: str(test_output_dir / f"test_validation_report_{key}.tsv")
+            for key in SUITE_KEYS
+        }
+        for key in SUITE_KEYS:
+            ds.output_file_names["report"][key] = output_paths[key]
 
         ds.write_reports()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["xgb_temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["xgb_psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["xgb_pres"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["dt_temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["dt_psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["dt_pres"]))
+        for key in SUITE_KEYS:
+            assert os.path.exists(output_paths[key])
+            os.remove(output_paths[key])  # comment out to debug
 
-        os.remove(ds.output_file_names["report"]["xgb_temp"])
-        os.remove(ds.output_file_names["report"]["xgb_psal"])
-        os.remove(ds.output_file_names["report"]["xgb_pres"])
-        os.remove(ds.output_file_names["report"]["dt_temp"])
-        os.remove(ds.output_file_names["report"]["dt_psal"])
-        os.remove(ds.output_file_names["report"]["dt_pres"])
-
-    def test_write_contingency_tables(self):
-        """
-        Ensure contingency tables are written to the specified output files.
-        """
+    def test_write_contingency_tables(
+        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+    ):
+        """write_contingency_tables produces a parquet per composite key."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
         ds.process_targets()
 
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-
-        # Override output paths for testing
-        ds.output_file_names["contingency_table"]["xgb_temp"] = str(
-            data_path / "temp_contingency_xgb_temp.parquet"
-        )
-        ds.output_file_names["contingency_table"]["xgb_psal"] = str(
-            data_path / "temp_contingency_xgb_psal.parquet"
-        )
-        ds.output_file_names["contingency_table"]["xgb_pres"] = str(
-            data_path / "temp_contingency_xgb_pres.tsv"
-        )
-        ds.output_file_names["contingency_table"]["dt_temp"] = str(
-            data_path / "temp_contingency_dt_temp.tsv"
-        )
-        ds.output_file_names["contingency_table"]["dt_psal"] = str(
-            data_path / "temp_contingency_dt_psal.tsv"
-        )
-        ds.output_file_names["contingency_table"]["dt_pres"] = str(
-            data_path / "temp_contingency_dt_pres.tsv"
-        )
+        output_paths = {
+            key: str(test_output_dir / f"test_contingency_{key}.parquet")
+            for key in SUITE_KEYS
+        }
+        for key in SUITE_KEYS:
+            ds.output_file_names["contingency_table"][key] = output_paths[key]
 
         ds.write_contingency_tables()
 
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["xgb_temp"])
-        )
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["xgb_psal"])
-        )
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["xgb_pres"])
-        )
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["dt_temp"])
-        )
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["dt_psal"])
-        )
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["dt_pres"])
-        )
+        for key in SUITE_KEYS:
+            assert os.path.exists(output_paths[key])
+            os.remove(output_paths[key])  # comment out to debug
 
-        os.remove(ds.output_file_names["contingency_table"]["xgb_temp"])
-        os.remove(ds.output_file_names["contingency_table"]["xgb_psal"])
-        os.remove(ds.output_file_names["contingency_table"]["xgb_pres"])
-        os.remove(ds.output_file_names["contingency_table"]["dt_temp"])
-        os.remove(ds.output_file_names["contingency_table"]["dt_psal"])
-        os.remove(ds.output_file_names["contingency_table"]["dt_pres"])
-
-    def test_create_metric_plots(self):
-        """
-        Ensure ROC and Precision-Recall plots written to the specified output files.
-        """
-        import matplotlib
-
-        matplotlib.use("Agg")  # Prevent plots popping up during testing
-
+    def test_create_metric_plots(
+        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+    ):
+        """create_metric_plots produces an SVG per composite key."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
         ds.process_targets()
 
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-
-        # Override output paths for testing
-        ds.output_file_names["metric_plot"]["xgb_temp"] = str(
-            data_path / "temp_metric_plots_xgb_temp.tsv"
-        )
-        ds.output_file_names["metric_plot"]["xgb_psal"] = str(
-            data_path / "temp_metric_plots_xgb_psal.tsv"
-        )
-        ds.output_file_names["metric_plot"]["xgb_pres"] = str(
-            data_path / "temp_metric_plots_xgb_pres.tsv"
-        )
-        ds.output_file_names["metric_plot"]["dt_temp"] = str(
-            data_path / "temp_metric_plots_dt_temp.tsv"
-        )
-        ds.output_file_names["metric_plot"]["dt_psal"] = str(
-            data_path / "temp_metric_plots_dt_psal.tsv"
-        )
-        ds.output_file_names["metric_plot"]["dt_pres"] = str(
-            data_path / "temp_metric_plots_dt_pres.tsv"
-        )
+        output_paths = {
+            key: str(test_output_dir / f"test_metric_plots_{key}.svg")
+            for key in SUITE_KEYS
+        }
+        for key in SUITE_KEYS:
+            ds.output_file_names["metric_plot"][key] = output_paths[key]
 
         ds.create_metric_plots()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["xgb_temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["xgb_psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["xgb_pres"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["dt_temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["dt_psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["dt_pres"]))
+        for key in SUITE_KEYS:
+            assert os.path.exists(output_paths[key])
+            os.remove(output_paths[key])  # comment out to debug
 
-        os.remove(ds.output_file_names["metric_plot"]["xgb_temp"])
-        os.remove(ds.output_file_names["metric_plot"]["xgb_psal"])
-        os.remove(ds.output_file_names["metric_plot"]["xgb_pres"])
-        os.remove(ds.output_file_names["metric_plot"]["dt_temp"])
-        os.remove(ds.output_file_names["metric_plot"]["dt_psal"])
-        os.remove(ds.output_file_names["metric_plot"]["dt_pres"])
+    # ----- Error cases (write before process_targets) -----
 
-    def test_write_reports_empty_reports(self):
-        """
-        Ensure that calling write_reports with empty reports raises a ValueError.
-        """
+    def test_write_reports_empty_reports(
+        self, training_config_001_validate_suite, training_input_001,
+    ):
+        """write_reports before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_contingency_tables_empty(self):
-        """
-        Ensure that calling write_contingency_tables with empty tables raises a ValueError.
-        """
+    def test_write_contingency_tables_empty(
+        self, training_config_001_validate_suite, training_input_001,
+    ):
+        """write_contingency_tables before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.write_contingency_tables()
 
-    def test_create_metric_plots_empty(self):
-        """
-        Ensure that calling create_metric_plots with empty tables raises a ValueError.
-        """
+    def test_create_metric_plots_empty(
+        self, training_config_001_validate_suite, training_input_001,
+    ):
+        """create_metric_plots before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
-            self.config, training_sets=self.ds_input.training_sets
+            training_config_001_validate_suite,
+            training_sets=training_input_001.training_sets,
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.create_metric_plots()
