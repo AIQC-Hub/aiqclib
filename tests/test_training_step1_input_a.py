@@ -1,140 +1,102 @@
-"""
-This module contains unit tests for the `InputTrainingSetA` class, focusing on its
-ability to correctly initialize from a `TrainingConfig` and load training and test
-datasets using Polars.
-"""
+"""Unit tests for the ``InputTrainingSetA`` class.
 
-import unittest
-from pathlib import Path
+InputTrainingSetA loads pre-split training and test parquets (produced by
+``SplitDataSetA``) and exposes them as ``training_sets`` / ``test_sets``
+keyed by target name.
+
+Refactored from a single ``unittest.TestCase`` class. Bridges from the
+prepare stage (test_prepare_*) to the training stage (test_training_*);
+uses ``training_config_001`` from conftest plus a small inline
+``input_file_names`` dict.
+"""
 
 import polars as pl
+import pytest
 
-from aiqclib.common.config.training_config import TrainingConfig
 from aiqclib.train.step1_read_input.dataset_a import InputTrainingSetA
 
+from tests.conftest import TARGETS
 
-class TestInputTrainingSetA(unittest.TestCase):
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+
+def _build_input_file_names(training_dir):
+    """Build the ``input_file_names`` dict pointing at tests/data/training/.
+
+    Same shape as the legacy setUp's self.input_file_names — keyed by
+    ``"train"``/``"test"`` then by target name.
     """
-    A suite of tests ensuring that the InputTrainingSetA class
-    correctly loads and processes training data sets.
-    """
+    return {
+        kind: {tgt: str(training_dir / f"{kind}_set_{tgt}.parquet") for tgt in TARGETS}
+        for kind in ("train", "test")
+    }
 
-    def setUp(self):
-        """
-        Prepare a TrainingConfig instance pointing to a test YAML file with
-        specified training sets. Also defines file paths where training
-        and test data can be loaded from.
-        """
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-        self.input_file_names = {
-            "train": {
-                "temp": str(data_path / "train_set_temp.parquet"),
-                "psal": str(data_path / "train_set_psal.parquet"),
-                "pres": str(data_path / "train_set_pres.parquet"),
-            },
-            "test": {
-                "temp": str(data_path / "test_set_temp.parquet"),
-                "psal": str(data_path / "test_set_psal.parquet"),
-                "pres": str(data_path / "test_set_pres.parquet"),
-            },
-        }
 
-    def test_step_name(self):
-        """Check that the step name in the InputTrainingSetA instance is 'input'."""
-        ds = InputTrainingSetA(self.config)
-        self.assertEqual(ds.step_name, "input")
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    def test_input_file_names(self):
-        """
-        Verify that file names for training and test sets are correctly resolved
-        from the training configuration.
-        """
-        ds = InputTrainingSetA(self.config)
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/train_set_temp.parquet",
-            str(ds.input_file_names["train"]["temp"]),
-        )
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/train_set_psal.parquet",
-            str(ds.input_file_names["train"]["psal"]),
-        )
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/train_set_pres.parquet",
-            str(ds.input_file_names["train"]["pres"]),
-        )
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/test_set_temp.parquet",
-            str(ds.input_file_names["test"]["temp"]),
-        )
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/test_set_psal.parquet",
-            str(ds.input_file_names["test"]["psal"]),
-        )
 
-        self.assertEqual(
-            "/path/to/input_1/nrt_bo_001/input_folder_1/test_set_pres.parquet",
-            str(ds.input_file_names["test"]["pres"]),
-        )
+class TestInputTrainingSetA:
+    """Tests for InputTrainingSetA: identity, file-name resolution, and read."""
 
-    def test_read_files(self):
-        """
-        Confirm that training and test data sets are loaded into
-        Polars DataFrame objects, with expected shapes for each variable.
-        """
-        ds = InputTrainingSetA(self.config)
-        # Override input_file_names to point to actual local test data files
-        # for reading, as the config paths might be generic/placeholder.
-        ds.input_file_names = self.input_file_names
+    def test_step_name(self, training_config_001):
+        """step_name == 'input'."""
+        ds = InputTrainingSetA(training_config_001)
+        assert ds.step_name == "input"
 
+    def test_input_file_names(self, training_config_001):
+        """Default per-(kind, target) input paths come from config.path_info."""
+        ds = InputTrainingSetA(training_config_001)
+        base = "/path/to/input_1/nrt_bo_001/input_folder_1"
+        for kind in ("train", "test"):
+            for tgt in TARGETS:
+                assert (
+                    str(ds.input_file_names[kind][tgt])
+                    == f"{base}/{kind}_set_{tgt}.parquet"
+                )
+
+    def test_read_files(self, training_config_001, training_dir):
+        """process_targets loads each (kind, target) parquet with expected shape."""
+        ds = InputTrainingSetA(training_config_001)
+        # Override the config-derived paths with paths to actual fixture files.
+        ds.input_file_names = _build_input_file_names(training_dir)
         ds.process_targets()
 
-        self.assertIsInstance(ds.training_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["temp"].shape[0], 116)
-        self.assertEqual(ds.training_sets["temp"].shape[1], 57)
+        expected_train_rows = {"temp": 22, "psal": 34, "pres": 18}
+        expected_test_rows = {"temp": 2, "psal": 2, "pres": 0}
+        for tgt in TARGETS:
+            assert isinstance(ds.training_sets[tgt], pl.DataFrame)
+            assert ds.training_sets[tgt].shape[0] == expected_train_rows[tgt]
+            assert ds.training_sets[tgt].shape[1] == 57
 
-        self.assertIsInstance(ds.test_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["temp"].shape[0], 12)
-        self.assertEqual(ds.test_sets["temp"].shape[1], 56)
+            assert isinstance(ds.test_sets[tgt], pl.DataFrame)
+            assert ds.test_sets[tgt].shape[0] == expected_test_rows[tgt]
+            assert ds.test_sets[tgt].shape[1] == 56
 
-        self.assertIsInstance(ds.training_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["psal"].shape[0], 126)
-        self.assertEqual(ds.training_sets["psal"].shape[1], 57)
+    def test_read_training_set_incorrect_file_names(self, training_config_001):
+        """process_targets with bogus (config-derived) paths raises FileNotFoundError.
 
-        self.assertIsInstance(ds.test_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["psal"].shape[0], 14)
-        self.assertEqual(ds.test_sets["psal"].shape[1], 56)
-
-        self.assertIsInstance(ds.training_sets["pres"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["pres"].shape[0], 110)
-        self.assertEqual(ds.training_sets["pres"].shape[1], 57)
-
-        self.assertIsInstance(ds.test_sets["pres"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["pres"].shape[0], 12)
-        self.assertEqual(ds.test_sets["pres"].shape[1], 56)
-
-    def test_read_training_set_incorrect_file_names(self):
+        The config's path_info points at /path/to/... which doesn't exist on
+        disk; without an override, process_targets fails on the first read.
         """
-        Verify that `process_targets` raises a `FileNotFoundError` if *any* of the
-        configured training or test file paths do not exist when initialized from config.
-        """
-        ds = InputTrainingSetA(self.config)
-        with self.assertRaises(FileNotFoundError):
+        ds = InputTrainingSetA(training_config_001)
+        with pytest.raises(FileNotFoundError):
             ds.process_targets()
 
-    def test_read_test_set_incorrect_file_names(self):
+    def test_read_test_set_incorrect_file_names(
+        self, training_config_001, training_dir
+    ):
+        """When train paths are valid but test paths aren't, process_targets fails.
+
+        Sets train paths only; leaves test paths at their config-derived
+        /path/to/... default. process_targets reads train first (succeeds),
+        then test (fails with FileNotFoundError).
         """
-        Verify that `process_targets` raises a `FileNotFoundError` if the *test*
-        set file paths do not exist, even if training set paths are valid.
-        """
-        ds = InputTrainingSetA(self.config)
-        ds.input_file_names["train"] = self.input_file_names["train"]
-        with self.assertRaises(FileNotFoundError):
+        ds = InputTrainingSetA(training_config_001)
+        ds.input_file_names["train"] = _build_input_file_names(training_dir)["train"]
+        with pytest.raises(FileNotFoundError):
             ds.process_targets()

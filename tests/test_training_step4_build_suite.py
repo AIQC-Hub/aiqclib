@@ -1,306 +1,366 @@
-"""
-This module contains unit tests for the BuildModelSuite class, which is responsible
-for building, testing, and saving multiple machine learning models concurrently
-within the aiqclib training pipeline.
+"""Unit tests for the ``BuildModelSuite`` class.
+
+BuildModelSuite is the multi-model variant of BuildModel: it uses a
+``ModelSuite`` as its base model and runs *several* methods in parallel
+(here just XGB and DT, to keep tests fast). Composite keys are used
+throughout — ``xgb_temp``, ``dt_temp``, etc. — instead of just ``temp``,
+because each target has multiple trained models.
+
+Refactored from the original which:
+- Used a module-level ``setup_training_step4(test_obj)`` helper to mutate the
+  config to suite settings and load the training input (replaced here by the
+  ``training_config_001_suite`` fixture for the mutation + the conftest
+  ``training_input_001`` fixture for the input wiring)
+- Had ~30 lines of per-target × per-output-kind triplication in
+  ``test_write_aggregated_results`` (collapsed via a nested loop over
+  TARGETS and output kinds)
+- Triplicated the model-file path setup in ``test_write_models``
+- All other tests followed the per-target triplication pattern (replaced
+  with ``for tgt in TARGETS`` loops)
+
+No 9-model fan-out here: BuildModelSuite tests the *combined* behaviour of
+multiple methods running together, not each model wrapper individually.
 """
 
 import os
-import unittest
-from pathlib import Path
 
 import matplotlib
 import polars as pl
+import pytest
 
-# Use non-interactive backend to prevent plots from trying to open windows during tests
+# Use non-interactive backend so plot tests don't try to open windows.
 matplotlib.use("Agg")
 
-from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.common.loader.training_loader import load_step1_input_training_set
 from aiqclib.train.models.model_suite import ModelSuite
 from aiqclib.train.step4_build_model.build_model_suite import BuildModelSuite
 
+from tests.conftest import TARGETS_NONEMPTY
 
-def setup_training_step4(test_obj):
+
+# Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
+# one model per (method, target) combination, 2 × 3 = 6 keys.
+SUITE_METHODS = ("xgb", "dt")
+SUITE_KEYS = tuple(
+    f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY
+)
+
+
+# ---------------------------------------------------------------------------
+# Suite-config fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def training_config_001_suite(training_config_001_bo002):
+    """training_config_001 with suite settings injected.
+
+    Three mutations applied to a fresh training_config_001:
+    - ``step_class_set.steps.build`` = "BuildModelSuite"
+    - ``step_class_set.steps.model`` = "ModelSuite"
+    - ``step_param_set.steps.model.methods`` = ["XGB", "DT"]
+
+    Only two methods are tested (not all 9 defaults) to keep tests fast.
     """
-    Prepare a test training configuration and load input data for subsequent tests.
-    Forces the configuration to use the ModelSuite and limits it to two methods.
-    """
-    test_obj.config_file_path = (
-        Path(__file__).resolve().parent / "data" / "config" / "test_training_001.yaml"
+    training_config_001_bo002.data["step_class_set"]["steps"]["build"] = (
+        "BuildModelSuite"
     )
-    test_obj.config = TrainingConfig(str(test_obj.config_file_path))
-    test_obj.config.select("NRT_BO_001")
-
-    # Force the configuration to use BuildModelSuite
-    test_obj.config.data["step_class_set"]["steps"]["build"] = "BuildModelSuite"
-    # Force configuration to use ModelSuite instead of a single model
-    test_obj.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-    # To keep tests fast, we only test two models instead of all 9 defaults
-    test_obj.config.data["step_param_set"]["steps"]["model"] = {
-        "methods": ["XGB", "DT"]
+    training_config_001_bo002.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+    training_config_001_bo002.data["step_param_set"]["steps"]["model"] = {
+        "methods": ["XGB", "DT"],
     }
-
-    data_path = Path(__file__).resolve().parent / "data" / "training"
-    test_obj.input_file_names = {
-        "train": {
-            "temp": str(data_path / "train_set_temp.parquet"),
-            "psal": str(data_path / "train_set_psal.parquet"),
-            "pres": str(data_path / "train_set_pres.parquet"),
-        },
-        "test": {
-            "temp": str(data_path / "test_set_temp.parquet"),
-            "psal": str(data_path / "test_set_psal.parquet"),
-            "pres": str(data_path / "test_set_pres.parquet"),
-        },
-    }
-
-    test_obj.ds_input = load_step1_input_training_set(test_obj.config)
-    test_obj.ds_input.input_file_names = test_obj.input_file_names
-    test_obj.ds_input.process_targets()
+    return training_config_001_bo002
 
 
-class TestBuildModelSuite(unittest.TestCase):
-    """
-    A suite of tests ensuring that building, testing, and saving multiple models
-    via BuildModelSuite follows the expected configuration and aggregation flows.
-    """
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
+
+class TestBuildModelSuite:
+    """Tests for BuildModelSuite's multi-model build, test, save behaviour."""
+
+    # ----- Identity / config -----
+
+    def test_step_name(self, training_config_001_suite):
+        """step_name == 'build'."""
+        ds = BuildModelSuite(training_config_001_suite)
+        assert ds.step_name == "build"
+
+    def test_multi_flag_check(self, training_config_001_suite):
+        """Constructing BuildModelSuite with a single-model wrapper raises ValueError.
+
+        The error message must mention ``multi=True`` because that's the
+        invariant the user has to fix.
         """
-        Prepare a test training configuration and load input data for subsequent tests.
+        training_config_001_suite.data["step_class_set"]["steps"]["model"] = "XGBoost"
+        with pytest.raises(ValueError, match="multi=True"):
+            _ = BuildModelSuite(training_config_001_suite)
+
+    def test_shap_flag(self, training_config_001_suite):
+        """``calculate_shap`` propagates to both the suite and each child method.
+
+        The suite's own ``enable_shap`` and every ``method_obj.enable_shap``
+        must move together. BuildModelSuite, like BuildModel, honours the
+        flag (SHAP is computed at the testing stage).
         """
-        setup_training_step4(self)
+        # Unset == False, both at suite level and per-method.
+        ds = BuildModelSuite(training_config_001_suite)
+        assert ds.base_model.enable_shap is False
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is False
 
-    def test_step_name(self):
-        """Check that the BuildModelSuite step name is correctly assigned."""
-        ds = BuildModelSuite(self.config)
-        self.assertEqual(ds.step_name, "build")
+        # True at suite level propagates to every method.
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
+        ds = BuildModelSuite(training_config_001_suite)
+        assert ds.base_model.enable_shap is True
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is True
 
-    def test_multi_flag_check(self):
+        # False at suite level also propagates.
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
+        ds = BuildModelSuite(training_config_001_suite)
+        assert ds.base_model.enable_shap is False
+        for method_obj in ds.base_model.method_objs.values():
+            assert method_obj.enable_shap is False
+
+    def test_output_file_names(self, training_config_001_suite):
+        """Model files use composite ``{method}_{tgt}`` keys; outputs use ``{tgt}``."""
+        ds = BuildModelSuite(training_config_001_suite)
+        model_base = "/path/to/model_1/nrt_bo_001/model_folder_1"
+        out_base = "/path/to/build_1/nrt_bo_001/build_folder_1"
+
+        # Model files: one per (method, target) composite key
+        for method in SUITE_METHODS:
+            for tgt in TARGETS_NONEMPTY:
+                key = f"{method}_{tgt}"
+                assert (
+                    str(ds.model_file_names[key]) == f"{model_base}/model_{key}.joblib"
+                )
+
+        # Aggregated output files: one per target (not per method)
+        for tgt in TARGETS_NONEMPTY:
+            assert (
+                str(ds.output_file_names["report"][tgt])
+                == f"{out_base}/test_report_{tgt}.tsv"
+            )
+            assert (
+                str(ds.output_file_names["contingency_table"][tgt])
+                == f"{out_base}/test_contingency_tables_{tgt}.parquet"
+            )
+            assert (
+                str(ds.output_file_names["shap_value"][tgt])
+                == f"{out_base}/test_shap_values_{tgt}.parquet"
+            )
+            assert (
+                str(ds.output_file_names["metric_plot"][tgt])
+                == f"{out_base}/test_metric_plots_{tgt}.svg"
+            )
+
+    def test_base_model(self, training_config_001_suite):
+        """The base_model is a ModelSuite instance."""
+        ds = BuildModelSuite(training_config_001_suite)
+        assert isinstance(ds.base_model, ModelSuite)
+
+    # ----- Build / test pipeline behaviour -----
+
+    def test_build_final_model_targets(
+        self, training_config_001_suite, training_input_001
+    ):
+        """build_final_model_targets populates final_models with all composite keys.
+
+        Each (method, target) combination produces a distinct model, and the
+        training_set passed to each model spans both train + test data
+        (because the "final" model uses everything).
         """
-        Verify that instantiating BuildModelSuite with a standard model
-        (multi=False) raises a ValueError.
-        """
-        self.config.data["step_class_set"]["steps"]["model"] = "XGBoost"
-        with self.assertRaisesRegex(ValueError, "multi=True"):
-            _ = BuildModelSuite(self.config)
-
-    def test_shap_flag(self):
-        ds = BuildModelSuite(self.config)
-        model = ds.base_model
-        self.assertFalse(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertFalse(method_obj.enable_shap)
-
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
-        ds = BuildModelSuite(self.config)
-        model = ds.base_model
-        self.assertTrue(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertTrue(method_obj.enable_shap)
-
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
-        ds = BuildModelSuite(self.config)
-        model = ds.base_model
-        self.assertFalse(model.enable_shap)
-        for method_obj in model.method_objs.values():
-            self.assertFalse(method_obj.enable_shap)
-
-    def test_output_file_names(self):
-        """
-        Verify that default output file names correctly reflect composite keys
-        for models, and aggregated target keys for reports/predictions.
-        """
-        ds = BuildModelSuite(self.config)
-
-        # Model files should be uniquely named using the composite key
-        self.assertEqual(
-            "/path/to/model_1/nrt_bo_001/model_folder_1/model_xgb_temp.joblib",
-            str(ds.model_file_names["xgb_temp"]),
-        )
-        self.assertEqual(
-            "/path/to/model_1/nrt_bo_001/model_folder_1/model_dt_psal.joblib",
-            str(ds.model_file_names["dt_psal"]),
-        )
-
-        # Aggregated result files should NOT contain the method name, only the target
-        self.assertEqual(
-            "/path/to/build_1/nrt_bo_001/build_folder_1/test_report_temp.tsv",
-            str(ds.output_file_names["report"]["temp"]),
-        )
-        self.assertEqual(
-            "/path/to/build_1/nrt_bo_001/build_folder_1/test_contingency_tables_psal.parquet",
-            str(ds.output_file_names["contingency_table"]["psal"]),
-        )
-        self.assertEqual(
-            "/path/to/build_1/nrt_bo_001/build_folder_1/test_shap_values_psal.parquet",
-            str(ds.output_file_names["shap_value"]["psal"]),
-        )
-        self.assertEqual(
-            "/path/to/build_1/nrt_bo_001/build_folder_1/test_metric_plots_pres.svg",
-            str(ds.output_file_names["metric_plot"]["pres"]),
-        )
-
-    def test_base_model(self):
-        """Ensure that the configured base model is a ModelSuite instance."""
-        ds = BuildModelSuite(self.config)
-        self.assertIsInstance(ds.base_model, ModelSuite)
-
-    def test_build_final_model_targets(self):
-        """Confirm that building models populates 'final_models' with composite keys."""
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
         ds.build_final_model_targets()
 
-        # Both methods should exist for all targets
-        self.assertIn("xgb_temp", ds.final_models)
-        self.assertIn("dt_temp", ds.final_models)
-        self.assertIsNot(ds.final_models["xgb_temp"], ds.final_models["dt_temp"])
+        # All composite keys exist
+        for key in SUITE_KEYS:
+            assert key in ds.final_models
 
-        # Verify that internal data was joined correctly
-        self.assertEqual(
-            ds.final_models["xgb_temp"].training_set.height, 116 + 12
-        )  # 116 train + 12 test
+        # XGB and DT produce distinct objects for the same target
+        for tgt in TARGETS_NONEMPTY:
+            assert ds.final_models[f"xgb_{tgt}"] is not ds.final_models[f"dt_{tgt}"]
 
-    def test_build_targets(self):
-        """Confirm that building models populates 'models' with composite keys."""
+        # final_models combine train + test data. Temp had 22 train + 2 test rows.
+        assert ds.final_models["xgb_temp"].training_set.height == 22 + 2
+
+    def test_build_targets(self, training_config_001_suite, training_input_001):
+        """build_targets populates models with composite keys; sees only training data."""
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
         ds.build_targets()
 
-        # Both methods should exist for all targets
-        self.assertIn("xgb_temp", ds.models)
-        self.assertIn("dt_temp", ds.models)
-        self.assertIsNot(ds.models["xgb_temp"], ds.models["dt_temp"])
+        for key in SUITE_KEYS:
+            assert key in ds.models
+        for tgt in TARGETS_NONEMPTY:
+            assert ds.models[f"xgb_{tgt}"] is not ds.models[f"dt_{tgt}"]
 
-        # Verify that internal data was joined correctly
-        self.assertEqual(ds.models["xgb_temp"].training_set.height, 116)
+        # models use train-only data
+        assert ds.models["xgb_temp"].training_set.height == 22
 
-    def test_build_without_data(self):
-        """Ensure that calling build_targets() without data raises ValueError."""
-        ds = BuildModelSuite(self.config, training_sets=None, test_sets=None)
-        with self.assertRaises(ValueError):
-            ds.build_targets()
+    def test_test_targets(self, training_config_001_suite, training_input_001):
+        """test_targets aggregates per-method predictions into a 'method' column.
 
-    def test_build_final_model_without_test_data(self):
-        """Ensure that calling build_final_model_targets() without data raises ValueError."""
-        ds = BuildModelSuite(
-            self.config, training_sets=self.ds_input.training_sets, test_sets=None
-        )
-        with self.assertRaises(ValueError):
-            ds.build_final_model_targets()
-
-    def test_build_final_model_without_training_data(self):
-        """Ensure that calling build_final_model_targets() without data raises ValueError."""
-        ds = BuildModelSuite(self.config, training_sets=None, test_sets=None)
-        with self.assertRaises(ValueError):
-            ds.build_final_model_targets()
-
-    def test_test_targets(self):
-        """
-        Check that testing sets populates aggregated result columns including
-        the newly introduced 'method' column.
+        With 2 methods, each target's prediction count doubles vs. single-model.
         """
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
         ds.build_targets()
         ds.test_targets()
 
-        # Check aggregated Predictions
-        self.assertIsInstance(ds.predictions["temp"], pl.DataFrame)
-        self.assertIn("method", ds.predictions["temp"].columns)
-        # Temp has 12 test rows. 2 models = 24 rows total.
-        self.assertEqual(ds.predictions["temp"].shape[0], 24)
+        # Aggregated predictions: include 'method' column, 2x rows per target
+        # Temp: 2 test rows × 2 methods = 4
+        # Psal: 2 test rows × 2 methods = 4
+        # Pres: 0 test rows × 2 methods = 0
+        expected_pred_heights = {"temp": 4, "psal": 4, "pres": 0}
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.predictions[tgt], pl.DataFrame)
+            assert "method" in ds.predictions[tgt].columns
+            assert ds.predictions[tgt].shape[0] == expected_pred_heights[tgt]
 
-        # Check aggregated Contingency Tables
-        self.assertIsInstance(ds.contingency_tables["psal"], pl.DataFrame)
-        self.assertIn("method", ds.contingency_tables["psal"].columns)
-        # Psal has 14 test rows. 2 models = 28 rows total.
-        self.assertEqual(ds.contingency_tables["psal"].height, 28)
+        # Contingency tables aggregate the same way
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
+            assert "method" in ds.contingency_tables[tgt].columns
+            assert ds.contingency_tables[tgt].height == expected_pred_heights[tgt]
 
-        # Check aggregated Reports
-        self.assertIsInstance(ds.reports["pres"], pl.DataFrame)
-        self.assertIn("method", ds.reports["pres"].columns)
+        # Reports include the 'method' column
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.reports[tgt], pl.DataFrame)
+            assert "method" in ds.reports[tgt].columns
 
-    def test_test_without_model(self):
-        """Ensure that calling test_targets() without first building models raises a ValueError."""
+    # ----- Error cases (no data / wrong order of calls) -----
+
+    def test_build_without_data(self, training_config_001_suite):
+        """build_targets with no inputs raises ValueError."""
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite, training_sets=None, test_sets=None
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
+            ds.build_targets()
+
+    def test_build_final_model_without_test_data(
+        self, training_config_001_suite, training_input_001
+    ):
+        """build_final_model_targets with test_sets=None raises ValueError."""
+        ds = BuildModelSuite(
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=None,
+        )
+        with pytest.raises(ValueError):
+            ds.build_final_model_targets()
+
+    def test_build_final_model_without_training_data(self, training_config_001_suite):
+        """build_final_model_targets with no inputs raises ValueError."""
+        ds = BuildModelSuite(
+            training_config_001_suite, training_sets=None, test_sets=None
+        )
+        with pytest.raises(ValueError):
+            ds.build_final_model_targets()
+
+    def test_test_without_model(self, training_config_001_suite, training_input_001):
+        """test_targets before build_targets raises ValueError."""
+        ds = BuildModelSuite(
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
+        )
+        with pytest.raises(ValueError):
             ds.test_targets()
 
-    def test_write_aggregated_results(self):
+    def test_empty_write_calls(self, training_config_001_suite, training_input_001):
+        """Calling any write_*/create_metric_plots before producing data raises ValueError.
+
+        Five sibling checks for the five write paths. Original had this
+        as a single test with five with-statements; preserved structure but
+        slightly compacted.
         """
-        Check that aggregated reports, contingency tables, and predictions are written.
-        """
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
-        data_path = Path(__file__).resolve().parent / "data" / "training"
+        with pytest.raises(ValueError):
+            ds.write_reports()
+        with pytest.raises(ValueError):
+            ds.write_contingency_tables()
+        with pytest.raises(ValueError):
+            ds.create_metric_plots()
+        with pytest.raises(ValueError):
+            ds.write_predictions()
+        with pytest.raises(ValueError):
+            ds.write_models()
 
-        # Override output file names to a local temporary location
-        ds.output_file_names["report"]["temp"] = str(
-            data_path / "temp_test_report_temp.tsv"
+    def test_read_models_no_file(
+        self, training_config_001_suite, training_input_001, training_dir
+    ):
+        """Missing model files raise FileNotFoundError."""
+        ds = BuildModelSuite(
+            training_config_001_suite,
+            training_sets=None,
+            test_sets=training_input_001.test_sets,
         )
-        ds.output_file_names["contingency_table"]["temp"] = str(
-            data_path / "temp_test_contingency_temp.parquet"
-        )
-        ds.output_file_names["shap_value"]["temp"] = str(
-            data_path / "temp_test_shap_values_temp.parquet"
-        )
-        ds.output_file_names["prediction"]["temp"] = str(
-            data_path / "temp_test_prediction_temp.parquet"
-        )
-        ds.output_file_names["metric_plot"]["temp"] = str(
-            data_path / "temp_test_metric_plot_temp.svg"
-        )
-
-        ds.output_file_names["report"]["psal"] = str(
-            data_path / "temp_test_report_psal.tsv"
-        )
-        ds.output_file_names["contingency_table"]["psal"] = str(
-            data_path / "temp_test_contingency_psal.parquet"
-        )
-        ds.output_file_names["shap_value"]["psal"] = str(
-            data_path / "temp_test_shap_values_psal.parquet"
-        )
-        ds.output_file_names["prediction"]["psal"] = str(
-            data_path / "temp_test_prediction_psal.parquet"
-        )
-        ds.output_file_names["metric_plot"]["psal"] = str(
-            data_path / "temp_test_metric_plot_psal.svg"
+        ds.model_file_names["xgb_temp"] = str(
+            training_dir / "non_existent_model.joblib"
         )
 
-        ds.output_file_names["report"]["pres"] = str(
-            data_path / "temp_test_report_pres.tsv"
+        with pytest.raises(FileNotFoundError):
+            ds.read_models()
+
+    # ----- File output -----
+
+    def test_write_aggregated_results(
+        self, training_config_001_suite, training_input_001, test_output_dir
+    ):
+        """All five aggregated output kinds write per-target files.
+
+        The original wrote 15 paths (5 kinds × 3 targets) by hand, then
+        asserted existence for all 15, then removed all 15 — ~90 lines.
+        Same coverage here, ~15 lines via nested loops.
+        """
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
+        ds = BuildModelSuite(
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
-        ds.output_file_names["contingency_table"]["pres"] = str(
-            data_path / "temp_test_contingency_pres.parquet"
-        )
-        ds.output_file_names["shap_value"]["pres"] = str(
-            data_path / "temp_test_shap_values_pres.parquet"
-        )
-        ds.output_file_names["prediction"]["pres"] = str(
-            data_path / "temp_test_prediction_pres.parquet"
-        )
-        ds.output_file_names["metric_plot"]["pres"] = str(
-            data_path / "temp_test_metric_plot_pres.svg"
-        )
+
+        # (output_kind, filename_template) pairs. {tgt} substituted per target.
+        output_specs = [
+            ("report", "test_test_report_{tgt}.tsv"),
+            ("contingency_table", "test_test_contingency_{tgt}.parquet"),
+            ("shap_value", "test_test_shap_values_{tgt}.parquet"),
+            ("prediction", "test_test_prediction_{tgt}.parquet"),
+            ("metric_plot", "test_test_metric_plot_{tgt}.svg"),
+        ]
+
+        # Wire all 15 output paths
+        output_paths: dict[str, dict[str, str]] = {}
+        for kind, template in output_specs:
+            output_paths[kind] = {
+                tgt: str(test_output_dir / template.format(tgt=tgt))
+                for tgt in TARGETS_NONEMPTY
+            }
+            ds.output_file_names[kind] = output_paths[kind]
 
         ds.build_targets()
         ds.test_targets()
@@ -311,113 +371,29 @@ class TestBuildModelSuite(unittest.TestCase):
         ds.write_predictions()
         ds.create_metric_plots()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["temp"]))
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["temp"])
-        )
-        self.assertTrue(os.path.exists(ds.output_file_names["shap_value"]["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["prediction"]["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["temp"]))
+        for kind, _ in output_specs:
+            for tgt in TARGETS_NONEMPTY:
+                assert os.path.exists(output_paths[kind][tgt])
+                os.remove(output_paths[kind][tgt])  # comment out to debug
 
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["psal"]))
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["psal"])
-        )
-        self.assertTrue(os.path.exists(ds.output_file_names["shap_value"]["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["prediction"]["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["psal"]))
-
-        self.assertTrue(os.path.exists(ds.output_file_names["report"]["pres"]))
-        self.assertTrue(
-            os.path.exists(ds.output_file_names["contingency_table"]["pres"])
-        )
-        self.assertTrue(os.path.exists(ds.output_file_names["shap_value"]["pres"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["prediction"]["pres"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["metric_plot"]["pres"]))
-
-        # Cleanup
-        os.remove(ds.output_file_names["report"]["temp"])
-        os.remove(ds.output_file_names["contingency_table"]["temp"])
-        os.remove(ds.output_file_names["shap_value"]["temp"])
-        os.remove(ds.output_file_names["prediction"]["temp"])
-        os.remove(ds.output_file_names["metric_plot"]["temp"])
-
-        os.remove(ds.output_file_names["report"]["psal"])
-        os.remove(ds.output_file_names["contingency_table"]["psal"])
-        os.remove(ds.output_file_names["shap_value"]["psal"])
-        os.remove(ds.output_file_names["prediction"]["psal"])
-        os.remove(ds.output_file_names["metric_plot"]["psal"])
-
-        os.remove(ds.output_file_names["report"]["pres"])
-        os.remove(ds.output_file_names["contingency_table"]["pres"])
-        os.remove(ds.output_file_names["shap_value"]["pres"])
-        os.remove(ds.output_file_names["prediction"]["pres"])
-        os.remove(ds.output_file_names["metric_plot"]["pres"])
-
-    def test_write_models(self):
-        """
-        Check that individual trained models are serialized to files correctly.
-        """
+    def test_write_models(
+        self, training_config_001_suite, training_input_001, test_output_dir
+    ):
+        """write_models serialises one joblib per composite key (6 files for XGB+DT × 3 targets)."""
         ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
+            training_config_001_suite,
+            training_sets=training_input_001.training_sets,
+            test_sets=training_input_001.test_sets,
         )
-        data_path = Path(__file__).resolve().parent / "data" / "training"
 
-        # Override paths for composite keys
-        ds.model_file_names["xgb_temp"] = str(data_path / "temp_model_xgb_temp.joblib")
-        ds.model_file_names["xgb_psal"] = str(data_path / "temp_model_xgb_psal.joblib")
-        ds.model_file_names["xgb_pres"] = str(data_path / "temp_model_xgb_pres.joblib")
-        ds.model_file_names["dt_temp"] = str(data_path / "temp_model_dt_temp.joblib")
-        ds.model_file_names["dt_psal"] = str(data_path / "temp_model_dt_psal.joblib")
-        ds.model_file_names["dt_pres"] = str(data_path / "temp_model_dt_pres.joblib")
+        output_paths = {
+            key: str(test_output_dir / f"test_model_{key}.joblib") for key in SUITE_KEYS
+        }
+        ds.model_file_names = output_paths
 
         ds.build_final_model_targets()
         ds.write_models()
 
-        self.assertTrue(os.path.exists(ds.model_file_names["xgb_temp"]))
-        self.assertTrue(os.path.exists(ds.model_file_names["xgb_psal"]))
-        self.assertTrue(os.path.exists(ds.model_file_names["xgb_pres"]))
-        self.assertTrue(os.path.exists(ds.model_file_names["dt_temp"]))
-        self.assertTrue(os.path.exists(ds.model_file_names["dt_psal"]))
-        self.assertTrue(os.path.exists(ds.model_file_names["dt_pres"]))
-
-        os.remove(ds.model_file_names["xgb_temp"])
-        os.remove(ds.model_file_names["xgb_psal"])
-        os.remove(ds.model_file_names["xgb_pres"])
-        os.remove(ds.model_file_names["dt_temp"])
-        os.remove(ds.model_file_names["dt_psal"])
-        os.remove(ds.model_file_names["dt_pres"])
-
-    def test_empty_write_calls(self):
-        """
-        Ensure ValueErrors are raised if write methods are called empty datasets.
-        """
-        ds = BuildModelSuite(
-            self.config,
-            training_sets=self.ds_input.training_sets,
-            test_sets=self.ds_input.test_sets,
-        )
-
-        with self.assertRaises(ValueError):
-            ds.write_reports()
-        with self.assertRaises(ValueError):
-            ds.write_contingency_tables()
-        with self.assertRaises(ValueError):
-            ds.create_metric_plots()
-        with self.assertRaises(ValueError):
-            ds.write_predictions()
-        with self.assertRaises(ValueError):
-            ds.write_models()
-
-    def test_read_models_no_file(self):
-        """Check that FileNotFoundError is raised if model files are missing during reading."""
-        ds = BuildModelSuite(
-            self.config, training_sets=None, test_sets=self.ds_input.test_sets
-        )
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-        ds.model_file_names["xgb_temp"] = str(data_path / "non_existent_model.joblib")
-
-        with self.assertRaises(FileNotFoundError):
-            ds.read_models()
+        for key in SUITE_KEYS:
+            assert os.path.exists(output_paths[key])
+            os.remove(output_paths[key])  # comment out to debug

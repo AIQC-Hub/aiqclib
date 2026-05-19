@@ -1,252 +1,149 @@
-"""
-This module contains unit tests for the ExtractDataSetAll class,
-verifying its functionality in gathering and processing features from
-various classification pipeline steps (input, summary, select, locate).
+"""Unit tests for the classify-side ``ExtractDataSetAll`` class.
+
+ExtractDataSetAll is the classify-side analogue of the prepare-side
+ExtractDataSetAll: it gathers outputs from classify steps 1-4 (input,
+summary, select, locate) and produces per-target feature DataFrames keyed
+by target name.
+
+Refactored from a pytest-style class with five ad-hoc helper methods
+(``_setup_configs``, ``_setup_input_datasets``, ``_setup_summary_datasets``,
+``_setup_select_datasets``, ``_setup_locate_datasets``), all replaced by a
+single ``pipelines`` fixture that calls ``build_classify_prepare_pipeline``
+from conftest with ``stop_after="locate"``. Per-target triplication
+collapses to ``for tgt in TARGETS_NONEMPTY:`` loops.
 """
 
 import os
-import pytest
-from pathlib import Path
 
 import polars as pl
+import pytest
 
 from aiqclib.classify.step5_extract_features.dataset_all import ExtractDataSetAll
-from aiqclib.common.config.classify_config import ClassificationConfig
-from aiqclib.common.loader.classify_loader import (
-    load_classify_step1_input_dataset,
-    load_classify_step2_summary_dataset,
-    load_classify_step3_select_dataset,
-    load_classify_step4_locate_dataset,
-)
+
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
+
+
+# ---------------------------------------------------------------------------
+# Helper
+# ---------------------------------------------------------------------------
+
+
+def _make_extract(pipeline) -> ExtractDataSetAll:
+    """Construct an ExtractDataSetAll from a build_classify_prepare_pipeline result.
+
+    The four upstream stages (input, summary, select, locate) all live on
+    the SimpleNamespace returned by build_classify_prepare_pipeline(
+    ..., stop_after="locate").
+    """
+    return ExtractDataSetAll(
+        pipeline.config,
+        input_data=pipeline.input.input_data,
+        selected_profiles=pipeline.select.selected_profiles,
+        selected_rows=pipeline.locate.selected_rows,
+        summary_stats=pipeline.summary.summary_stats,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 class TestExtractDataSetAll:
+    """Tests for the classify-side ExtractDataSetAll, parametrized over two configs.
+
+    Both configs (001 + 002) should behave identically; tests parametrize
+    over ``idx ∈ {0, 1}`` to run each in isolation.
     """
-    A suite of tests verifying that the ExtractDataSetA class gathers
-    and outputs extracted features from multiple prior steps (input, summary,
-    select, locate).
-    """
 
-    def _setup_configs(self):
-        self.configs = []
-        for x in self.config_file_paths:
-            c = ClassificationConfig(str(x))
-            c.select("NRT_BO_001")
-            self.configs.append(c)
-
-    def _setup_input_datasets(self):
-        self.ds_input = []
-        for x in self.configs:
-            ds = load_classify_step1_input_dataset(x)
-            ds.input_file_name = str(self.test_data_file)
-            ds.read_input_data()
-            self.ds_input.append(ds)
-
-    def _setup_summary_datasets(self):
-        self.ds_summary = []
-        for x, y in zip(self.configs, self.ds_input):
-            ds = load_classify_step2_summary_dataset(x, input_data=y.input_data)
-            ds.calculate_stats()
-            self.ds_summary.append(ds)
-
-    def _setup_select_datasets(self):
-        self.ds_select = []
-        for x, y in zip(self.configs, self.ds_input):
-            ds = load_classify_step3_select_dataset(x, input_data=y.input_data)
-            ds.label_profiles()
-            self.ds_select.append(ds)
-
-    def _setup_locate_datasets(self):
-        self.ds_locate = []
-        for x, y, z in zip(self.configs, self.ds_input, self.ds_select):
-            ds = load_classify_step4_locate_dataset(
-                x, input_data=y.input_data, selected_profiles=z.selected_profiles
-            )
-            ds.process_targets()
-            self.ds_locate.append(ds)
-
-    @pytest.fixture(autouse=True)
-    def setup_datasets(self):
-        """
-        Set up test environment and load input, summary, select, and locate data.
-        Initializes `DataSetConfig` and pre-processes data using prior steps
-        to prepare for `ExtractDataSetA` testing.
-        """
-        self.config_file_paths = [
-            (
-                Path(__file__).resolve().parent
-                / "data"
-                / "config"
-                / "test_classify_001.yaml"
-            ),
-            (
-                Path(__file__).resolve().parent
-                / "data"
-                / "config"
-                / "test_classify_002.yaml"
-            ),
+    @pytest.fixture
+    def pipelines(self, classify_config_001, classify_config_002, test_data_file):
+        """Two pipelines, one per config, each run through step4 (locate)."""
+        return [
+            build_classify_prepare_pipeline(c, test_data_file, stop_after="locate")
+            for c in [classify_config_001, classify_config_002]
         ]
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-        self._setup_configs()
-        self._setup_input_datasets()
-        self._setup_summary_datasets()
-        self._setup_select_datasets()
-        self._setup_locate_datasets()
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_output_file_names(self, idx):
-        """
-        Test that the output file names dictionary is correctly populated
-        based on the configuration.
-        """
-        ds = ExtractDataSetAll(self.configs[idx])
-        assert (
-            "/path/to/data_1/nrt_bo_001/extract/extracted_features_classify_temp.parquet"
-            == str(ds.output_file_names["temp"])
-        )
-        assert (
-            "/path/to/data_1/nrt_bo_001/extract/extracted_features_classify_psal.parquet"
-            == str(ds.output_file_names["psal"])
-        )
-        assert (
-            "/path/to/data_1/nrt_bo_001/extract/extracted_features_classify_pres.parquet"
-            == str(ds.output_file_names["pres"])
-        )
+    def test_output_file_names(self, idx, pipelines):
+        """Default per-target output paths derive from config.path_info."""
+        ds = ExtractDataSetAll(pipelines[idx].config)
+        base = "/path/to/data_1/nrt_bo_001/extract"
+        for tgt in TARGETS_NONEMPTY:
+            assert (
+                str(ds.output_file_names[tgt])
+                == f"{base}/extracted_features_classify_{tgt}.parquet"
+            )
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_step_name(self, idx):
-        """
-        Verify that the 'step_name' attribute of the ExtractDataSetAll instance
-        is correctly set to 'extract'.
-        """
-        ds = ExtractDataSetAll(self.configs[idx])
+    def test_step_name(self, idx, pipelines):
+        """step_name == 'extract'."""
+        ds = ExtractDataSetAll(pipelines[idx].config)
         assert ds.step_name == "extract"
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_init_arguments(self, idx):
-        """
-        Test that the ExtractDataSetAll class correctly initializes with
-        provided input data, selected profiles, selected rows, and summary statistics,
-        and that these dataframes have the expected shapes.
-        """
-        ds = ExtractDataSetAll(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
+    def test_init_arguments(self, idx, pipelines):
+        """All four upstream inputs land on the ExtractDataSetAll instance."""
+        ds = _make_extract(pipelines[idx])
 
         assert isinstance(ds.input_data, pl.DataFrame)
-        assert ds.input_data.shape[0] == 19480
+        assert ds.input_data.shape[0] == 2456
         assert ds.input_data.shape[1] == 30
 
         assert isinstance(ds.summary_stats, pl.DataFrame)
-        assert ds.summary_stats.shape[0] == 425
+        assert ds.summary_stats.shape[0] == 44
         assert ds.summary_stats.shape[1] == 12
 
         assert isinstance(ds.selected_profiles, pl.DataFrame)
-        assert ds.selected_profiles.shape[0] == 84
+        assert ds.selected_profiles.shape[0] == 10
         assert ds.selected_profiles.shape[1] == 8
 
-        assert isinstance(ds.selected_rows["temp"], pl.DataFrame)
-        assert ds.selected_rows["temp"].shape[0] == 19480
-        assert ds.selected_rows["temp"].shape[1] == 9
-
-        assert isinstance(ds.selected_rows["psal"], pl.DataFrame)
-        assert ds.selected_rows["psal"].shape[0] == 19480
-        assert ds.selected_rows["psal"].shape[1] == 9
-
-        assert isinstance(ds.selected_rows["pres"], pl.DataFrame)
-        assert ds.selected_rows["pres"].shape[0] == 19480
-        assert ds.selected_rows["pres"].shape[1] == 9
+        # Classify-side keeps all input rows per target.
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
+            assert ds.selected_rows[tgt].shape[0] == 2456
+            assert ds.selected_rows[tgt].shape[1] == 9
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_location_features(self, idx):
-        """
-        Test that the `process_targets` method correctly generates and
-        stores extracted features for all configured targets (temp, psal, pres)
-        with the expected DataFrame shapes.
-        """
-        ds = ExtractDataSetAll(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
+    def test_location_features(self, idx, pipelines):
+        """process_targets populates target_features per target.
 
+        Note: the original test method was named ``test_location_features``
+        but exercises ``ExtractDataSetAll.process_targets``, not a location-
+        specific feature. Preserving the name for git-history continuity;
+        ``pytest -k`` filters will still match.
+        """
+        ds = _make_extract(pipelines[idx])
         ds.process_targets()
 
-        assert isinstance(ds.target_features["temp"], pl.DataFrame)
-        assert ds.target_features["temp"].shape[0] == 19480
-        assert ds.target_features["temp"].shape[1] == 56
-
-        assert isinstance(ds.target_features["psal"], pl.DataFrame)
-        assert ds.target_features["psal"].shape[0] == 19480
-        assert ds.target_features["psal"].shape[1] == 56
-
-        assert isinstance(ds.target_features["pres"], pl.DataFrame)
-        assert ds.target_features["pres"].shape[0] == 19480
-        assert ds.target_features["pres"].shape[1] == 56
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.target_features[tgt], pl.DataFrame)
+            assert ds.target_features[tgt].shape[0] == 2456
+            assert ds.target_features[tgt].shape[1] == 56
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_write_target_features(self, idx):
-        """
-        Test that the `write_target_features` method successfully writes
-        the extracted features for configured targets to parquet files
-        and that these files are created in the specified location.
-        """
-        ds = ExtractDataSetAll(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
-        data_path = Path(__file__).resolve().parent / "data" / "extract"
-
-        ds.output_file_names["temp"] = str(
-            data_path / "temp_extracted_features_classify_temp.parquet"
-        )
-        ds.output_file_names["psal"] = str(
-            data_path / "temp_extracted_features_classify_psal.parquet"
-        )
-        ds.output_file_names["pres"] = str(
-            data_path / "temp_extracted_features_classify_pres.parquet"
-        )
+    def test_write_target_features(self, idx, pipelines, test_output_dir):
+        """write_target_features produces a parquet per target."""
+        ds = _make_extract(pipelines[idx])
+        output_paths = {
+            tgt: str(
+                test_output_dir / f"test_extracted_features_classify_{tgt}.parquet"
+            )
+            for tgt in TARGETS_NONEMPTY
+        }
+        for tgt in TARGETS_NONEMPTY:
+            ds.output_file_names[tgt] = output_paths[tgt]
 
         ds.process_targets()
         ds.write_target_features()
 
-        assert os.path.exists(ds.output_file_names["temp"])
-        assert os.path.exists(ds.output_file_names["psal"])
-        assert os.path.exists(ds.output_file_names["pres"])
-
-        os.remove(ds.output_file_names["temp"])
-        os.remove(ds.output_file_names["psal"])
-        os.remove(ds.output_file_names["pres"])
+        for tgt in TARGETS_NONEMPTY:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug
 
     @pytest.mark.parametrize("idx", range(2))
-    def test_write_no_target_features(self, idx):
-        """
-        Test that calling `write_target_features` when `target_features`
-        is empty (i.e., `process_targets` has not been called) raises a ValueError,
-        ensuring proper validation.
-        """
-        ds = ExtractDataSetAll(
-            self.configs[idx],
-            input_data=self.ds_input[idx].input_data,
-            selected_profiles=self.ds_select[idx].selected_profiles,
-            selected_rows=self.ds_locate[idx].selected_rows,
-            summary_stats=self.ds_summary[idx].summary_stats,
-        )
-
+    def test_write_no_target_features(self, idx, pipelines):
+        """write_target_features before process_targets raises ValueError."""
+        ds = _make_extract(pipelines[idx])
         with pytest.raises(ValueError):
             ds.write_target_features()

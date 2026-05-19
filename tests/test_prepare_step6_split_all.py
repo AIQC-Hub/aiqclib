@@ -1,219 +1,111 @@
-"""
-This module contains unit tests for the SplitDataSetA class, ensuring its
-correct functionality in splitting extracted feature datasets into training
-and test sets, generating appropriate output file paths, and adhering to
-configuration parameters like test set fraction and k-fold validation.
-It also verifies the integrity of the dataframes after splitting and
-the successful writing of these sets to disk.
+"""Unit tests for the ``SplitDataSetAll`` class.
+
+SplitDataSetAll is the "select-all" variant of SplitDataSetA — it takes the
+``target_features`` produced by ExtractDataSetAll (which keeps every input
+row per target) and splits each target's frame into train/test sets.
+
+Refactored from a single ``unittest.TestCase`` class. Uses
+``build_prepare_pipeline(dataset_config_005, ..., stop_after="extract")``
+to get the upstream pipeline output, then exercises SplitDataSetAll on top.
+Per-target triplication collapses to ``for tgt in TARGETS:`` loops.
 """
 
 import os
-import unittest
-from pathlib import Path
 
 import polars as pl
+import pytest
 
-from aiqclib.common.config.dataset_config import DataSetConfig
-from aiqclib.common.loader.dataset_loader import (
-    load_step1_input_dataset,
-    load_step2_summary_dataset,
-    load_step3_select_dataset,
-    load_step4_locate_dataset,
-    load_step5_extract_dataset,
-)
 from aiqclib.prepare.step6_split_dataset.dataset_all import SplitDataSetAll
 
+from tests.conftest import TARGETS, build_prepare_pipeline
 
-class TestSplitDataSetAll(unittest.TestCase):
-    """
-    A suite of unit tests ensuring SplitDataSetA correctly splits extracted features
-    into training and test sets, writes them to files, and respects user-defined
-    configurations such as test set fraction and k-fold.
-    """
 
-    def setUp(self):
-        """
-        Set up test environment and load data from previous steps
-        (input, summary, select, locate, extract) to provide necessary
-        dependencies for SplitDataSetA.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_005.yaml"
+class TestSplitDataSetAll:
+    """Tests for SplitDataSetAll's train/test split and file output."""
+
+    @pytest.fixture
+    def pipeline(self, dataset_config_005, test_data_file):
+        """Run the prepare pipeline through step5 (extract) for the select-all config."""
+        return build_prepare_pipeline(
+            dataset_config_005,
+            test_data_file,
+            stop_after="extract",
         )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
 
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds_input = load_step1_input_dataset(self.config)
-        self.ds_input.input_file_name = str(self.test_data_file)
-        self.ds_input.read_input_data()
+    def test_step_name(self, pipeline):
+        """step_name == 'split'."""
+        ds = SplitDataSetAll(pipeline.config)
+        assert ds.step_name == "split"
 
-        self.ds_summary = load_step2_summary_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_summary.calculate_stats()
-
-        self.ds_select = load_step3_select_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_select.label_profiles()
-
-        self.ds_locate = load_step4_locate_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-        )
-        self.ds_locate.process_targets()
-
-        self.ds_extract = load_step5_extract_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-        self.ds_extract.process_targets()
-
-    def test_step_name(self):
-        """
-        Verify that the step name attribute of SplitDataSetA is correctly
-        set to 'split'.
-        """
-        ds = SplitDataSetAll(self.config)
-        self.assertEqual(ds.step_name, "split")
-
-    def test_target_features_data(self):
-        """
-        Check that target features (extracted dataframes) are correctly
-        loaded into the SplitDataSetA class upon initialization,
-        verifying their type and dimensions.
-        """
+    def test_target_features_data(self, pipeline):
+        """target_features arrives with the expected per-target shape (full input width)."""
         ds = SplitDataSetAll(
-            self.config, target_features=self.ds_extract.target_features
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
 
-        self.assertIsInstance(ds.target_features["temp"], pl.DataFrame)
-        self.assertEqual(ds.target_features["temp"].shape[0], 132342)
-        self.assertEqual(ds.target_features["temp"].shape[1], 58)
+        for tgt in TARGETS:
+            assert isinstance(ds.target_features[tgt], pl.DataFrame)
+            assert ds.target_features[tgt].shape[0] == 3267
+            assert ds.target_features[tgt].shape[1] == 58
 
-        self.assertIsInstance(ds.target_features["psal"], pl.DataFrame)
-        self.assertEqual(ds.target_features["psal"].shape[0], 132342)
-        self.assertEqual(ds.target_features["psal"].shape[1], 58)
-
-        self.assertIsInstance(ds.target_features["pres"], pl.DataFrame)
-        self.assertEqual(ds.target_features["pres"].shape[0], 132342)
-        self.assertEqual(ds.target_features["pres"].shape[1], 58)
-
-    def test_split_features_data(self):
-        """
-        Verify the splitting of features into training and test sets,
-        checking the resulting dimensions of the dataframes for both
-        "temp" and "psal" target variables.
-        """
+    def test_split_features_data(self, pipeline):
+        """process_targets produces non-empty (training_set, test_set) per target."""
         ds = SplitDataSetAll(
-            self.config, target_features=self.ds_extract.target_features
-        )
-
-        ds.process_targets()
-
-        self.assertIsInstance(ds.training_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["temp"].shape[0], 119109)
-        self.assertEqual(ds.training_sets["temp"].shape[1], 57)
-
-        self.assertIsInstance(ds.test_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["temp"].shape[0], 13233)
-        self.assertEqual(ds.test_sets["temp"].shape[1], 56)
-
-        self.assertIsInstance(ds.training_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["psal"].shape[0], 119108)
-        self.assertEqual(ds.training_sets["psal"].shape[1], 57)
-
-        self.assertIsInstance(ds.test_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["psal"].shape[0], 13234)
-        self.assertEqual(ds.test_sets["psal"].shape[1], 56)
-
-        self.assertIsInstance(ds.training_sets["pres"], pl.DataFrame)
-        self.assertEqual(ds.training_sets["pres"].shape[0], 119108)
-        self.assertEqual(ds.training_sets["pres"].shape[1], 57)
-
-        self.assertIsInstance(ds.test_sets["pres"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["pres"].shape[0], 13234)
-        self.assertEqual(ds.test_sets["pres"].shape[1], 56)
-
-    def test_write_training_sets(self):
-        """
-        Confirm that training sets for each target variable are
-        successfully written to their respective parquet files,
-        and clean up the created files afterwards.
-        """
-        ds = SplitDataSetAll(
-            self.config, target_features=self.ds_extract.target_features
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
         ds.process_targets()
 
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-        # Ensure the directory exists
-        data_path.mkdir(parents=True, exist_ok=True)
+        expected_train_rows = {"temp": 2941, "psal": 2942, "pres": 2942}
+        expected_test_rows = {"temp": 326, "psal": 325, "pres": 325}
+        for tgt in TARGETS:
+            assert isinstance(ds.training_sets[tgt], pl.DataFrame)
+            assert ds.training_sets[tgt].shape[0] == expected_train_rows[tgt]
+            assert ds.training_sets[tgt].shape[1] == 57
 
-        ds.output_file_names["train"]["temp"] = str(
-            data_path / "temp_train_set_all_temp.parquet"
+            assert isinstance(ds.test_sets[tgt], pl.DataFrame)
+            assert ds.test_sets[tgt].shape[0] == expected_test_rows[tgt]
+            assert ds.test_sets[tgt].shape[1] == 56
+
+    def test_write_training_sets(self, pipeline, test_output_dir):
+        """write_training_sets produces a parquet per target."""
+        ds = SplitDataSetAll(
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
-        ds.output_file_names["train"]["psal"] = str(
-            data_path / "temp_train_set_all_psal.parquet"
-        )
-        ds.output_file_names["train"]["pres"] = str(
-            data_path / "temp_train_set_all_pres.parquet"
-        )
+        ds.process_targets()
+
+        output_paths = {
+            tgt: str(test_output_dir / f"test_train_set_all_{tgt}.parquet")
+            for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names["train"][tgt] = output_paths[tgt]
 
         ds.write_training_sets()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["train"]["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["train"]["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["train"]["pres"]))
+        for tgt in TARGETS:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug
 
-        os.remove(ds.output_file_names["train"]["temp"])
-        os.remove(ds.output_file_names["train"]["psal"])
-        os.remove(ds.output_file_names["train"]["pres"])
-
-    def test_write_test_sets(self):
-        """
-        Confirm that test sets for each target variable are
-        successfully written to their respective parquet files,
-        and clean up the created files afterwards.
-        """
+    def test_write_test_sets(self, pipeline, test_output_dir):
+        """write_test_sets produces a parquet per target."""
         ds = SplitDataSetAll(
-            self.config, target_features=self.ds_extract.target_features
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
         ds.process_targets()
 
-        data_path = Path(__file__).resolve().parent / "data" / "training"
-        # Ensure the directory exists
-        data_path.mkdir(parents=True, exist_ok=True)
-
-        ds.output_file_names["test"]["temp"] = str(
-            data_path / "temp_test_set_all_temp.parquet"
-        )
-        ds.output_file_names["test"]["psal"] = str(
-            data_path / "temp_test_set_all_psal.parquet"
-        )
-        ds.output_file_names["test"]["pres"] = str(
-            data_path / "temp_test_set_all_pres.parquet"
-        )
+        output_paths = {
+            tgt: str(test_output_dir / f"test_test_set_all_{tgt}.parquet")
+            for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names["test"][tgt] = output_paths[tgt]
 
         ds.write_test_sets()
 
-        self.assertTrue(os.path.exists(ds.output_file_names["test"]["temp"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["test"]["psal"]))
-        self.assertTrue(os.path.exists(ds.output_file_names["test"]["pres"]))
-
-        os.remove(ds.output_file_names["test"]["temp"])
-        os.remove(ds.output_file_names["test"]["psal"])
-        os.remove(ds.output_file_names["test"]["pres"])
+        for tgt in TARGETS:
+            assert os.path.exists(output_paths[tgt])
+            os.remove(output_paths[tgt])  # comment out to debug

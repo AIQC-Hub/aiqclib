@@ -1,216 +1,158 @@
-"""
-Unit tests for the ConcatDataSetAll class, which handles concatenating prediction datasets
-generated in earlier classification steps.
+"""Unit tests for the ``ConcatDataSetAll`` class.
+
+ConcatDataSetAll is the step7 (concat) variant for single-method classify
+pipelines. It takes the predictions produced by ClassifyAll (one prediction
+DataFrame per target) and merges them with the original input data into a
+single long parquet output.
+
+Refactored from a ``unittest.TestCase`` class with a ~70-line ``setUp``
+that ran the full classify pipeline + step6 in-line. The pipeline setup
+moves to a per-file fixture using ``build_classify_prepare_pipeline()``
+from conftest; the step6 classify step is local to this file since it's
+specific to step7's needs.
 """
 
 import os
-import unittest
-from pathlib import Path
+from types import SimpleNamespace
 
 import polars as pl
+import pytest
 
+from aiqclib.classify.step6_classify_dataset.dataset_all import ClassifyAll
 from aiqclib.classify.step7_concat_datasets.dataset_all import ConcatDataSetAll
-from aiqclib.common.config.classify_config import ClassificationConfig
-from aiqclib.common.loader.classify_loader import (
-    load_classify_step1_input_dataset,
-    load_classify_step2_summary_dataset,
-    load_classify_step3_select_dataset,
-    load_classify_step4_locate_dataset,
-    load_classify_step5_extract_dataset,
-    load_classify_step6_classify_dataset,
-)
+
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 
 
-class TestConcatPredictions(unittest.TestCase):
+# ---------------------------------------------------------------------------
+# Fixture
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def step7_pipeline(classify_config_001, test_data_file, training_dir):
+    """Pipeline through step6: prepare (1-5) + classify (6) with default models.
+
+    Returns a SimpleNamespace with ``config``, ``input``, and ``classify``
+    attributes. ``classify`` is a ClassifyAll instance with .predictions
+    populated, ready for step7 (concat).
     """
-    A suite of tests for the ConcatDataSetAll class, ensuring proper concatenation
-    and handling of prediction datasets.
-    """
+    pipeline = build_classify_prepare_pipeline(
+        classify_config_001,
+        test_data_file,
+        stop_after="extract",
+    )
+    ds_classify = ClassifyAll(
+        pipeline.config,
+        test_sets=pipeline.extract.target_features,
+    )
+    ds_classify.model_file_names = {
+        tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS_NONEMPTY
+    }
+    ds_classify.read_models()
+    ds_classify.test_targets()
 
-    def setUp(self):
-        """
-        Set up test environment by loading necessary configuration and preparing
-        input data, summary statistics, selected profiles, located data, extracted features,
-        and classified predictions from previous steps.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
-        )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
+    return SimpleNamespace(
+        config=pipeline.config,
+        input=pipeline.input,
+        classify=ds_classify,
+    )
 
-        model_path = Path(__file__).resolve().parent / "data" / "training"
-        self.model_file_names = {
-            "temp": str(model_path / "model_temp.joblib"),
-            "psal": str(model_path / "model_psal.joblib"),
-            "pres": str(model_path / "model_pres.joblib"),
-        }
 
-        self.prediction_file_name = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "classify"
-            / "temp_predictions.parquet"
-        )
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-        self.test_data_file = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-        self.ds_input = load_classify_step1_input_dataset(self.config)
-        self.ds_input.input_file_name = str(self.test_data_file)
-        self.ds_input.read_input_data()
 
-        self.ds_summary = load_classify_step2_summary_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_summary.calculate_stats()
+class TestConcatPredictions:
+    """Tests for ConcatDataSetAll's merge_predictions and file output."""
 
-        self.ds_select = load_classify_step3_select_dataset(
-            self.config, input_data=self.ds_input.input_data
-        )
-        self.ds_select.label_profiles()
+    def test_step_name(self, classify_config_001):
+        """step_name == 'concat'."""
+        ds = ConcatDataSetAll(classify_config_001)
+        assert ds.step_name == "concat"
 
-        self.ds_locate = load_classify_step4_locate_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-        )
-        self.ds_locate.process_targets()
-
-        self.ds_extract = load_classify_step5_extract_dataset(
-            self.config,
-            input_data=self.ds_input.input_data,
-            selected_profiles=self.ds_select.selected_profiles,
-            selected_rows=self.ds_locate.selected_rows,
-            summary_stats=self.ds_summary.summary_stats,
-        )
-        self.ds_extract.process_targets()
-
-        self.ds_classify = load_classify_step6_classify_dataset(
-            self.config, self.ds_extract.target_features
-        )
-        self.ds_classify.model_file_names = self.model_file_names
-        self.ds_classify.read_models()
-        self.ds_classify.test_targets()
-
-    def test_step_name(self):
-        """Check that the ConcatDataSetAll step name is correctly assigned."""
-        ds = ConcatDataSetAll(self.config)
-        self.assertEqual(ds.step_name, "concat")
-
-    def test_output_file_names(self):
-        """Verify that the default output file name for merged predictions is as expected from config."""
-        ds = ConcatDataSetAll(self.config)
-
-        self.assertEqual(
-            "/path/to/concat_1/nrt_bo_001/concat_folder_1/predictions.parquet",
-            str(ds.output_file_name),
+    def test_output_file_names(self, classify_config_001):
+        """Default output path comes from config.path_info."""
+        ds = ConcatDataSetAll(classify_config_001)
+        assert (
+            str(ds.output_file_name)
+            == "/path/to/concat_1/nrt_bo_001/concat_folder_1/predictions.parquet"
         )
 
-    def test_test_sets(self):
-        """
-        Check that input data and predictions are correctly loaded into ConcatDataSetAll
-        and have the expected shapes for further processing.
-        """
+    def test_test_sets(self, step7_pipeline):
+        """input_data and per-target predictions are loaded with expected shapes."""
         ds = ConcatDataSetAll(
-            self.config,
-            input_data=self.ds_input.input_data,
-            predictions=self.ds_classify.predictions,
+            step7_pipeline.config,
+            input_data=step7_pipeline.input.input_data,
+            predictions=step7_pipeline.classify.predictions,
         )
 
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 19480)
-        self.assertEqual(ds.input_data.shape[1], 30)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == 2456
+        assert ds.input_data.shape[1] == 30
 
-        self.assertIsInstance(ds.predictions["temp"], pl.DataFrame)
-        self.assertEqual(ds.predictions["temp"].shape[0], 19480)
-        self.assertEqual(ds.predictions["temp"].shape[1], 7)
+        # Each target's predictions table is (input_rows × 7).
+        for tgt in TARGETS_NONEMPTY:
+            assert isinstance(ds.predictions[tgt], pl.DataFrame)
+            assert ds.predictions[tgt].shape[0] == 2456
+            assert ds.predictions[tgt].shape[1] == 7
 
-        self.assertIsInstance(ds.predictions["psal"], pl.DataFrame)
-        self.assertEqual(ds.predictions["psal"].shape[0], 19480)
-        self.assertEqual(ds.predictions["psal"].shape[1], 7)
-
-        self.assertIsInstance(ds.predictions["pres"], pl.DataFrame)
-        self.assertEqual(ds.predictions["pres"].shape[0], 19480)
-        self.assertEqual(ds.predictions["pres"].shape[1], 7)
-
-    def test_merge_predictions(self):
-        """
-        Confirm that merging predictions correctly combines input data and
-        individual parameter predictions into a single Polars DataFrame with the expected shape.
-        """
+    def test_merge_predictions(self, step7_pipeline):
+        """merge_predictions combines input + per-target predictions into one wide frame."""
         ds = ConcatDataSetAll(
-            self.config,
-            input_data=self.ds_input.input_data,
-            predictions=self.ds_classify.predictions,
+            step7_pipeline.config,
+            input_data=step7_pipeline.input.input_data,
+            predictions=step7_pipeline.classify.predictions,
         )
         ds.merge_predictions()
 
-        self.assertIsInstance(ds.merged_predictions, pl.DataFrame)
-        self.assertEqual(ds.merged_predictions.shape[0], 19480)
-        self.assertEqual(ds.merged_predictions.shape[1], 39)
+        assert isinstance(ds.merged_predictions, pl.DataFrame)
+        # Row count == input rows; column count == 30 input cols + 3 × 3 added per-target cols.
+        assert ds.merged_predictions.shape[0] == 2456
+        assert ds.merged_predictions.shape[1] == 36
 
-    def test_merge_predictions_with_empty_input(self):
-        """
-        Check that a ValueError is raised if the input data for merging is absent (None).
-        """
+    def test_merge_predictions_with_empty_input(self, step7_pipeline):
+        """merge_predictions with input_data=None raises ValueError."""
         ds = ConcatDataSetAll(
-            self.config,
+            step7_pipeline.config,
             input_data=None,
-            predictions=self.ds_classify.predictions,
+            predictions=step7_pipeline.classify.predictions,
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.merge_predictions()
 
-    def test_merge_predictions_with_empty_predictions(self):
-        """
-        Check that a ValueError is raised if the predictions for merging are absent (None).
-        """
+    def test_merge_predictions_with_empty_predictions(self, step7_pipeline):
+        """merge_predictions with predictions=None raises ValueError."""
         ds = ConcatDataSetAll(
-            self.config,
-            input_data=self.ds_input.input_data,
+            step7_pipeline.config,
+            input_data=step7_pipeline.input.input_data,
             predictions=None,
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.merge_predictions()
 
-    def test_write_predictions(self):
-        """
-        Check that the merged predictions are correctly written to a Parquet file
-        and that the file exists afterwards, then clean up the created file.
-        """
+    def test_write_predictions(self, step7_pipeline, test_output_dir):
+        """write_merged_predictions produces a parquet at the configured path."""
         ds = ConcatDataSetAll(
-            self.config,
-            input_data=self.ds_input.input_data,
-            predictions=self.ds_classify.predictions,
+            step7_pipeline.config,
+            input_data=step7_pipeline.input.input_data,
+            predictions=step7_pipeline.classify.predictions,
         )
-
-        data_path = Path(__file__).resolve().parent / "data" / "classify"
-        ds.output_file_name = str(data_path / "temp_predictions.parquet")
+        output_path = str(test_output_dir / "test_predictions.parquet")
+        ds.output_file_name = output_path
 
         ds.merge_predictions()
         ds.write_merged_predictions()
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
 
-        self.assertTrue(os.path.exists(ds.output_file_name))
-
-        os.remove(ds.output_file_name)
-
-    def test_write_no_results(self):
-        """
-        Ensure ValueError is raised if write_merged_predictions is called
-        before predictions have been merged, as `merged_predictions` would be None.
-        """
+    def test_write_no_results(self, step7_pipeline):
+        """write_merged_predictions before merge_predictions raises ValueError."""
         ds = ConcatDataSetAll(
-            self.config,
-            input_data=self.ds_input.input_data,
-            predictions=self.ds_classify.predictions,
+            step7_pipeline.config,
+            input_data=step7_pipeline.input.input_data,
+            predictions=step7_pipeline.classify.predictions,
         )
-
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.write_merged_predictions()

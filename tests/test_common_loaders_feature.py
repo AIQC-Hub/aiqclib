@@ -1,54 +1,40 @@
-"""
-Unit tests for verifying the correct loading and initialization of feature classes
-at various processing steps, using common loader functions.
+"""Unit tests for the ``load_feature_class`` loader.
+
+load_feature_class is the factory that turns a feature-param dict (one
+entry from ``config.data["feature_param_set"]["params"]``) into a concrete
+feature object. The first entry in ``test_dataset_001.yaml``'s
+feature_param_set defines a ``LocationFeat``-class feature — the tests
+verify the loader returns the right instance for that entry and raises
+ValueError when given an invalid feature name.
+
+Refactored from a ``unittest.TestCase`` class with the standard setUp
+boilerplate. Uses ``dataset_config_001`` from conftest.
 """
 
-import unittest
-from pathlib import Path
+import pytest
 
-from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.loader.feature_loader import load_feature_class
 from aiqclib.prepare.features.location import LocationFeat
 
 
-class TestFeatureClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the Feature class.
-    """
+class TestFeatureClassLoader:
+    """Tests for the load_feature_class factory."""
 
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_001.yaml"
-        )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-
-    def test_load_model_valid_config(self):
-        """
-        Test that `load_feature_class` successfully loads and returns an instance
-        of `LocationFeat` when provided with valid configuration parameters.
-        """
+    def test_load_model_valid_config(self, dataset_config_001):
+        """A valid feature-param entry produces an instance of the configured class."""
         ds = load_feature_class(
-            "temp", self.config.data["feature_param_set"]["params"][0]
+            "temp",
+            dataset_config_001.data["feature_param_set"]["params"][0],
         )
-        self.assertIsInstance(ds, LocationFeat)
+        assert isinstance(ds, LocationFeat)
 
-    def test_load_model_invalid_config(self):
-        """
-        Test that `load_feature_class` raises a `ValueError` when an
-        invalid feature name is provided in the configuration.
-        """
-        self.config.data["feature_param_set"]["params"][0]["feature"] = (
+    def test_load_model_invalid_config(self, dataset_config_001):
+        """An invalid feature name in the param entry raises ValueError."""
+        dataset_config_001.data["feature_param_set"]["params"][0]["feature"] = (
             "invalid_feature_name"
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = load_feature_class(
-                "temp", self.config.data["feature_param_set"]["params"][0]
+                "temp",
+                dataset_config_001.data["feature_param_set"]["params"][0],
             )
