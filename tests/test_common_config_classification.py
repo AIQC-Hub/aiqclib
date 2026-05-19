@@ -1,106 +1,100 @@
-"""
-This module contains unit tests for the ClassificationConfig class,
-ensuring its ability to load, validate, and select configuration settings
-for classification tasks, as well as generate correct file paths.
+"""Unit tests for the ``ClassificationConfig`` class.
+
+Coverage:
+- ``validate()`` correctly identifies valid vs. invalid YAML files
+- ``select()`` populates the expected ds.data sections with the right
+  number of keys for a classification config
+- Repeated ``select()`` calls are idempotent
+- Selecting an unknown name raises ValueError
+- Template YAMLs resolve folder paths correctly for input/summary/classify
+- ``auto_select=False`` defers data loading
+
+Refactored from a ``unittest.TestCase`` + a pytest-style template class
+into two parallel pytest classes. Both classes get their YAML paths from
+conftest fixtures (``classify_yaml_001``, ``config_dir``) rather than
+constructing paths inline.
 """
 
-import unittest
 import pytest
-from pathlib import Path
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 
 
-class TestClassificationConfig(unittest.TestCase):
-    """
-    A suite of tests ensuring ClassificationConfig can validate configurations,
-    select datasets correctly, and generate file/folder paths as expected.
-    """
+# ---------------------------------------------------------------------------
+# Basic config tests against test_classify_001.yaml
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Set up references to valid and template configuration files
-        to be used in subsequent tests.
-        """
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
-        )
 
-    def test_valid_config(self):
-        """
-        Verify that validating a well-formed configuration reports it as valid.
-        """
-        ds = ClassificationConfig(str(self.config_file_path))
-        msg = ds.validate()
-        self.assertIn("valid", msg)
+class TestClassificationConfig:
+    """Tests for ``ClassificationConfig`` against a real test YAML."""
 
-    def test_invalid_config(self):
-        """
-        Verify that validating a malformed configuration reports it as invalid.
-        """
-        config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_invalid.yaml"
-        )
-        ds = ClassificationConfig(str(config_file_path))
-        msg = ds.validate()
-        self.assertIn("invalid", msg)
+    def test_valid_config(self, classify_yaml_001):
+        """A well-formed YAML validates as 'valid'."""
+        ds = ClassificationConfig(str(classify_yaml_001))
+        assert "valid" in ds.validate()
 
-    def test_load_dataset_config(self):
+    def test_invalid_config(self, config_dir):
+        """A malformed YAML validates as 'invalid'.
+
+        Relies on ``test_dataset_invalid.yaml`` in the config fixtures.
         """
-        Check that the expected configuration sections and their lengths
-        are loaded from a valid configuration file.
+        ds = ClassificationConfig(str(config_dir / "test_dataset_invalid.yaml"))
+        assert "invalid" in ds.validate()
+
+    def test_load_dataset_config(self, classify_yaml_001):
+        """After select(), each top-level data section has the expected key count.
+
+        Classification configs include `model` and `concat` path entries, so
+        path_info has 8 keys (vs 6 for prepare/training configs). The other
+        sections each have 2 keys (`name` + body).
         """
-        ds = ClassificationConfig(str(self.config_file_path))
+        ds = ClassificationConfig(str(classify_yaml_001))
         ds.select("NRT_BO_001")
 
-        self.assertEqual(len(ds.data["path_info"]), 8)
-        self.assertEqual(len(ds.data["target_set"]), 2)
-        self.assertEqual(len(ds.data["feature_set"]), 2)
-        self.assertEqual(len(ds.data["feature_param_set"]), 2)
-        self.assertEqual(len(ds.data["step_class_set"]), 2)
-        self.assertEqual(len(ds.data["step_param_set"]), 2)
+        assert len(ds.data["path_info"]) == 8
+        assert len(ds.data["target_set"]) == 2
+        assert len(ds.data["feature_set"]) == 2
+        assert len(ds.data["feature_param_set"]) == 2
+        assert len(ds.data["step_class_set"]) == 2
+        assert len(ds.data["step_param_set"]) == 2
 
-    def test_load_dataset_config_twice(self):
-        """
-        Confirm that calling `select()` multiple times with the same dataset
-        name does not cause issues or alter the state incorrectly.
-        """
-        ds = ClassificationConfig(str(self.config_file_path))
+    def test_load_dataset_config_twice(self, classify_yaml_001):
+        """Calling select() twice with the same name is idempotent."""
+        ds = ClassificationConfig(str(classify_yaml_001))
         ds.select("NRT_BO_001")
-        ds.select("NRT_BO_001")
+        ds.select("NRT_BO_001")  # Should not raise
 
-    def test_invalid_dataset_name(self):
-        """
-        Check that attempting to select an unavailable dataset name
-        raises a ValueError as expected.
-        """
-        ds = ClassificationConfig(str(self.config_file_path))
-        with self.assertRaises(ValueError):
+    def test_invalid_dataset_name(self, classify_yaml_001):
+        """select() with an unknown dataset name raises ValueError."""
+        ds = ClassificationConfig(str(classify_yaml_001))
+        with pytest.raises(ValueError):
             ds.select("INVALID_NAME")
 
 
-class TestClassificationConfigTemplate:
-    @pytest.fixture(autouse=True)
-    def setup_template(self):
-        dir_config = Path(__file__).resolve().parent / "data" / "config"
-        self.template_files = [
-            dir_config / "config_classify_set_full_template.yaml",
-            dir_config / "config_classify_set_template.yaml",
-        ]
+# ---------------------------------------------------------------------------
+# Template-config tests against the in-package YAML templates
+# ---------------------------------------------------------------------------
 
-    @pytest.mark.parametrize("idx", range(2))
-    def test_input_folder(self, idx):
-        """
-        Verify that full file paths for input files are generated correctly
-        based on the configuration settings.
-        """
-        ds = ClassificationConfig(str(self.template_files[idx]))
+# Module-level list of template files. Both templates resolve the same
+# folder paths under the same select name; tests parametrize over idx.
+_TEMPLATE_FILENAMES = (
+    "config_classify_set_full_template.yaml",
+    "config_classify_set_template.yaml",
+)
+
+
+class TestClassificationConfigTemplate:
+    """Tests for the bundled classification template YAMLs."""
+
+    @pytest.fixture
+    def template_paths(self, config_dir):
+        """List of full paths to the classification template YAMLs."""
+        return [config_dir / name for name in _TEMPLATE_FILENAMES]
+
+    @pytest.mark.parametrize("idx", range(len(_TEMPLATE_FILENAMES)))
+    def test_input_folder(self, idx, template_paths):
+        """Input file path resolves correctly under the template settings."""
+        ds = ClassificationConfig(str(template_paths[idx]))
         ds.select("classification_0001")
         input_file_name = ds.get_full_file_name(
             "input",
@@ -110,34 +104,31 @@ class TestClassificationConfigTemplate:
         )
         assert input_file_name == "/path/to/input/nrt_cora_bo_4.parquet"
 
-    @pytest.mark.parametrize("idx", range(2))
-    def test_summary_folder(self, idx):
-        """
-        Confirm that full file paths for 'summary' folder items are resolved correctly.
-        """
-        ds = ClassificationConfig(str(self.template_files[idx]))
+    @pytest.mark.parametrize("idx", range(len(_TEMPLATE_FILENAMES)))
+    def test_summary_folder(self, idx, template_paths):
+        """Files placed in 'summary' resolve under the dataset folder."""
+        ds = ClassificationConfig(str(template_paths[idx]))
         ds.select("classification_0001")
-        input_file_name = ds.get_full_file_name("summary", "test.txt")
-        assert input_file_name == "/path/to/data/dataset_0001/summary/test.txt"
+        assert (
+            ds.get_full_file_name("summary", "test.txt")
+            == "/path/to/data/dataset_0001/summary/test.txt"
+        )
 
-    @pytest.mark.parametrize("idx", range(2))
-    def test_classify_folder(self, idx):
-        """
-        Confirm that full file paths for 'classify' folder items are resolved correctly.
-        """
-        ds = ClassificationConfig(str(self.template_files[idx]))
+    @pytest.mark.parametrize("idx", range(len(_TEMPLATE_FILENAMES)))
+    def test_classify_folder(self, idx, template_paths):
+        """Files placed in 'classify' resolve under the dataset folder."""
+        ds = ClassificationConfig(str(template_paths[idx]))
         ds.select("classification_0001")
-        input_file_name = ds.get_full_file_name("classify", "test.txt")
-        assert input_file_name == "/path/to/data/dataset_0001/classify/test.txt"
+        assert (
+            ds.get_full_file_name("classify", "test.txt")
+            == "/path/to/data/dataset_0001/classify/test.txt"
+        )
 
-    @pytest.mark.parametrize("idx", range(2))
-    def test_auto_select(self, idx):
-        """
-        Confirm that the `auto_select` option in the constructor correctly
-        determines whether data is automatically loaded or not.
-        """
-        ds = ClassificationConfig(str(self.template_files[idx]), False)
+    @pytest.mark.parametrize("idx", range(len(_TEMPLATE_FILENAMES)))
+    def test_auto_select(self, idx, template_paths):
+        """auto_select=False defers loading; auto_select=True loads immediately."""
+        ds = ClassificationConfig(str(template_paths[idx]), False)
         assert ds.data is None
 
-        ds = ClassificationConfig(str(self.template_files[idx]), True)
+        ds = ClassificationConfig(str(template_paths[idx]), True)
         assert ds.data is not None

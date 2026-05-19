@@ -1,24 +1,44 @@
-"""
-Unit tests for the DataSetBase class in aiqclib.common.base.model_base
-This module verifies the correct functionality of DataSetBase's methods.
+"""Unit tests for the ``ModelBase`` class.
+
+Coverage:
+- A subclass with no ``expected_class_name`` raises NotImplementedError on
+  construction
+- A subclass whose ``expected_class_name`` doesn't match the config-selected
+  model class raises ValueError
+- ``__str__`` returns a structured representation
+- ``load_model`` raises FileNotFoundError on missing path and ValueError on
+  type mismatch between the loaded joblib and ``_get_model_class()``
+- The SHAP flag (``calculate_shap``) propagates from config to ``enable_shap``
+- ``update_contingency_table`` validates required member variables and
+  correctly accumulates per-fold contingency rows
+
+Refactored from a ``unittest.TestCase`` class. The three module-level mock
+subclasses (ModelBaseWithEmptyName, ModelBaseWithExpectedName,
+ModelBaseWithWrongName) stay at module level.
+
+Fix to original: the file's top-level docstring claimed this tested
+"DataSetBase in aiqclib.common.base.model_base" — a copy-paste error.
+This file tests ``ModelBase`` (which lives in ``aiqclib.common.base.model_base``).
 """
 
-import unittest
-from pathlib import Path
 from typing import Self
 
 import polars as pl
+import pytest
 import xgboost as xgb
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
-from aiqclib.common.config.training_config import TrainingConfig
+
+
+# ---------------------------------------------------------------------------
+# Module-level mock subclasses
+# ---------------------------------------------------------------------------
 
 
 class ModelBaseWithEmptyName(ModelBase):
-    """
-    ModelBaseWithEmptyName is used to test methods and variables in ModelBase
-    """
+    """Subclass with no ``expected_class_name`` — used to test the
+    NotImplementedError path in ModelBase's constructor."""
 
     def __init__(self, config: ConfigBase) -> None:
         super().__init__(config)
@@ -37,9 +57,9 @@ class ModelBaseWithEmptyName(ModelBase):
 
 
 class ModelBaseWithExpectedName(ModelBase):
-    """
-    ModelBaseWithExpectedName is used to test methods and variables in ModelBase
-    """
+    """Subclass whose ``expected_class_name`` matches the config's model
+    step ("XGBoost"). Used to test the successful-construction and
+    type-checking paths."""
 
     expected_class_name: str = "XGBoost"
 
@@ -60,9 +80,8 @@ class ModelBaseWithExpectedName(ModelBase):
 
 
 class ModelBaseWithWrongName(ModelBase):
-    """
-    ModelBaseWithWrongName is used to test methods and variables in ModelBase
-    """
+    """Subclass whose ``expected_class_name`` ("XGBoostZ") doesn't match
+    any registered model class — triggers the ValueError path."""
 
     expected_class_name: str = "XGBoostZ"
 
@@ -82,145 +101,140 @@ class ModelBaseWithWrongName(ModelBase):
         return xgb.XGBClassifier
 
 
-class TestModelBaseMethods(unittest.TestCase):
-    """
-    A suite of tests that verify the correctness of methods
-    within the ModelBase.
-    """
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Set up a reference to the test configuration file (test_training_001.yaml)
-        to be used by all subsequent tests in this class.
-        """
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
 
-    def test_expected_class_name(self):
-        """
-        Ensure that an undefined expected class_name raises a NotImplementedError.
-        """
-        with self.assertRaises(NotImplementedError):
-            _ = ModelBaseWithEmptyName(self.config)
+class TestModelBaseMethods:
+    """Tests for ModelBase's abstract-class behaviour, model loading, and
+    contingency-table accumulation."""
 
-    def test_model_name(self):
-        """
-        Ensure that an unmatched model name raises a ValueError.
-        """
-        with self.assertRaises(ValueError):
-            _ = ModelBaseWithWrongName(self.config)
+    # ----- Identity / construction -----
 
-    def test_representing_str(self):
-        """
-        Ensure that the instance returns a correct string representation.
-        """
-        ds = ModelBaseWithExpectedName(self.config)
-        self.assertEqual(str(ds), "ModelBase(class=XGBoost)")
+    def test_expected_class_name(self, training_config_001):
+        """A subclass without ``expected_class_name`` raises NotImplementedError."""
+        with pytest.raises(NotImplementedError):
+            _ = ModelBaseWithEmptyName(training_config_001)
 
-    def test_load_input_with_invalid_path(self):
-        """
-        Ensure that an invalid file path raises a FileNotFoundError.
-        """
-        ds = ModelBaseWithExpectedName(self.config)
-        with self.assertRaises(FileNotFoundError):
+    def test_model_name(self, training_config_001):
+        """A subclass with a mismatched ``expected_class_name`` raises ValueError."""
+        with pytest.raises(ValueError):
+            _ = ModelBaseWithWrongName(training_config_001)
+
+    def test_representing_str(self, training_config_001):
+        """__str__ returns "ModelBase(class=<expected_class_name>)"."""
+        ds = ModelBaseWithExpectedName(training_config_001)
+        assert str(ds) == "ModelBase(class=XGBoost)"
+
+    # ----- load_model -----
+
+    def test_load_input_with_invalid_path(self, training_config_001):
+        """load_model with a missing path raises FileNotFoundError."""
+        ds = ModelBaseWithExpectedName(training_config_001)
+        with pytest.raises(FileNotFoundError):
             ds.load_model("invalid_file_path")
 
-    def test_load_model_success(self):
-        """
-        Ensure that load_model successfully loads a model when the class matches
-        the one expected by _get_model_class().
-        """
-        ds = ModelBaseWithExpectedName(self.config)
+    def test_load_model_success(self, training_config_001, training_dir):
+        """load_model loads a joblib whose class matches ``_get_model_class()``.
 
-        model_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "training"
-            / "model_pres_xgb.joblib"
-        )
-
-        ds.load_model(str(model_file))
-        self.assertIsInstance(ds.model, xgb.XGBClassifier)
-
-    def test_load_model_type_mismatch(self):
+        Uses ``model_temp_xgb.joblib`` — a temp-target XGBoost fixture.
         """
-        Ensure that load_model raises a ValueError when the loaded model
-        does not match the expected class.
-        """
-        ds = ModelBaseWithExpectedName(self.config)
+        ds = ModelBaseWithExpectedName(training_config_001)
+        ds.load_model(str(training_dir / "model_temp_xgb.joblib"))
+        assert isinstance(ds.model, xgb.XGBClassifier)
 
-        model_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "training"
-            / "model_pres_mlp.joblib"
-        )
+    def test_load_model_type_mismatch(self, training_config_001, training_dir):
+        """load_model raises ValueError when the joblib's class doesn't match.
 
-        # Verify that loading the wrong model type triggers the custom ValueError
-        with self.assertRaisesRegex(ValueError, "Inconsistent class instances"):
-            ds.load_model(str(model_file))
+        Uses ``model_temp_mlp.joblib`` (an MLP model) loaded into a wrapper
+        whose ``_get_model_class()`` returns XGBClassifier. ModelBase should
+        catch the mismatch and surface a "Inconsistent class instances" error.
+        """
+        ds = ModelBaseWithExpectedName(training_config_001)
+        with pytest.raises(ValueError, match="Inconsistent class instances"):
+            ds.load_model(str(training_dir / "model_temp_mlp.joblib"))
 
-    def test_update_contingency_table_validation(self):
+    # ----- SHAP flag -----
+
+    def test_shap_flag(self, training_config_001):
+        """``calculate_shap`` in config propagates to ``enable_shap`` on the model.
+
+        Unset == False; True propagates as True; explicit False propagates as False.
+        Contrast with KFoldValidationSuite, which suppresses SHAP regardless
+        of config — that override happens at the step level, not on
+        ModelBase itself.
         """
-        Ensure that update_contingency_table raises ValueError when required
-        member variables are missing.
+        model = ModelBaseWithExpectedName(training_config_001)
+        assert model.enable_shap is False  # unset == False
+
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
+        model = ModelBaseWithExpectedName(training_config_001)
+        assert model.enable_shap is True
+
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
+        model = ModelBaseWithExpectedName(training_config_001)
+        assert model.enable_shap is False
+
+    # ----- update_contingency_table -----
+
+    def test_update_contingency_table_validation(self, training_config_001):
+        """update_contingency_table raises ValueError when required vars are missing.
+
+        Two cases:
+        1. test_set is None (with predictions set) → "Member variable 'test_set'"
+        2. predictions is None (with test_set set) → "Member variable 'predictions'"
         """
-        model = ModelBaseWithExpectedName(self.config)
+        model = ModelBaseWithExpectedName(training_config_001)
 
         # Case 1: test_set is None
         model.test_set = None
         model.predictions = pl.DataFrame({"score": [0.5]})
-        with self.assertRaisesRegex(ValueError, "Member variable 'test_set'"):
+        with pytest.raises(ValueError, match="Member variable 'test_set'"):
             model.update_contingency_table()
 
         # Case 2: predictions is None
         model.test_set = pl.DataFrame({"label": [1]})
         model.predictions = None
-        with self.assertRaisesRegex(ValueError, "Member variable 'predictions'"):
+        with pytest.raises(ValueError, match="Member variable 'predictions'"):
             model.update_contingency_table()
 
-    def test_shap_flag(self):
-        model = ModelBaseWithExpectedName(self.config)
-        self.assertFalse(model.enable_shap)
+    def test_update_contingency_table_flow(self, training_config_001):
+        """Multi-batch contingency-table updates correctly initialize then append.
 
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
-        model = ModelBaseWithExpectedName(self.config)
-        self.assertTrue(model.enable_shap)
-
-        self.config.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
-        model = ModelBaseWithExpectedName(self.config)
-        self.assertFalse(model.enable_shap)
-
-    def test_update_contingency_table_flow(self):
+        Verifies the table is initialized on the first call (k=0) with the
+        expected shape (3, 4) and columns, and that a subsequent k=1 call
+        appends rows correctly to give a (5, 4) total.
         """
-        Ensure that the contingency table is correctly initialized and
-        appended to when calling update_contingency_table multiple times.
-        """
-        model = ModelBaseWithExpectedName(self.config)
+        model = ModelBaseWithExpectedName(training_config_001)
 
-        # --- Batch 1 (e.g., Fold k=0) ---
+        # ----- Batch 1 (fold k=0) -----
         model.k = 0
         model.test_set = pl.DataFrame({"label": [0, 1, 0]})
         model.predictions = pl.DataFrame(
-            {"label": [0, 1, 0], "predicted_label": [0, 1, 0], "score": [0.1, 0.9, 0.4]}
+            {
+                "label": [0, 1, 0],
+                "predicted_label": [0, 1, 0],
+                "score": [0.1, 0.9, 0.4],
+            }
         )
 
         model.update_contingency_table()
 
-        # Check initialization
-        self.assertIsNotNone(model.contingency_table)
-        self.assertEqual(model.contingency_table.shape, (3, 4))
-        self.assertListEqual(
-            model.contingency_table.columns, ["k", "label", "predicted_label", "score"]
-        )
+        assert model.contingency_table is not None
+        assert model.contingency_table.shape == (3, 4)
+        assert model.contingency_table.columns == [
+            "k",
+            "label",
+            "predicted_label",
+            "score",
+        ]
 
-        # Verify content of Batch 1
+        # Verify Batch 1 content equals the expected frame exactly.
         expected_batch_1 = pl.DataFrame(
             {
                 "k": [0, 0, 0],
@@ -229,21 +243,25 @@ class TestModelBaseMethods(unittest.TestCase):
                 "score": [0.1, 0.9, 0.4],
             }
         )
-        self.assertTrue(model.contingency_table.equals(expected_batch_1))
+        assert model.contingency_table.equals(expected_batch_1)
 
-        # --- Batch 2 (e.g., Fold k=1) ---
+        # ----- Batch 2 (fold k=1) -----
         model.k = 1
         model.test_set = pl.DataFrame({"label": [1, 1]})
         model.predictions = pl.DataFrame(
-            {"label": [1, 0], "predicted_label": [1, 0], "score": [0.8, 0.3]}
+            {
+                "label": [1, 0],
+                "predicted_label": [1, 0],
+                "score": [0.8, 0.3],
+            }
         )
 
         model.update_contingency_table()
 
-        # Check appending behavior
-        self.assertEqual(model.contingency_table.shape, (5, 4))
+        # Total rows now 3 + 2 = 5.
+        assert model.contingency_table.shape == (5, 4)
 
-        # Verify that k=1 rows were added
+        # k=1 rows specifically: 2 rows with the new scores.
         k1_rows = model.contingency_table.filter(pl.col("k") == 1)
-        self.assertEqual(k1_rows.shape, (2, 4))
-        self.assertEqual(k1_rows["score"].to_list(), [0.8, 0.3])
+        assert k1_rows.shape == (2, 4)
+        assert k1_rows["score"].to_list() == [0.8, 0.3]

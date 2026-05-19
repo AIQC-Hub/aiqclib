@@ -1,371 +1,85 @@
+"""Unit tests for the concrete model wrapper classes.
+
+This is the canonical "all rich fields used" example of the MODEL_CASES
+pattern. Each test method runs against all 9 model wrappers via parametrize:
+
+- ``test_init_class`` consumes ``case.wrapper_cls`` and ``case.sklearn_cls``
+- ``test_multi_flag`` consumes ``case.wrapper_cls`` (and ``case.config_name`` for wiring)
+- ``test_default_params`` consumes ``case.defaults`` and ``case.missing``
+- ``test_config_params_override`` consumes ``case.override``
+
+Refactored from the original which had:
+- Nine ``unittest.TestCase`` classes (``TestXGBoost``, ``TestLogisticRegression``,
+  ..., ``TestMLP``), each with an identical ``setUp`` and four near-identical
+  test methods differing only in the model under test (collapsed into a
+  single parametrized class here)
+
+Test count is unchanged: 9 models × 4 methods = 36 tests in both the original
+and the refactored file.
 """
-Unit tests for concrete model classes (XGBoost, LogisticRegression, SVM, etc.).
 
-This module verifies that specific model implementations correctly integrate
-with the aiqclib configuration system and initialize with expected parameters.
-"""
+import pytest
 
-import unittest
-from pathlib import Path
-
-import xgboost as xgb
-from sklearn.linear_model import LogisticRegression as SklearnLR
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as SklearnLDA
-from sklearn.svm import SVC as SklearnSVC
-from sklearn.tree import DecisionTreeClassifier as SklearnDT
-from sklearn.ensemble import RandomForestClassifier as SklearnRF
-from sklearn.neighbors import KNeighborsClassifier as SklearnKNN
-from sklearn.naive_bayes import GaussianNB as SklearnGNB
-from sklearn.neural_network import MLPClassifier as SklearnMLP
-
-from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.train.models.xgboost import XGBoost
-from aiqclib.train.models.logistic_regression import LogisticRegression
-from aiqclib.train.models.linear_discriminant_analysis import LinearDiscriminantAnalysis
-from aiqclib.train.models.support_vector_machine import SupportVectorMachine
-from aiqclib.train.models.decision_tree import DecisionTree
-from aiqclib.train.models.random_forest import RandomForest
-from aiqclib.train.models.k_nearest_neighbors import KNearestNeighbors
-from aiqclib.train.models.gaussian_naive_bayes import GaussianNaiveBayes
-from aiqclib.train.models.multilayer_perceptron import MultilayerPerceptron
+from tests._model_cases import MODEL_CASES
 
 
-class TestXGBoost(unittest.TestCase):
-    """Tests for the XGBoost model wrapper."""
+@pytest.mark.parametrize("case", MODEL_CASES, ids=lambda c: c.config_name)
+class TestModelWrappers:
+    """Per-wrapper checks: init, multi flag, default params, config override.
 
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
+    Every test sets ``step_class_set.steps.model = case.config_name`` on the
+    fresh function-scoped ``training_config_001`` fixture before constructing
+    the wrapper. The wrapper itself is constructed via ``case.wrapper_cls(config)``
+    so the test doesn't need a separate import per model.
+    """
+
+    def test_init_class(self, case, training_config_001):
+        """``expected_class_name`` matches the wrapper class name; sklearn class resolves."""
+        training_config_001.data["step_class_set"]["steps"]["model"] = case.config_name
+        ds = case.wrapper_cls(training_config_001)
+        # ``wrapper_cls.__name__`` matches each wrapper's ``expected_class_name``,
+        # including the non-obvious cases (SVM → "SupportVectorMachine",
+        # MLP → "MultilayerPerceptron").
+        assert ds.expected_class_name == case.wrapper_cls.__name__
+        assert ds._get_model_class() == case.sklearn_cls
+
+    def test_multi_flag(self, case, training_config_001):
+        """Single-model wrappers expose ``multi == False``."""
+        training_config_001.data["step_class_set"]["steps"]["model"] = case.config_name
+        ds = case.wrapper_cls(training_config_001)
+        assert ds.multi is False
+
+    def test_default_params(self, case, training_config_001):
+        """Default ``model_params`` include ``case.defaults`` and exclude ``case.missing``."""
+        training_config_001.data["step_class_set"]["steps"]["model"] = case.config_name
+        ds = case.wrapper_cls(training_config_001)
+
+        # Every expected default key has the expected value.
+        for key, expected_value in case.defaults.items():
+            assert ds.model_params.get(key) == expected_value, (
+                f"{case.config_name}: expected model_params[{key!r}] == "
+                f"{expected_value!r}, got {ds.model_params.get(key)!r}"
+            )
+
+        # Keys explicitly recorded as "must not be present" are absent.
+        # Examples: LDA doesn't support n_jobs; LogisticRegression no longer
+        # uses penalty (after the sklearn 1.8 deprecation, replaced by l1_ratio).
+        for key in case.missing:
+            assert key not in ds.model_params, (
+                f"{case.config_name}: model_params[{key!r}] should not be set, "
+                f"got value {ds.model_params.get(key)!r}"
+            )
+
+    def test_config_params_override(self, case, training_config_001):
+        """``model_params`` set in the YAML config flow into the wrapper's params."""
+        training_config_001.data["step_class_set"]["steps"]["model"] = case.config_name
+        training_config_001.data["step_param_set"]["steps"]["model"]["model_params"] = (
+            dict(case.override)
         )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        # XGBoost is usually the default in the test config, but we ensure it here
-        self.config.data["step_class_set"]["steps"]["model"] = "XGBoost"
+        ds = case.wrapper_cls(training_config_001)
 
-    def test_init_class(self):
-        ds = XGBoost(self.config)
-        self.assertEqual(ds.expected_class_name, "XGBoost")
-        self.assertEqual(ds._get_model_class(), xgb.XGBClassifier)
-
-    def test_multi_flag(self):
-        ds = XGBoost(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = XGBoost(self.config)
-        self.assertEqual(ds.model_params.get("n_estimators"), 100)
-        self.assertEqual(ds.model_params.get("n_jobs"), -1)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "max_depth": 10,
-            "n_jobs": 4,
-        }
-        ds = XGBoost(self.config)
-        self.assertEqual(ds.model_params["max_depth"], 10)
-        self.assertEqual(ds.model_params["n_jobs"], 4)
-
-
-class TestLogisticRegression(unittest.TestCase):
-    """Tests for the Logistic Regression model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "LogisticRegression"
-
-    def test_init_class(self):
-        ds = LogisticRegression(self.config)
-        self.assertEqual(ds.expected_class_name, "LogisticRegression")
-        self.assertEqual(ds._get_model_class(), SklearnLR)
-
-    def test_multi_flag(self):
-        ds = LogisticRegression(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = LogisticRegression(self.config)
-        self.assertEqual(ds.model_params.get("l1_ratio"), 0)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "C": 0.5,
-            "max_iter": 500,
-        }
-        ds = LogisticRegression(self.config)
-        self.assertEqual(ds.model_params["C"], 0.5)
-        self.assertEqual(ds.model_params["max_iter"], 500)
-
-
-class TestLDA(unittest.TestCase):
-    """Tests for the Linear Discriminant Analysis model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = (
-            "LinearDiscriminantAnalysis"
-        )
-
-    def test_init_class(self):
-        ds = LinearDiscriminantAnalysis(self.config)
-        self.assertEqual(ds.expected_class_name, "LinearDiscriminantAnalysis")
-        self.assertEqual(ds._get_model_class(), SklearnLDA)
-
-    def test_multi_flag(self):
-        ds = LinearDiscriminantAnalysis(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = LinearDiscriminantAnalysis(self.config)
-        self.assertEqual(ds.model_params.get("solver"), "svd")
-        # Ensure n_jobs is NOT present (sklearn LDA doesn't support it)
-        self.assertNotIn("n_jobs", ds.model_params)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "tol": 1.0e-5
-        }
-        ds = LinearDiscriminantAnalysis(self.config)
-        self.assertEqual(ds.model_params["tol"], 1.0e-5)
-
-
-class TestSVM(unittest.TestCase):
-    """Tests for the SVM model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "SVM"
-
-    def test_init_class(self):
-        ds = SupportVectorMachine(self.config)
-        self.assertEqual(ds.expected_class_name, "SupportVectorMachine")
-        self.assertEqual(ds._get_model_class(), SklearnSVC)
-
-    def test_multi_flag(self):
-        ds = SupportVectorMachine(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = SupportVectorMachine(self.config)
-        self.assertEqual(ds.model_params.get("kernel"), "linear")
-        # Probability must be True for the base class predict_proba logic
-        self.assertTrue(ds.model_params.get("probability"))
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "C": 0.5,
-            "kernel": "rbf",
-        }
-        ds = SupportVectorMachine(self.config)
-        self.assertEqual(ds.model_params["C"], 0.5)
-        self.assertEqual(ds.model_params["kernel"], "rbf")
-
-
-class TestDecisionTree(unittest.TestCase):
-    """Tests for the Decision Tree model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "DecisionTree"
-
-    def test_init_class(self):
-        ds = DecisionTree(self.config)
-        self.assertEqual(ds.expected_class_name, "DecisionTree")
-        self.assertEqual(ds._get_model_class(), SklearnDT)
-
-    def test_multi_flag(self):
-        ds = DecisionTree(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = DecisionTree(self.config)
-        self.assertEqual(ds.model_params.get("criterion"), "gini")
-        self.assertEqual(ds.model_params.get("splitter"), "best")
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "max_depth": 5,
-            "min_samples_split": 4,
-        }
-        ds = DecisionTree(self.config)
-        self.assertEqual(ds.model_params["max_depth"], 5)
-        self.assertEqual(ds.model_params["min_samples_split"], 4)
-
-
-class TestRandomForest(unittest.TestCase):
-    """Tests for the Random Forest model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "RandomForest"
-
-    def test_init_class(self):
-        ds = RandomForest(self.config)
-        self.assertEqual(ds.expected_class_name, "RandomForest")
-        self.assertEqual(ds._get_model_class(), SklearnRF)
-
-    def test_multi_flag(self):
-        ds = RandomForest(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = RandomForest(self.config)
-        self.assertEqual(ds.model_params.get("n_estimators"), 100)
-        self.assertEqual(ds.model_params.get("n_jobs"), -1)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "n_estimators": 50,
-            "max_features": "log2",
-        }
-        ds = RandomForest(self.config)
-        self.assertEqual(ds.model_params["n_estimators"], 50)
-        self.assertEqual(ds.model_params["max_features"], "log2")
-
-
-class TestKNN(unittest.TestCase):
-    """Tests for the K-Nearest Neighbors model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "KNearestNeighbors"
-
-    def test_init_class(self):
-        ds = KNearestNeighbors(self.config)
-        self.assertEqual(ds.expected_class_name, "KNearestNeighbors")
-        self.assertEqual(ds._get_model_class(), SklearnKNN)
-
-    def test_multi_flag(self):
-        ds = KNearestNeighbors(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = KNearestNeighbors(self.config)
-        self.assertEqual(ds.model_params.get("n_neighbors"), 5)
-        self.assertEqual(ds.model_params.get("n_jobs"), -1)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "n_neighbors": 10,
-            "weights": "distance",
-        }
-        ds = KNearestNeighbors(self.config)
-        self.assertEqual(ds.model_params["n_neighbors"], 10)
-        self.assertEqual(ds.model_params["weights"], "distance")
-
-
-class TestGaussianNaiveBayes(unittest.TestCase):
-    """Tests for the Gaussian Naive Bayes model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "GaussianNaiveBayes"
-
-    def test_init_class(self):
-        ds = GaussianNaiveBayes(self.config)
-        self.assertEqual(ds.expected_class_name, "GaussianNaiveBayes")
-        self.assertEqual(ds._get_model_class(), SklearnGNB)
-
-    def test_multi_flag(self):
-        ds = GaussianNaiveBayes(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = GaussianNaiveBayes(self.config)
-        self.assertEqual(ds.model_params.get("var_smoothing"), 1e-9)
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "var_smoothing": 1e-5
-        }
-        ds = GaussianNaiveBayes(self.config)
-        self.assertEqual(ds.model_params["var_smoothing"], 1e-5)
-
-
-class TestMLP(unittest.TestCase):
-    """Tests for the Multi-layer Perceptron model wrapper."""
-
-    def setUp(self):
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_training_001.yaml"
-        )
-        self.config = TrainingConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["step_class_set"]["steps"]["model"] = "MLP"
-
-    def test_init_class(self):
-        ds = MultilayerPerceptron(self.config)
-        self.assertEqual(ds.expected_class_name, "MultilayerPerceptron")
-        self.assertEqual(ds._get_model_class(), SklearnMLP)
-
-    def test_multi_flag(self):
-        ds = MultilayerPerceptron(self.config)
-        self.assertFalse(ds.multi)
-
-    def test_default_params(self):
-        ds = MultilayerPerceptron(self.config)
-        self.assertEqual(ds.model_params.get("hidden_layer_sizes"), (50,))
-        self.assertEqual(ds.model_params.get("activation"), "relu")
-
-    def test_config_params_override(self):
-        self.config.data["step_param_set"]["steps"]["model"]["model_params"] = {
-            "hidden_layer_sizes": (50, 50),
-            "learning_rate_init": 0.01,
-        }
-        ds = MultilayerPerceptron(self.config)
-        self.assertEqual(ds.model_params["hidden_layer_sizes"], (50, 50))
-        self.assertEqual(ds.model_params["learning_rate_init"], 0.01)
+        for key, expected_value in case.override.items():
+            assert ds.model_params[key] == expected_value, (
+                f"{case.config_name}: override of {key!r} to {expected_value!r} "
+                f"did not propagate; got {ds.model_params[key]!r}"
+            )

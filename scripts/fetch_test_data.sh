@@ -10,7 +10,7 @@
 #   scripts/fetch_test_data.sh
 #
 # Override the defaults via environment if needed:
-#   TEST_DATA_VERSION=test-data-v1.0.2 scripts/fetch_test_data.sh
+#   TEST_DATA_VERSION=test-data-v1.0.3 scripts/fetch_test_data.sh
 #   TEST_DATA_REPO=YourFork/aiqclib    scripts/fetch_test_data.sh
 #
 # Requirements:
@@ -19,7 +19,7 @@
 #
 set -euo pipefail
 
-VERSION="${TEST_DATA_VERSION:-test-data-v1.0.1}"
+VERSION="${TEST_DATA_VERSION:-test-data-v1.0.2}"
 REPO="${TEST_DATA_REPO:-AIQC-Hub/aiqclib}"
 
 # Resolve repo root from this script's location so it works from anywhere.

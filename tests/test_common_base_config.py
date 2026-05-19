@@ -1,13 +1,29 @@
-"""Unit tests for the ConfigBase class in aiqclib.common.base.config_base.
+"""Unit tests for the ``ConfigBase`` class.
 
-This module verifies the correct functionality of ConfigBase's methods,
-including initialization, validation, and data retrieval, as well as the
-correct loading of configuration templates.
+Coverage:
+- Direct instantiation of the abstract ``ConfigBase`` raises NotImplementedError
+- Invalid section name raises ValueError
+- ``__str__`` returns a structured representation including section name
+- A corrupted ``full_config`` causes ``select()`` to raise ValueError
+- Missing ``base_path`` in the ``common`` section causes ``get_base_path()``
+  to raise ValueError
+- All five bundled template YAMLs (data_sets, data_sets_full, training_sets,
+  classification_sets, classification_sets_full) load and select correctly
+  via the corresponding config class
+
+Refactored from a ``unittest.TestCase`` + a pytest-style template class.
+The mock subclass ``ConfigBaseWithExpectedName`` stays at module level.
+Setup is replaced by the ``dataset_yaml_001`` fixture — ConfigBase loads
+its own YAML, so the tests need the *path*, not a pre-loaded config.
+
+Class rename: the first class was named ``TestDatasetBaseMethods`` in the
+original — a copy-paste typo, since it tests ``ConfigBase`` (not
+``DataSetBase``, which lives in ``test_common_base_dataset.py``). Renamed
+to ``TestConfigBaseMethods`` so the name matches the class under test.
+``pytest -k`` filters now target the correct test surface.
 """
 
-import unittest
 import pytest
-from pathlib import Path
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.config.classify_config import ClassificationConfig
@@ -15,126 +31,105 @@ from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.training_config import TrainingConfig
 
 
-class ConfigBaseWithExpectedName(ConfigBase):
-    """A helper class for testing ConfigBase.
+# ---------------------------------------------------------------------------
+# Module-level mock subclass
+# ---------------------------------------------------------------------------
 
-    This class extends ConfigBase and defines the `expected_class_name`
-    attribute, allowing it to be instantiated and used in tests.
-    """
+
+class ConfigBaseWithExpectedName(ConfigBase):
+    """Minimal concrete subclass for exercising ConfigBase plumbing."""
 
     expected_class_name: str = "ConfigBaseWithExpectedName"
 
     def __init__(self, section_name: str, config_file: str) -> None:
-        """Initialize a new instance of ConfigBaseWithExpectedName.
-
-        This constructor calls the parent `ConfigBase` constructor with the
-        provided section name and configuration file path.
-        """
         super().__init__(section_name, config_file)
 
 
-class TestDatasetBaseMethods(unittest.TestCase):
-    """A suite of tests that verify the correctness of methods
-    within the ConfigBase class.
+# ---------------------------------------------------------------------------
+# Tests for ConfigBase methods (renamed from TestDatasetBaseMethods)
+# ---------------------------------------------------------------------------
+
+
+class TestConfigBaseMethods:
+    """Tests for ConfigBase's abstract-class behaviour, __str__, and validation.
+
+    Renamed from ``TestDatasetBaseMethods`` — the original was a copy-paste
+    from ``test_common_base_dataset.py``. This file tests ConfigBase.
     """
 
-    def setUp(self):
-        """Set up the path to the test configuration file.
+    def test_common_base_path(self, dataset_yaml_001):
+        """Direct instantiation of ConfigBase raises NotImplementedError.
 
-        This method is called before each test function to ensure the
-        `self.config_file_path` is correctly set.
+        ConfigBase is abstract — subclasses must define
+        ``expected_class_name``.
         """
-        self.config_file_path = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_001.yaml"
-        )
+        with pytest.raises(NotImplementedError):
+            _ = ConfigBase("data_sets", dataset_yaml_001)
 
-    def test_common_base_path(self):
-        """Verify that instantiating ConfigBase directly raises NotImplementedError.
+    def test_section_name(self, dataset_yaml_001):
+        """An unsupported section name raises ValueError."""
+        with pytest.raises(ValueError):
+            _ = ConfigBaseWithExpectedName("invalid_section_name", dataset_yaml_001)
 
-        This test checks that `ConfigBase` cannot be instantiated without a
-        subclass defining `expected_class_name`.
+    def test_represented_str(self, dataset_yaml_001):
+        """__str__ returns "ConfigBase(section_name=<section>)"."""
+        ds = ConfigBaseWithExpectedName("data_sets", dataset_yaml_001)
+        assert str(ds) == "ConfigBase(section_name=data_sets)"
+
+    def test_validation_error_with_select(self, dataset_yaml_001):
+        """select() on a corrupted full_config raises ValueError.
+
+        Manually corrupts ``ds.full_config`` to simulate an invalid YAML
+        structure and verifies select() catches the schema violation.
         """
-        with self.assertRaises(NotImplementedError):
-            _ = ConfigBase("data_sets", self.config_file_path)
-
-    def test_section_name(self):
-        """Verify that an unsupported section name raises a ValueError.
-
-        This test checks that initializing `ConfigBase` with a section name
-        not in its supported list raises an error.
-        """
-        with self.assertRaises(ValueError):
-            _ = ConfigBaseWithExpectedName(
-                "invalid_section_name", self.config_file_path
-            )
-
-    def test_represented_str(self):
-        """Verify that the instance returns a correct string representation.
-
-        This test checks the output of the `__repr__` method of the `ConfigBase`
-        instance.
-        """
-        ds = ConfigBaseWithExpectedName("data_sets", self.config_file_path)
-        self.assertEqual(str(ds), "ConfigBase(section_name=data_sets)")
-
-    def test_validation_error_with_select(self):
-        """Verify that invalid YAML content raises a ValueError during selection.
-
-        This test intentionally corrupts `full_config` to simulate an invalid
-        YAML structure and asserts that `select` method correctly raises a
-        `ValueError` due to schema validation failure.
-        """
-        ds = ConfigBaseWithExpectedName("data_sets", self.config_file_path)
+        ds = ConfigBaseWithExpectedName("data_sets", dataset_yaml_001)
         ds.full_config = ""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.select("NRT_BO_001")
 
-    def test_no_base_name(self):
-        """Verify that `get_base_path` raises an error if the base path is None.
-
-        This test sets the 'common' base_path to None in the loaded configuration
-        and asserts that calling `get_base_path` raises a `ValueError`.
-        """
-        ds = ConfigBaseWithExpectedName("data_sets", self.config_file_path)
+    def test_no_base_name(self, dataset_yaml_001):
+        """get_base_path() raises ValueError when common.base_path is None."""
+        ds = ConfigBaseWithExpectedName("data_sets", dataset_yaml_001)
         ds.select("NRT_BO_001")
         ds.data["path_info"]["common"]["base_path"] = None
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds.get_base_path("invalid_step_name")
 
 
+# ---------------------------------------------------------------------------
+# Tests for the bundled template YAMLs (each loadable via its config class)
+# ---------------------------------------------------------------------------
+
+# (config_class, template_path, select_name) tuples covering all five
+# bundled templates. The ``template:`` prefix triggers in-package template
+# resolution rather than disk loading.
+_TEMPLATE_CASES = [
+    (DataSetConfig, "template:data_sets", "dataset_0001"),
+    (DataSetConfig, "template:data_sets_full", "dataset_0001"),
+    (TrainingConfig, "template:training_sets", "training_0001"),
+    (ClassificationConfig, "template:classification_sets_full", "classification_0001"),
+    (ClassificationConfig, "template:classification_sets", "classification_0001"),
+]
+
+
 class TestConfigTemplates:
-    """Tests for loading configuration from built-in YAML templates."""
+    """Tests for loading the five bundled YAML templates via each config class."""
 
     @pytest.mark.parametrize(
-        "template",
-        [
-            (DataSetConfig, "template:data_sets", "dataset_0001"),
-            (DataSetConfig, "template:data_sets_full", "dataset_0001"),
-            (TrainingConfig, "template:training_sets", "training_0001"),
-            (
-                ClassificationConfig,
-                "template:classification_sets_full",
-                "classification_0001",
-            ),
-            (
-                ClassificationConfig,
-                "template:classification_sets",
-                "classification_0001",
-            ),
-        ],
+        "config_class, template_path, select_name",
+        _TEMPLATE_CASES,
+        ids=[f"{cls.__name__}:{path}" for cls, path, _ in _TEMPLATE_CASES],
     )
-    def test_read_template(self, template):
-        """Verify that DataSetConfig can load and select from the 'data_sets' template.
+    def test_read_template(self, config_class, template_path, select_name):
+        """Each template loads, then select() populates ``data``.
 
-        This test ensures that the configuration is loaded successfully and that
-        a specific dataset can be selected from the template.
+        Before select(), ``data`` is None (auto_select is False by default
+        for templates). After select(), ``data`` is populated with the
+        selected dataset/training/classification entry.
         """
-        conf = template[0](template[1])
+        conf = config_class(template_path)
         assert conf.full_config is not None
-
         assert conf.data is None
-        conf.select(template[2])
+
+        conf.select(select_name)
         assert conf.data is not None

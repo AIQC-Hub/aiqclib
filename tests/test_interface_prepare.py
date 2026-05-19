@@ -1,198 +1,152 @@
-"""
-Unit tests for the `create_training_dataset` function, verifying its ability to
-generate the correct directory structure and output files for various data
-processing steps within a training dataset.
+"""Unit tests for the ``create_training_dataset`` interface function.
+
+Runs the full prepare pipeline (summary → select → locate → extract →
+split) against test configs and verifies that the expected output folder
+structure and per-target files are produced.
+
+Refactored from two classes (``TestCreateTrainingDataSet`` parametrized over
+3 configs, plus ``TestCreateTrainingDataSetNegX5`` for config 003) into
+the same shape but with conftest fixtures, per-target file-existence loops,
+and the path_info-override pattern factored into a small helper.
 """
 
-import os
 import shutil
-import unittest
-import pytest
-from pathlib import Path
 
-from aiqclib.common.config.dataset_config import DataSetConfig
+import pytest
+
 from aiqclib.interface.prepare import create_training_dataset
+
+from tests.conftest import TARGETS
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _wire_path_info(config, test_output_dir, input_dir, extra=None):
+    """Override the config's path_info to redirect output to test_output_dir.
+
+    The default ``input.step_folder_name=""`` means the input file is found
+    directly under ``input_dir`` (i.e. ``tests/data/input/``). Pass ``extra``
+    as a dict to merge additional path_info entries (e.g. the NegX5 variant
+    sets a custom ``split.step_folder_name="training"``).
+    """
+    config.data["input_file_name"] = "nrt_cora_bo_test.parquet"
+    path_info = {
+        "name": "data_set_1",
+        "common": {"base_path": str(test_output_dir)},
+        "input": {"base_path": str(input_dir), "step_folder_name": ""},
+    }
+    if extra:
+        path_info.update(extra)
+    config.data["path_info"] = path_info
+
+
+def _assert_prepare_outputs(output_folder, *, split_dir_name="split"):
+    """Assert every expected output file from create_training_dataset exists.
+
+    ``split_dir_name`` defaults to "split" but the NegX5 variant uses
+    "training" via a custom ``split.step_folder_name`` in path_info.
+    """
+    dir_summary = output_folder / "summary"
+    dir_select = output_folder / "select"
+    dir_locate = output_folder / "locate"
+    dir_extract = output_folder / "extract"
+    dir_split = output_folder / split_dir_name
+
+    assert (dir_summary / "summary_stats.tsv").exists()
+    assert (dir_select / "selected_profiles.parquet").exists()
+    for tgt in TARGETS:
+        assert (dir_locate / f"selected_rows_{tgt}.parquet").exists()
+        assert (dir_extract / f"extracted_features_{tgt}.parquet").exists()
+        assert (dir_split / f"train_set_{tgt}.parquet").exists()
+        assert (dir_split / f"test_set_{tgt}.parquet").exists()
+
+
+def _cleanup_output_folder(config, test_output_dir):
+    """Remove the config's ``dataset_folder_name`` directory if present."""
+    output_folder = test_output_dir / config.data["dataset_folder_name"]
+    if output_folder.exists() and output_folder.is_dir():
+        shutil.rmtree(output_folder)
+
+
+# ---------------------------------------------------------------------------
+# Three-config tests (default behaviour, no custom step folder names)
+# ---------------------------------------------------------------------------
 
 
 class TestCreateTrainingDataSet:
-    """
-    Tests for verifying that create_training_dataset produces the
-    expected directory structure and output files for training data.
-    """
+    """create_training_dataset against configs 001, 004, 005.
 
-    def _setup_configs(self):
-        self.configs = []
-        for x in self.config_file_paths:
-            c = DataSetConfig(str(x))
-            c.select("NRT_BO_001")
-            c.data["input_file_name"] = "nrt_cora_bo_test.parquet"
-            c.data["path_info"] = {
-                "name": "data_set_1",
-                "common": {"base_path": str(self.test_data_location)},
-                "input": {
-                    "base_path": str(self.input_data_path),
-                    "step_folder_name": "",
-                },
-            }
-            self.configs.append(c)
+    Each config produces a fully-populated output folder tree. Tests
+    parametrize over ``idx ∈ {0, 1, 2}`` to run each in isolation, with
+    cleanup happening per-test via the autouse fixture.
+    """
 
     @pytest.fixture(autouse=True)
-    def setup_and_cleanup(self):
-        """
-        Prepare the test environment by creating a DataSetConfig object,
-        defining file paths, and updating the configuration with test input
-        and output paths.
-        """
-        dir_config = Path(__file__).resolve().parent / "data" / "config"
-        self.config_file_paths = [
-            (dir_config / "test_dataset_001.yaml"),
-            (dir_config / "test_dataset_004.yaml"),
-            (dir_config / "test_dataset_005.yaml"),
-        ]
-        self.test_data_location = Path(__file__).resolve().parent / "data" / "test"
-        self.input_data_path = Path(__file__).resolve().parent / "data" / "input"
+    def setup_and_cleanup(
+        self,
+        dataset_config_001,
+        dataset_config_004,
+        dataset_config_005,
+        test_output_dir,
+        input_dir,
+    ):
+        """Wire the three configs and clean up generated folders afterwards."""
+        self.configs = [dataset_config_001, dataset_config_004, dataset_config_005]
+        self.test_output_dir = test_output_dir
+        for c in self.configs:
+            _wire_path_info(c, test_output_dir, input_dir)
 
-        self._setup_configs()
         yield
 
         for c in self.configs:
-            output_folder = self.test_data_location / c.data["dataset_folder_name"]
-            if os.path.exists(output_folder):
-                shutil.rmtree(output_folder)
+            _cleanup_output_folder(c, test_output_dir)
 
     @pytest.mark.parametrize("idx", range(3))
     def test_create_training_data_set(self, idx):
-        """
-        Verify that `create_training_dataset` generates the expected folder
-        hierarchy and all required output files for summary, select, locate,
-        extract, and split steps.
-        """
+        """End-to-end prepare pipeline produces all expected outputs."""
         create_training_dataset(self.configs[idx])
 
         output_folder = (
-            self.test_data_location / self.configs[idx].data["dataset_folder_name"]
+            self.test_output_dir / self.configs[idx].data["dataset_folder_name"]
         )
-        dir_summary = output_folder / "summary"
-        dir_select = output_folder / "select"
-        dir_locate = output_folder / "locate"
-        dir_extract = output_folder / "extract"
-        dir_split = output_folder / "split"
-        assert os.path.exists(str(dir_summary / "summary_stats.tsv"))
-        assert os.path.exists(str(dir_select / "selected_profiles.parquet"))
-        assert os.path.exists(str(dir_locate / "selected_rows_temp.parquet"))
-        assert os.path.exists(str(dir_locate / "selected_rows_psal.parquet"))
-        assert os.path.exists(str(dir_locate / "selected_rows_pres.parquet"))
-        assert os.path.exists(str(dir_extract / "extracted_features_temp.parquet"))
-        assert os.path.exists(str(dir_extract / "extracted_features_psal.parquet"))
-        assert os.path.exists(str(dir_extract / "extracted_features_pres.parquet"))
-        assert os.path.exists(str(dir_split / "train_set_temp.parquet"))
-        assert os.path.exists(str(dir_split / "train_set_psal.parquet"))
-        assert os.path.exists(str(dir_split / "train_set_pres.parquet"))
-        assert os.path.exists(str(dir_split / "test_set_temp.parquet"))
-        assert os.path.exists(str(dir_split / "test_set_psal.parquet"))
-        assert os.path.exists(str(dir_split / "test_set_pres.parquet"))
+        _assert_prepare_outputs(output_folder)
 
 
-class TestCreateTrainingDataSetNegX5(unittest.TestCase):
-    """
-    Tests for verifying that create_training_dataset produces the
-    expected directory structure and output files for training data when
-    custom step folder names are configured.
+# ---------------------------------------------------------------------------
+# NegX5 variant (config 003 with custom split folder name)
+# ---------------------------------------------------------------------------
+
+
+class TestCreateTrainingDataSetNegX5:
+    """create_training_dataset against config 003 with a custom split folder.
+
+    The NegX5 variant sets ``split.step_folder_name="training"`` to verify
+    that the configured folder override flows through correctly. Train/test
+    parquets land in ``training/`` rather than the default ``split/``.
     """
 
-    def setUp(self):
-        """
-        Prepare the test environment by creating a DataSetConfig object,
-        defining file paths, and updating the configuration with test input
-        and output paths, including a custom folder name for the 'split' step.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_dataset_003.yaml"
+    @pytest.fixture(autouse=True)
+    def setup_and_cleanup(self, dataset_config_003, test_output_dir, input_dir):
+        """Wire config 003 with the custom split-folder override; clean up afterwards."""
+        self.config = dataset_config_003
+        self.test_output_dir = test_output_dir
+        _wire_path_info(
+            self.config,
+            test_output_dir,
+            input_dir,
+            extra={"split": {"step_folder_name": "training"}},
         )
-        self.config = DataSetConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.config.data["input_file_name"] = "nrt_cora_bo_test.parquet"
-        self.test_data_location = Path(__file__).resolve().parent / "data" / "test"
-        self.input_data_path = Path(__file__).resolve().parent / "data" / "input"
-        self.config.data["path_info"] = {
-            "name": "data_set_1",
-            "common": {"base_path": str(self.test_data_location)},
-            "input": {"base_path": str(self.input_data_path), "step_folder_name": ""},
-            "split": {"step_folder_name": "training"},
-        }
+
+        yield
+
+        _cleanup_output_folder(self.config, test_output_dir)
 
     def test_create_training_data_set(self):
-        """
-        Verify that `create_training_dataset` generates the expected folder
-        hierarchy and all required output files, specifically checking the
-        custom 'training' folder for split data.
-        """
+        """End-to-end with custom split folder produces train/test in training/."""
         create_training_dataset(self.config)
 
-        output_folder = (
-            self.test_data_location / self.config.data["dataset_folder_name"]
-        )
-
-        self.assertTrue(
-            os.path.exists(str(output_folder / "summary" / "summary_stats.tsv"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "select" / "selected_profiles.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "locate" / "selected_rows_temp.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "locate" / "selected_rows_psal.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "locate" / "selected_rows_pres.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(
-                str(output_folder / "extract" / "extracted_features_temp.parquet")
-            )
-        )
-        self.assertTrue(
-            os.path.exists(
-                str(output_folder / "extract" / "extracted_features_psal.parquet")
-            )
-        )
-        self.assertTrue(
-            os.path.exists(
-                str(output_folder / "extract" / "extracted_features_pres.parquet")
-            )
-        )
-        # Verify files are in the custom 'training' folder instead of 'split'
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "train_set_temp.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "train_set_psal.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "train_set_pres.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "test_set_temp.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "test_set_psal.parquet"))
-        )
-        self.assertTrue(
-            os.path.exists(str(output_folder / "training" / "test_set_pres.parquet"))
-        )
-
-    def tearDown(self):
-        """
-        Clean up the test environment by removing the generated output directory
-        and its contents after each test.
-        """
-        output_folder = (
-            self.test_data_location / self.config.data["dataset_folder_name"]
-        )
-        if os.path.exists(output_folder):
-            shutil.rmtree(output_folder)
+        output_folder = self.test_output_dir / self.config.data["dataset_folder_name"]
+        _assert_prepare_outputs(output_folder, split_dir_name="training")
