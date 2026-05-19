@@ -6,6 +6,11 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-19
+
+### Changed
+- Refactored all unit tests
+
 ## [0.2.0] - 2026-05-11
 
 ### Changed
