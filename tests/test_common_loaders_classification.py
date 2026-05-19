@@ -1,15 +1,38 @@
-"""
-This module contains unit tests for the classification dataset loader functions.
+"""Unit tests for the classify-stage dataset loader functions.
 
-It verifies that each `load_classify_stepX_dataset` function correctly
-instantiates the appropriate dataset class and properly handles the
-injection of input data and intermediate results from previous steps.
-"""
+Seven classes, one per classify-pipeline step:
+- ``TestClassifyInputClassLoader``     — load_classify_step1_input_dataset
+- ``TestClassifySummaryClassLoader``   — load_classify_step2_summary_dataset
+- ``TestClassifySelectClassLoader``    — load_classify_step3_select_dataset
+- ``TestClassifyLocateClassLoader``    — load_classify_step4_locate_dataset
+- ``TestClassifyExtractClassLoader``   — load_classify_step5_extract_dataset
+- ``TestClassifyClassifyClassLoader``  — load_classify_step6_classify_dataset
+- ``TestClassifyConcatClassLoader``    — load_classify_step7_concat_dataset
 
-import unittest
-from pathlib import Path
+For each loader:
+1. The default config produces an instance of the expected class with the
+   right step_name.
+2. Provided upstream outputs propagate to the resulting wrapper with
+   expected shapes.
+
+Steps 6 and 7 also cover the suite variants (ClassifyAllSuite,
+ConcatDataSetSuite), which require config mutations (model=ModelSuite,
+classify=ClassifyAllSuite, concat=ConcatDataSetSuite).
+
+Refactored from 7 ``unittest.TestCase`` classes. The setUp pattern (load
+test_classify_001.yaml + select NRT_BO_001 + define test_data_file path)
+is replaced with ``classify_config_001`` + ``test_data_file`` fixtures
+from conftest. The "build full prepare pipeline" pattern (run steps 1-N
+to set up the input to step N+1) is replaced with
+``build_classify_prepare_pipeline`` from conftest.
+
+Note on suite tests in step 7:
+The concat suite test sets four config keys (concat/classify/model + the
+methods param list). Same pattern as ``test_classify_step7_concat_suite.py``.
+"""
 
 import polars as pl
+import pytest
 
 from aiqclib.classify.step1_read_input.dataset_all import InputDataSetAll
 from aiqclib.classify.step2_calc_stats.dataset_all import SummaryDataSetAll
@@ -20,7 +43,6 @@ from aiqclib.classify.step6_classify_dataset.dataset_all import ClassifyAll
 from aiqclib.classify.step6_classify_dataset.dataset_all_suite import ClassifyAllSuite
 from aiqclib.classify.step7_concat_datasets.dataset_all import ConcatDataSetAll
 from aiqclib.classify.step7_concat_datasets.dataset_suite import ConcatDataSetSuite
-from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.loader.classify_loader import (
     load_classify_step1_input_dataset,
     load_classify_step2_summary_dataset,
@@ -31,609 +53,344 @@ from aiqclib.common.loader.classify_loader import (
     load_classify_step7_concat_dataset,
 )
 
+from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 
-class TestClassifyInputClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the InputDataSetAll class.
-    """
 
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
+# ---------------------------------------------------------------------------
+# Shared shape expectations
+# ---------------------------------------------------------------------------
+
+_CLASSIFY_INPUT_ROWS = 2456
+_CLASSIFY_INPUT_COLS = 30
+_CLASSIFY_SUMMARY_ROWS = 44
+_CLASSIFY_SUMMARY_COLS = 12
+_CLASSIFY_PROFILE_COUNT = 10
+
+
+# ---------------------------------------------------------------------------
+# Step 1: input
+# ---------------------------------------------------------------------------
+
+class TestClassifyInputClassLoader:
+    """Tests for load_classify_step1_input_dataset."""
+
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces an InputDataSetAll with step_name='input'."""
+        ds = load_classify_step1_input_dataset(classify_config_001)
+        assert isinstance(ds, InputDataSetAll)
+        assert ds.step_name == "input"
+
+    def test_load_input_class_with_invalid_config(self, classify_config_001):
+        """An invalid input-class name raises ValueError."""
+        classify_config_001.data["step_class_set"]["steps"]["input"] = "InvalidClass"
+        with pytest.raises(ValueError):
+            _ = load_classify_step1_input_dataset(classify_config_001)
+
+
+# ---------------------------------------------------------------------------
+# Step 2: summary
+# ---------------------------------------------------------------------------
+
+class TestClassifySummaryClassLoader:
+    """Tests for load_classify_step2_summary_dataset."""
+
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces a SummaryDataSetAll with step_name='summary'."""
+        ds = load_classify_step2_summary_dataset(classify_config_001)
+        assert isinstance(ds, SummaryDataSetAll)
+        assert ds.step_name == "summary"
+
+    def test_load_dataset_input_data(self, classify_config_001, classify_input_001):
+        """Provided input_data propagates with the expected shape."""
+        ds = load_classify_step2_summary_dataset(
+            classify_config_001, classify_input_001.input_data,
         )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step1_input_dataset returns an InputDataSetAll instance
-        with the expected step name.
-        """
-        ds = load_classify_step1_input_dataset(self.config)
-        self.assertIsInstance(ds, InputDataSetAll)
-        self.assertEqual(ds.step_name, "input")
-
-    def test_load_input_class_with_invalid_config(self):
-        """
-        Ensure that an invalid input class name configured in the YAML raises a ValueError.
-        """
-        self.config.data["step_class_set"]["steps"]["input"] = "InvalidClass"
-        with self.assertRaises(ValueError):
-            _ = load_classify_step1_input_dataset(self.config)
+        assert isinstance(ds, SummaryDataSetAll)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == _CLASSIFY_INPUT_ROWS
+        assert ds.input_data.shape[1] == _CLASSIFY_INPUT_COLS
 
 
-class TestClassifySummaryClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the SummaryDataSetAll class.
-    """
+# ---------------------------------------------------------------------------
+# Step 3: select
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
+class TestClassifySelectClassLoader:
+    """Tests for load_classify_step3_select_dataset."""
+
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces a SelectDataSetAll with step_name='select'."""
+        ds = load_classify_step3_select_dataset(classify_config_001)
+        assert isinstance(ds, SelectDataSetAll)
+        assert ds.step_name == "select"
+
+    def test_load_dataset_input_data(self, classify_config_001, classify_input_001):
+        """Provided input_data propagates with the expected shape."""
+        ds = load_classify_step3_select_dataset(
+            classify_config_001, classify_input_001.input_data,
         )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step2_summary_dataset returns a SummaryDataSetAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step2_summary_dataset(self.config)
-        self.assertIsInstance(ds, SummaryDataSetAll)
-        self.assertEqual(ds.step_name, "summary")
-
-    def test_load_dataset_input_data(self):
-        """
-        Check that load_classify_step2_summary_dataset properly receives and sets the
-        'input_data' attribute when provided during loading.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds = load_classify_step2_summary_dataset(self.config, ds_input.input_data)
-        self.assertIsInstance(ds, SummaryDataSetAll)
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 19480)
-        self.assertEqual(ds.input_data.shape[1], 30)
+        assert isinstance(ds, SelectDataSetAll)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == _CLASSIFY_INPUT_ROWS
+        assert ds.input_data.shape[1] == _CLASSIFY_INPUT_COLS
 
 
-class TestClassifySelectClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the SelectDataSetAll class.
-    """
+# ---------------------------------------------------------------------------
+# Step 4: locate
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
-        )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
+class TestClassifyLocateClassLoader:
+    """Tests for load_classify_step4_locate_dataset."""
 
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step3_select_dataset returns a SelectDataSetAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step3_select_dataset(self.config)
-        self.assertIsInstance(ds, SelectDataSetAll)
-        self.assertEqual(ds.step_name, "select")
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces a LocateDataSetAll with step_name='locate'."""
+        ds = load_classify_step4_locate_dataset(classify_config_001)
+        assert isinstance(ds, LocateDataSetAll)
+        assert ds.step_name == "locate"
 
-    def test_load_dataset_input_data(self):
-        """
-        Check that load_classify_step3_select_dataset properly receives and sets the
-        'input_data' attribute when provided during loading.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        self.assertIsInstance(ds, SelectDataSetAll)
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 19480)
-        self.assertEqual(ds.input_data.shape[1], 30)
-
-
-class TestClassifyLocateClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the LocateDataSetAll class.
-    """
-
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
-        )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step4_locate_dataset returns a LocateDataSetAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step4_locate_dataset(self.config)
-        self.assertIsInstance(ds, LocateDataSetAll)
-        self.assertEqual(ds.step_name, "locate")
-
-    def test_load_dataset_input_data_and_profiles(self):
-        """
-        Check that load_classify_step4_locate_dataset properly receives and sets the
-        'input_data' and 'selected_profiles' attributes when provided.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
+    def test_load_dataset_input_data_and_profiles(
+        self, classify_config_001, classify_input_001, classify_select_001,
+    ):
+        """Provided input_data + selected_profiles propagate with expected shapes."""
         ds = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
+            classify_config_001,
+            classify_input_001.input_data,
+            classify_select_001.selected_profiles,
         )
 
-        self.assertIsInstance(ds, LocateDataSetAll)
+        assert isinstance(ds, LocateDataSetAll)
 
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 19480)
-        self.assertEqual(ds.input_data.shape[1], 30)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == _CLASSIFY_INPUT_ROWS
+        assert ds.input_data.shape[1] == _CLASSIFY_INPUT_COLS
 
-        self.assertIsInstance(ds.selected_profiles, pl.DataFrame)
-        self.assertEqual(ds.selected_profiles.shape[0], 84)
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert isinstance(ds.selected_profiles, pl.DataFrame)
+        assert ds.selected_profiles.shape[0] == _CLASSIFY_PROFILE_COUNT
+        assert ds.selected_profiles.shape[1] == 8
 
 
-class TestClassifyExtractClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the ExtractDataSetAll class.
-    """
+# ---------------------------------------------------------------------------
+# Step 5: extract
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
+class TestClassifyExtractClassLoader:
+    """Tests for load_classify_step5_extract_dataset."""
+
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces an ExtractDataSetAll with step_name='extract'."""
+        ds = load_classify_step5_extract_dataset(classify_config_001)
+        assert isinstance(ds, ExtractDataSetAll)
+        assert ds.step_name == "extract"
+
+    def test_load_dataset_input_data_and_profiles(
+        self, classify_config_001, test_data_file,
+    ):
+        """Provided upstream outputs (input/summary/select/locate) propagate correctly.
+
+        Uses ``build_classify_prepare_pipeline(stop_after="locate")`` to build
+        the four upstream stages, then calls load_classify_step5_extract_dataset
+        directly with the assembled inputs.
         """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
+        pipeline = build_classify_prepare_pipeline(
+            classify_config_001, test_data_file, stop_after="locate",
         )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step5_extract_dataset returns an ExtractDataSetAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step5_extract_dataset(self.config)
-        self.assertIsInstance(ds, ExtractDataSetAll)
-        self.assertEqual(ds.step_name, "extract")
-
-    def test_load_dataset_input_data_and_profiles(self):
-        """
-        Check that load_classify_step5_extract_dataset properly receives and sets
-        'input_data', 'selected_profiles', 'selected_rows', and 'summary_stats'
-        attributes when provided. Also verifies 'filtered_input' from internal processing.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            self.config, ds_input.input_data
-        )
-        ds_summary.calculate_stats()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
-        )
-        ds_locate.process_targets()
 
         ds = load_classify_step5_extract_dataset(
-            self.config,
-            ds_input.input_data,
-            ds_select.selected_profiles,
-            ds_locate.selected_rows,
-            ds_summary.summary_stats,
+            classify_config_001,
+            pipeline.input.input_data,
+            pipeline.select.selected_profiles,
+            pipeline.locate.selected_rows,
+            pipeline.summary.summary_stats,
         )
 
-        self.assertIsInstance(ds, ExtractDataSetAll)
+        assert isinstance(ds, ExtractDataSetAll)
 
-        self.assertIsInstance(ds.input_data, pl.DataFrame)
-        self.assertEqual(ds.input_data.shape[0], 19480)
-        self.assertEqual(ds.input_data.shape[1], 30)
+        assert isinstance(ds.input_data, pl.DataFrame)
+        assert ds.input_data.shape[0] == _CLASSIFY_INPUT_ROWS
+        assert ds.input_data.shape[1] == _CLASSIFY_INPUT_COLS
 
-        self.assertIsInstance(ds.summary_stats, pl.DataFrame)
-        self.assertEqual(ds.summary_stats.shape[0], 425)
-        self.assertEqual(ds.summary_stats.shape[1], 12)
+        assert isinstance(ds.summary_stats, pl.DataFrame)
+        assert ds.summary_stats.shape[0] == _CLASSIFY_SUMMARY_ROWS
+        assert ds.summary_stats.shape[1] == _CLASSIFY_SUMMARY_COLS
 
-        self.assertIsInstance(ds.selected_profiles, pl.DataFrame)
-        self.assertEqual(ds.selected_profiles.shape[0], 84)
-        self.assertEqual(ds.selected_profiles.shape[1], 8)
+        assert isinstance(ds.selected_profiles, pl.DataFrame)
+        assert ds.selected_profiles.shape[0] == _CLASSIFY_PROFILE_COUNT
+        assert ds.selected_profiles.shape[1] == 8
 
-        self.assertIsInstance(ds.filtered_input, pl.DataFrame)
-        self.assertEqual(ds.filtered_input.shape[0], 19480)
-        self.assertEqual(ds.filtered_input.shape[1], 30)
+        # filtered_input matches input for the classify-side "all" pipeline.
+        assert isinstance(ds.filtered_input, pl.DataFrame)
+        assert ds.filtered_input.shape[0] == _CLASSIFY_INPUT_ROWS
+        assert ds.filtered_input.shape[1] == _CLASSIFY_INPUT_COLS
 
-        self.assertIsInstance(ds.selected_rows["temp"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["temp"].shape[0], 19480)
-        self.assertEqual(ds.selected_rows["temp"].shape[1], 9)
+        # Each target keeps all input rows (the "all" loaders don't filter
+        # by QC values like the prepare-side LocateDataSetA does).
+        for tgt in ("temp", "psal"):
+            assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
+            assert ds.selected_rows[tgt].shape[0] == _CLASSIFY_INPUT_ROWS
+            assert ds.selected_rows[tgt].shape[1] == 9
 
-        self.assertIsInstance(ds.selected_rows["psal"], pl.DataFrame)
-        self.assertEqual(ds.selected_rows["psal"].shape[0], 19480)
-        self.assertEqual(ds.selected_rows["psal"].shape[1], 9)
+
+# ---------------------------------------------------------------------------
+# Step 6: classify
+# ---------------------------------------------------------------------------
+
+def _inject_suite_classify_settings(config) -> None:
+    """Mutate config to use ClassifyAllSuite + ModelSuite."""
+    config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+    config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
 
 
-class TestClassifyClassifyClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the ClassifyAll class.
-    """
+class TestClassifyClassifyClassLoader:
+    """Tests for load_classify_step6_classify_dataset (default + suite variants)."""
 
-    def setUp(self):
-        """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces a ClassifyAll with step_name='classify'."""
+        ds = load_classify_step6_classify_dataset(classify_config_001)
+        assert isinstance(ds, ClassifyAll)
+        assert ds.step_name == "classify"
+
+    def test_load_classifiction_suite_dataset(self, classify_config_001):
+        """Suite config produces a ClassifyAllSuite with step_name='classify'."""
+        _inject_suite_classify_settings(classify_config_001)
+        ds = load_classify_step6_classify_dataset(classify_config_001)
+        assert isinstance(ds, ClassifyAllSuite)
+        assert ds.step_name == "classify"
+
+    def test_load_dataset_input_data(self, classify_config_001, test_data_file):
+        """Provided target_features (from step5) populate test_sets per target."""
+        pipeline = build_classify_prepare_pipeline(
+            classify_config_001, test_data_file, stop_after="extract",
         )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step6_classify_dataset returns a ClassifyAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step6_classify_dataset(self.config)
-        self.assertIsInstance(ds, ClassifyAll)
-        self.assertEqual(ds.step_name, "classify")
-
-    def test_load_classifiction_suite_dataset(self):
-        """
-        Check that load_classify_step6_classify_dataset returns a ClassifyAllSuite instance
-        with the correct step name.
-        """
-        self.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-        self.config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
-        ds = load_classify_step6_classify_dataset(self.config)
-        self.assertIsInstance(ds, ClassifyAllSuite)
-        self.assertEqual(ds.step_name, "classify")
-
-    def test_load_dataset_input_data(self):
-        """
-        Check that load_classify_step6_classify_dataset properly receives and sets
-        the 'target_features' attribute (which populates 'test_sets' internally)
-        when provided, after all prior steps have generated the necessary data.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            self.config, ds_input.input_data
-        )
-        ds_summary.calculate_stats()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
-        )
-        ds_locate.process_targets()
-
-        ds_extract = load_classify_step5_extract_dataset(
-            self.config,
-            ds_input.input_data,
-            ds_select.selected_profiles,
-            ds_locate.selected_rows,
-            ds_summary.summary_stats,
-        )
-        ds_extract.process_targets()
 
         ds = load_classify_step6_classify_dataset(
-            self.config, ds_extract.target_features
+            classify_config_001, pipeline.extract.target_features,
         )
 
-        self.assertIsInstance(ds, ClassifyAll)
+        assert isinstance(ds, ClassifyAll)
+        for tgt in ("temp", "psal"):
+            assert isinstance(ds.test_sets[tgt], pl.DataFrame)
+            assert ds.test_sets[tgt].shape[0] == _CLASSIFY_INPUT_ROWS
+            assert ds.test_sets[tgt].shape[1] == 56
 
-        self.assertIsInstance(ds.test_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["temp"].shape[0], 19480)
-        self.assertEqual(ds.test_sets["temp"].shape[1], 56)
-
-        self.assertIsInstance(ds.test_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["psal"].shape[0], 19480)
-        self.assertEqual(ds.test_sets["psal"].shape[1], 56)
-
-    def test_load_suite_dataset_input_data(self):
-        """
-        Check that load_classify_step6_classify_dataset properly receives and sets
-        the 'target_features' attribute (which populates 'test_sets' internally)
-        when provided, after all prior steps have generated the necessary data.
-        """
-        self.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-        self.config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
-
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            self.config, ds_input.input_data
+    def test_load_suite_dataset_input_data(self, classify_config_001, test_data_file):
+        """Same as test_load_dataset_input_data but for the suite variant."""
+        _inject_suite_classify_settings(classify_config_001)
+        pipeline = build_classify_prepare_pipeline(
+            classify_config_001, test_data_file, stop_after="extract",
         )
-        ds_summary.calculate_stats()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
-        )
-        ds_locate.process_targets()
-
-        ds_extract = load_classify_step5_extract_dataset(
-            self.config,
-            ds_input.input_data,
-            ds_select.selected_profiles,
-            ds_locate.selected_rows,
-            ds_summary.summary_stats,
-        )
-        ds_extract.process_targets()
 
         ds = load_classify_step6_classify_dataset(
-            self.config, ds_extract.target_features
+            classify_config_001, pipeline.extract.target_features,
         )
 
-        self.assertIsInstance(ds, ClassifyAllSuite)
-
-        self.assertIsInstance(ds.test_sets["temp"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["temp"].shape[0], 19480)
-        self.assertEqual(ds.test_sets["temp"].shape[1], 56)
-
-        self.assertIsInstance(ds.test_sets["psal"], pl.DataFrame)
-        self.assertEqual(ds.test_sets["psal"].shape[0], 19480)
-        self.assertEqual(ds.test_sets["psal"].shape[1], 56)
+        assert isinstance(ds, ClassifyAllSuite)
+        for tgt in ("temp", "psal"):
+            assert isinstance(ds.test_sets[tgt], pl.DataFrame)
+            assert ds.test_sets[tgt].shape[0] == _CLASSIFY_INPUT_ROWS
+            assert ds.test_sets[tgt].shape[1] == 56
 
 
-class TestClassifyConcatClassLoader(unittest.TestCase):
-    """
-    Tests related to loading the ConcatDataSetAll class.
-    """
+# ---------------------------------------------------------------------------
+# Step 7: concat
+# ---------------------------------------------------------------------------
 
-    def setUp(self):
+# Suite-mutation helper for step 7 — adds concat=ConcatDataSetSuite and the
+# methods param list to the step 6 mutations.
+_SUITE_METHODS = ("xgb", "dt")
+
+
+def _inject_suite_concat_settings(config) -> None:
+    """Mutate config to use ConcatDataSetSuite + ClassifyAllSuite + ModelSuite + methods."""
+    config.data["step_class_set"]["steps"]["concat"] = "ConcatDataSetSuite"
+    config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
+    config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+    config.data["step_param_set"]["steps"]["model"] = {"methods": ["XGB", "DT"]}
+
+
+class TestClassifyConcatClassLoader:
+    """Tests for load_classify_step7_concat_dataset (default + suite variants)."""
+
+    def test_load_dataset_valid_config(self, classify_config_001):
+        """Default config produces a ConcatDataSetAll with step_name='concat'."""
+        ds = load_classify_step7_concat_dataset(classify_config_001)
+        assert isinstance(ds, ConcatDataSetAll)
+        assert ds.step_name == "concat"
+
+    def test_load_suite_dataset_valid_config(self, classify_config_001):
+        """Suite config produces a ConcatDataSetSuite with step_name='concat'."""
+        _inject_suite_concat_settings(classify_config_001)
+        ds = load_classify_step7_concat_dataset(classify_config_001)
+        assert isinstance(ds, ConcatDataSetSuite)
+        assert ds.step_name == "concat"
+
+    def test_load_dataset_input_data(
+        self, classify_config_001, test_data_file, training_dir,
+    ):
+        """Provided input_data + predictions populate the concat wrapper.
+
+        Runs the full classify pipeline through step6 (read pre-trained models
+        from tests/data/training/, run test_targets), then exercises step 7's
+        loader on the resulting predictions.
         """
-        Define the path to the test config file and select a dataset
-        prior to each test.
-        """
-        self.config_file_path = str(
-            Path(__file__).resolve().parent
-            / "data"
-            / "config"
-            / "test_classify_001.yaml"
+        pipeline = build_classify_prepare_pipeline(
+            classify_config_001, test_data_file, stop_after="extract",
         )
-        self.config = ClassificationConfig(str(self.config_file_path))
-        self.config.select("NRT_BO_001")
-        self.test_data_file = (
-            Path(__file__).resolve().parent
-            / "data"
-            / "input"
-            / "nrt_cora_bo_test.parquet"
-        )
-
-        model_path = Path(__file__).resolve().parent / "data" / "training"
-        self.model_file_names = {
-            "temp": str(model_path / "model_temp.joblib"),
-            "psal": str(model_path / "model_psal.joblib"),
-            "pres": str(model_path / "model_pres.joblib"),
-        }
-        self.suite_model_file_names = {
-            "xgb_temp": str(model_path / "model_temp_xgb.joblib"),
-            "dt_temp": str(model_path / "model_temp_dt.joblib"),
-            "xgb_psal": str(model_path / "model_psal_xgb.joblib"),
-            "dt_psal": str(model_path / "model_psal_dt.joblib"),
-            "xgb_pres": str(model_path / "model_pres_xgb.joblib"),
-            "dt_pres": str(model_path / "model_pres_dt.joblib"),
-        }
-
-    def test_load_dataset_valid_config(self):
-        """
-        Check that load_classify_step7_concat_dataset returns a ConcatDataSetAll instance
-        with the correct step name.
-        """
-        ds = load_classify_step7_concat_dataset(self.config)
-        self.assertIsInstance(ds, ConcatDataSetAll)
-        self.assertEqual(ds.step_name, "concat")
-
-    def test_load_suite_dataset_valid_config(self):
-        """
-        Check that load_classify_step7_concat_dataset returns a ConcatDataSetSuite instance
-        with the correct step name.
-        """
-        self.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-        self.config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
-        self.config.data["step_class_set"]["steps"]["concat"] = "ConcatDataSetSuite"
-        ds = load_classify_step7_concat_dataset(self.config)
-        self.assertIsInstance(ds, ConcatDataSetSuite)
-        self.assertEqual(ds.step_name, "concat")
-
-    def test_load_dataset_input_data(self):
-        """
-        Check that load_classify_step7_concat_dataset properly receives and sets
-        the 'input_data' and 'predictions' attributes when provided, after
-        all prior steps have generated the necessary data.
-        """
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            self.config, ds_input.input_data
-        )
-        ds_summary.calculate_stats()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
-        )
-        ds_locate.process_targets()
-
-        ds_extract = load_classify_step5_extract_dataset(
-            self.config,
-            ds_input.input_data,
-            ds_select.selected_profiles,
-            ds_locate.selected_rows,
-            ds_summary.summary_stats,
-        )
-        ds_extract.process_targets()
 
         ds_classify = load_classify_step6_classify_dataset(
-            self.config, ds_extract.target_features
+            classify_config_001, pipeline.extract.target_features,
         )
-        ds_classify.model_file_names = self.model_file_names
+        # 3-target model file dict; the 2-target classify config only loads
+        # temp + psal, but extra dict entries are ignored.
+        ds_classify.model_file_names = {
+            tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS_NONEMPTY
+        }
         ds_classify.read_models()
         ds_classify.test_targets()
 
         ds = load_classify_step7_concat_dataset(
-            self.config, ds_input.input_data, ds_classify.predictions
+            classify_config_001, pipeline.input.input_data, ds_classify.predictions,
         )
 
-        self.assertIsInstance(ds, ConcatDataSetAll)
+        assert isinstance(ds, ConcatDataSetAll)
+        for tgt in ("temp", "psal"):
+            assert isinstance(ds.predictions[tgt], pl.DataFrame)
+            assert ds.predictions[tgt].shape[0] == _CLASSIFY_INPUT_ROWS
+            assert ds.predictions[tgt].shape[1] == 7
 
-        self.assertIsInstance(ds.predictions["temp"], pl.DataFrame)
-        self.assertEqual(ds.predictions["temp"].shape[0], 19480)
-        self.assertEqual(ds.predictions["temp"].shape[1], 7)
+    def test_load_suite_dataset_input_data(
+        self, classify_config_001, test_data_file, training_dir,
+    ):
+        """Same as test_load_dataset_input_data but for the suite variant.
 
-        self.assertIsInstance(ds.predictions["psal"], pl.DataFrame)
-        self.assertEqual(ds.predictions["psal"].shape[0], 19480)
-        self.assertEqual(ds.predictions["psal"].shape[1], 7)
-
-    def test_load_suite_dataset_input_data(self):
+        Suite predictions have a ``method`` column distinguishing per-method
+        rows, so predictions["temp"] has 2× the input row count (2 methods).
         """
-        Check that load_classify_step7_concat_dataset properly receives and sets
-        the 'input_data' and 'predictions' attributes when provided, after
-        all prior steps have generated the necessary data.
-        """
-        self.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-        self.config.data["step_class_set"]["steps"]["classify"] = "ClassifyAllSuite"
-        self.config.data["step_class_set"]["steps"]["concat"] = "ConcatDataSetSuite"
-        self.config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
-        self.config.data["step_param_set"]["steps"]["model"] = {
-            "methods": ["XGB", "DT"]
-        }
-
-        ds_input = load_classify_step1_input_dataset(self.config)
-        ds_input.input_file_name = str(self.test_data_file)
-        ds_input.read_input_data()
-
-        ds_select = load_classify_step3_select_dataset(self.config, ds_input.input_data)
-        ds_select.label_profiles()
-
-        ds_summary = load_classify_step2_summary_dataset(
-            self.config, ds_input.input_data
+        _inject_suite_concat_settings(classify_config_001)
+        pipeline = build_classify_prepare_pipeline(
+            classify_config_001, test_data_file, stop_after="extract",
         )
-        ds_summary.calculate_stats()
-
-        ds_locate = load_classify_step4_locate_dataset(
-            self.config, ds_input.input_data, ds_select.selected_profiles
-        )
-        ds_locate.process_targets()
-
-        ds_extract = load_classify_step5_extract_dataset(
-            self.config,
-            ds_input.input_data,
-            ds_select.selected_profiles,
-            ds_locate.selected_rows,
-            ds_summary.summary_stats,
-        )
-        ds_extract.process_targets()
 
         ds_classify = load_classify_step6_classify_dataset(
-            self.config, ds_extract.target_features
+            classify_config_001, pipeline.extract.target_features,
         )
-        ds_classify.model_file_names = self.suite_model_file_names
+        # 4-key suite model dict (2 methods × 2 targets); 2-target config
+        # ignores the pres entries.
+        ds_classify.model_file_names = {
+            f"{method}_{tgt}": str(training_dir / f"model_{tgt}_{method}.joblib")
+            for method in _SUITE_METHODS
+            for tgt in TARGETS_NONEMPTY
+        }
         ds_classify.read_models()
         ds_classify.test_targets()
 
         ds = load_classify_step7_concat_dataset(
-            self.config, ds_input.input_data, ds_classify.predictions
+            classify_config_001, pipeline.input.input_data, ds_classify.predictions,
         )
 
-        self.assertIsInstance(ds, ConcatDataSetSuite)
-
-        self.assertIsInstance(ds.predictions["temp"], pl.DataFrame)
-        self.assertEqual(ds.predictions["temp"].shape[0], 19480 * 2)
-        self.assertEqual(ds.predictions["temp"].shape[1], 8)
-
-        self.assertIsInstance(ds.predictions["psal"], pl.DataFrame)
-        self.assertEqual(ds.predictions["psal"].shape[0], 19480 * 2)
-        self.assertEqual(ds.predictions["psal"].shape[1], 8)
+        assert isinstance(ds, ConcatDataSetSuite)
+        for tgt in ("temp", "psal"):
+            assert isinstance(ds.predictions[tgt], pl.DataFrame)
+            # 2 methods × input rows.
+            assert ds.predictions[tgt].shape[0] == _CLASSIFY_INPUT_ROWS * 2
+            # +1 column ('method') over the default ConcatDataSetAll predictions.
+            assert ds.predictions[tgt].shape[1] == 8

@@ -1,28 +1,51 @@
-"""
-Unit tests for the create_metric_plots utility function.
-This module verifies that ROC and Precision-Recall plots are generated correctly
-based on provided contingency tables.
+"""Unit tests for the ``create_metric_plots`` utility.
+
+create_metric_plots takes a model-like object exposing ``contingency_tables``
+and ``output_file_names["metric_plot"]`` and writes ROC + Precision-Recall
+plots to disk as SVG files. The tests verify:
+- Empty contingency_tables raises ValueError
+- Single-fold (test-set) data produces a valid SVG file
+- Multi-fold (cross-validation) data also produces a valid SVG, exercising
+  the mean-curve + std-deviation code path
+- A fold containing only one class is silently skipped (instead of crashing
+  ``roc_curve``)
+
+Refactored from a ``unittest.TestCase`` class with tempfile.mkdtemp +
+shutil.rmtree teardown. Now uses:
+- ``test_output_dir`` from conftest (real directory under tests/data/test/);
+  ``os.remove(...)  # comment out to debug`` after each assertion lets the
+  generated SVG be inspected on failure.
+- A ``mock_model`` fixture for per-test isolation of the MockModel state.
+
+The MockModel class stays at module level — test infrastructure, not data.
 """
 
 import os
-import shutil
-import tempfile
-import unittest
 from typing import Dict
 
-import polars as pl
 import matplotlib
+import polars as pl
+import pytest
 
-# Use non-interactive backend to prevent plots from trying to open windows during tests
+# Non-interactive backend so plot tests don't open windows. Must be set
+# before any aiqclib import that loads matplotlib's pyplot. Keep this line
+# directly above the create_metric_plots import.
 matplotlib.use("Agg")
 
 from aiqclib.common.utils.metric_plots import create_metric_plots
 
 
+# ---------------------------------------------------------------------------
+# Module-level mock
+# ---------------------------------------------------------------------------
+
 class MockModel:
-    """
-    A simple mock class to simulate the structure of ValidationBase/BuildModelBase
-    required by create_metric_plots.
+    """Minimal stand-in for ValidationBase / BuildModelBase.
+
+    create_metric_plots only reads two attributes: ``contingency_tables``
+    (per-target DataFrame) and ``output_file_names["metric_plot"]``
+    (per-target path). This mock supplies both without dragging in any
+    of the real wrapper classes.
     """
 
     def __init__(self) -> None:
@@ -30,98 +53,92 @@ class MockModel:
         self.output_file_names: Dict[str, Dict[str, str]] = {"metric_plot": {}}
 
 
-class TestCreateMetricPlots(unittest.TestCase):
-    """
-    Test suite for the create_metric_plots function.
-    """
+# ---------------------------------------------------------------------------
+# Fixture
+# ---------------------------------------------------------------------------
 
-    def setUp(self) -> None:
-        """
-        Create a temporary directory to store output files during testing.
-        """
-        self.test_dir = tempfile.mkdtemp()
-        self.mock_model = MockModel()
+@pytest.fixture
+def mock_model():
+    """Fresh MockModel per test — avoids contingency_tables leaking across tests."""
+    return MockModel()
 
-    def tearDown(self) -> None:
-        """
-        Remove the temporary directory and its contents after testing.
-        """
-        shutil.rmtree(self.test_dir)
 
-    def test_empty_contingency_tables(self) -> None:
-        """
-        Ensure that a ValueError is raised if the model has no contingency tables.
-        """
-        self.mock_model.contingency_tables = {}
-        with self.assertRaises(ValueError):
-            create_metric_plots(self.mock_model)
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
-    def test_single_fold_plot_generation(self) -> None:
-        """
-        Verify that a plot file is created for a single-fold scenario (e.g., standard test set).
+class TestCreateMetricPlots:
+    """Tests for create_metric_plots's output-file generation behaviour."""
+
+    def test_empty_contingency_tables(self, mock_model):
+        """create_metric_plots with no contingency_tables raises ValueError."""
+        mock_model.contingency_tables = {}
+        with pytest.raises(ValueError):
+            create_metric_plots(mock_model)
+
+    def test_single_fold_plot_generation(self, mock_model, test_output_dir):
+        """A single-fold contingency table (e.g. test set with k=1) produces an SVG.
+
+        With one fold there's no mean/std logic — just the single ROC/PR
+        curve. The output file must exist and have non-zero size.
         """
         target_name = "temp"
-        output_file = os.path.join(self.test_dir, f"plot_{target_name}.svg")
+        output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.contingency_tables[target_name] = pl.DataFrame({
+            "k": [1, 1, 1, 1, 1],
+            "label": [0, 0, 1, 1, 0],
+            "score": [0.1, 0.2, 0.8, 0.9, 0.4],
+        })
 
-        # Setup mock data: Single fold (k=1)
-        self.mock_model.output_file_names["metric_plot"][target_name] = output_file
-        self.mock_model.contingency_tables[target_name] = pl.DataFrame(
-            {
-                "k": [1, 1, 1, 1, 1],
-                "label": [0, 0, 1, 1, 0],
-                "score": [0.1, 0.2, 0.8, 0.9, 0.4],
-            }
-        )
+        create_metric_plots(mock_model)
 
-        create_metric_plots(self.mock_model)
+        assert os.path.exists(output_path)
+        assert os.path.getsize(output_path) > 0
+        os.remove(output_path)  # comment out to debug
 
-        # Assert file exists and has size > 0
-        self.assertTrue(os.path.exists(output_file))
-        self.assertGreater(os.path.getsize(output_file), 0)
+    def test_multi_fold_plot_generation(self, mock_model, test_output_dir):
+        """Multi-fold contingency tables exercise the mean-curve + std-dev logic.
 
-    def test_multi_fold_plot_generation(self) -> None:
-        """
-        Verify that a plot file is created for a multi-fold scenario (e.g., cross-validation).
-        This tests the logic path for calculating mean curves and standard deviations.
+        Two folds (k=1, k=2) means create_metric_plots computes per-fold
+        ROC/PR curves, then averages them with a confidence band. The
+        output file must exist and have non-zero size.
         """
         target_name = "psal"
-        output_file = os.path.join(self.test_dir, f"plot_{target_name}.svg")
+        output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.contingency_tables[target_name] = pl.DataFrame({
+            "k": [1, 1, 1, 2, 2, 2],
+            "label": [0, 1, 0, 0, 1, 1],
+            "score": [0.1, 0.9, 0.2, 0.3, 0.8, 0.7],
+        })
 
-        # Setup mock data: Two folds (k=1, k=2)
-        self.mock_model.output_file_names["metric_plot"][target_name] = output_file
-        self.mock_model.contingency_tables[target_name] = pl.DataFrame(
-            {
-                "k": [1, 1, 1, 2, 2, 2],
-                "label": [0, 1, 0, 0, 1, 1],
-                "score": [0.1, 0.9, 0.2, 0.3, 0.8, 0.7],
-            }
-        )
+        create_metric_plots(mock_model)
 
-        create_metric_plots(self.mock_model)
+        assert os.path.exists(output_path)
+        assert os.path.getsize(output_path) > 0
+        os.remove(output_path)  # comment out to debug
 
-        # Assert file exists and has size > 0
-        self.assertTrue(os.path.exists(output_file))
-        self.assertGreater(os.path.getsize(output_file), 0)
+    def test_missing_classes_in_fold(self, mock_model, test_output_dir):
+        """A fold containing only one class is silently skipped.
 
-    def test_missing_classes_in_fold(self) -> None:
-        """
-        Verify that the function handles edge cases where a specific fold might
-        only contain one class (which causes roc_curve to fail if not skipped).
+        sklearn's ``roc_curve`` errors when called on single-class data.
+        create_metric_plots should detect this and skip the problematic
+        fold instead of crashing — the test verifies success by checking
+        that the output file gets created (using k=1 which has both classes).
         """
         target_name = "pres"
-        output_file = os.path.join(self.test_dir, f"plot_{target_name}.svg")
+        output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.contingency_tables[target_name] = pl.DataFrame({
+            # k=1 has both classes; k=2 has only class 0 (must be skipped).
+            "k": [1, 1, 2, 2],
+            "label": [0, 1, 0, 0],
+            "score": [0.1, 0.9, 0.2, 0.3],
+        })
 
-        self.mock_model.output_file_names["metric_plot"][target_name] = output_file
-        self.mock_model.contingency_tables[target_name] = pl.DataFrame(
-            {
-                # k=1 has both classes (OK)
-                # k=2 has only class 0 (Should be skipped by logic)
-                "k": [1, 1, 2, 2],
-                "label": [0, 1, 0, 0],
-                "score": [0.1, 0.9, 0.2, 0.3],
-            }
-        )
+        # Should not raise.
+        create_metric_plots(mock_model)
 
-        # Should not raise an error
-        create_metric_plots(self.mock_model)
-        self.assertTrue(os.path.exists(output_file))
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
