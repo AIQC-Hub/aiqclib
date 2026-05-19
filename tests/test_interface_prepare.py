@@ -10,7 +10,6 @@ the same shape but with conftest fixtures, per-target file-existence loops,
 and the path_info-override pattern factored into a small helper.
 """
 
-import os
 import shutil
 
 import pytest
@@ -23,6 +22,7 @@ from tests.conftest import TARGETS
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _wire_path_info(config, test_output_dir, input_dir, extra=None):
     """Override the config's path_info to redirect output to test_output_dir.
@@ -75,6 +75,7 @@ def _cleanup_output_folder(config, test_output_dir):
 # Three-config tests (default behaviour, no custom step folder names)
 # ---------------------------------------------------------------------------
 
+
 class TestCreateTrainingDataSet:
     """create_training_dataset against configs 001, 004, 005.
 
@@ -85,8 +86,12 @@ class TestCreateTrainingDataSet:
 
     @pytest.fixture(autouse=True)
     def setup_and_cleanup(
-        self, dataset_config_001, dataset_config_004, dataset_config_005,
-        test_output_dir, input_dir,
+        self,
+        dataset_config_001,
+        dataset_config_004,
+        dataset_config_005,
+        test_output_dir,
+        input_dir,
     ):
         """Wire the three configs and clean up generated folders afterwards."""
         self.configs = [dataset_config_001, dataset_config_004, dataset_config_005]
@@ -114,6 +119,7 @@ class TestCreateTrainingDataSet:
 # NegX5 variant (config 003 with custom split folder name)
 # ---------------------------------------------------------------------------
 
+
 class TestCreateTrainingDataSetNegX5:
     """create_training_dataset against config 003 with a custom split folder.
 
@@ -128,7 +134,9 @@ class TestCreateTrainingDataSetNegX5:
         self.config = dataset_config_003
         self.test_output_dir = test_output_dir
         _wire_path_info(
-            self.config, test_output_dir, input_dir,
+            self.config,
+            test_output_dir,
+            input_dir,
             extra={"split": {"step_folder_name": "training"}},
         )
 

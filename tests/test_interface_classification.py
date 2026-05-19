@@ -11,7 +11,6 @@ configs, plus ``TestClassifyDataSetNegX5`` for config 001 with the
 fixtures and per-target loops.
 """
 
-import os
 import shutil
 
 import pytest
@@ -24,6 +23,7 @@ from tests.conftest import TARGETS_NONEMPTY
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _wire_path_info(config, test_output_dir, input_dir, data_dir, *, model_subfolder):
     """Override path_info for classify tests.
@@ -86,20 +86,29 @@ def _cleanup_output_folder(config, test_output_dir):
 # Default classification tests (model dir = "training")
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyDataSet:
     """classify_dataset against classify configs 001 and 002, default model dir."""
 
     @pytest.fixture(autouse=True)
     def setup_and_cleanup(
-        self, classify_config_001, classify_config_002,
-        test_output_dir, input_dir, data_dir,
+        self,
+        classify_config_001,
+        classify_config_002,
+        test_output_dir,
+        input_dir,
+        data_dir,
     ):
         """Wire two configs with model_subfolder='training'; clean up afterwards."""
         self.configs = [classify_config_001, classify_config_002]
         self.test_output_dir = test_output_dir
         for c in self.configs:
             _wire_path_info(
-                c, test_output_dir, input_dir, data_dir, model_subfolder="training",
+                c,
+                test_output_dir,
+                input_dir,
+                data_dir,
+                model_subfolder="training",
             )
 
         yield
@@ -120,7 +129,9 @@ class TestClassifyDataSet:
     @pytest.mark.parametrize("idx", range(2))
     def test_shap_value_output(self, idx):
         """With ``calculate_shap=True``, SHAP value parquets are produced."""
-        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = (
+            True
+        )
         classify_dataset(self.configs[idx])
 
         output_folder = (
@@ -136,6 +147,7 @@ class TestClassifyDataSet:
 # NegX5 variant (config 001 with negx5_model/ as the model directory)
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyDataSetNegX5:
     """classify_dataset against config 001 but with negx5_model/ as model dir.
 
@@ -147,13 +159,20 @@ class TestClassifyDataSetNegX5:
 
     @pytest.fixture(autouse=True)
     def setup_and_cleanup(
-        self, classify_config_001, test_output_dir, input_dir, data_dir,
+        self,
+        classify_config_001,
+        test_output_dir,
+        input_dir,
+        data_dir,
     ):
         """Wire config 001 with model_subfolder='negx5_model'."""
         self.config = classify_config_001
         self.test_output_dir = test_output_dir
         _wire_path_info(
-            self.config, test_output_dir, input_dir, data_dir,
+            self.config,
+            test_output_dir,
+            input_dir,
+            data_dir,
             model_subfolder="negx5_model",
         )
 

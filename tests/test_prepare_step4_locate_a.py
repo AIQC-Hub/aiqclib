@@ -43,6 +43,7 @@ TARGET_VALUES: dict[str, dict] = {
 # Tests against test_dataset_001.yaml (default — no neg_x_multiplier)
 # ---------------------------------------------------------------------------
 
+
 class TestLocateDataSetA:
     """Tests for LocateDataSetA with the default config."""
 
@@ -53,8 +54,7 @@ class TestLocateDataSetA:
         # Original asserted only temp and psal; extending to all three.
         for tgt in TARGETS:
             assert (
-                str(ds.output_file_names[tgt])
-                == f"{base}/selected_rows_{tgt}.parquet"
+                str(ds.output_file_names[tgt]) == f"{base}/selected_rows_{tgt}.parquet"
             )
 
     def test_step_name(self, dataset_config_001):
@@ -173,6 +173,7 @@ class TestLocateDataSetA:
 # ---------------------------------------------------------------------------
 # Tests against test_dataset_003.yaml (NegX5 — neg_x_multiplier active)
 # ---------------------------------------------------------------------------
+
 
 class TestLocateDataSetANegX5:
     """Tests for LocateDataSetA with neg_x_multiplier set (config 003).

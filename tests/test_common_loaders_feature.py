@@ -23,7 +23,8 @@ class TestFeatureClassLoader:
     def test_load_model_valid_config(self, dataset_config_001):
         """A valid feature-param entry produces an instance of the configured class."""
         ds = load_feature_class(
-            "temp", dataset_config_001.data["feature_param_set"]["params"][0],
+            "temp",
+            dataset_config_001.data["feature_param_set"]["params"][0],
         )
         assert isinstance(ds, LocationFeat)
 
@@ -34,5 +35,6 @@ class TestFeatureClassLoader:
         )
         with pytest.raises(ValueError):
             _ = load_feature_class(
-                "temp", dataset_config_001.data["feature_param_set"]["params"][0],
+                "temp",
+                dataset_config_001.data["feature_param_set"]["params"][0],
             )

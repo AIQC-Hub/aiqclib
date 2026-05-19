@@ -49,6 +49,7 @@ SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARG
 # Suite-config fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def training_config_001_validate_suite(training_config_001):
     """training_config_001 with KFoldValidationSuite + ModelSuite + 2 methods injected.
@@ -78,6 +79,7 @@ def training_config_001_validate_suite(training_config_001):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestKFoldValidationSuite:
     """Tests for KFoldValidationSuite's multi-method k-fold + file output."""
@@ -163,7 +165,9 @@ class TestKFoldValidationSuite:
 
     # ----- Validation behaviour -----
 
-    def test_fold_validation(self, training_config_001_validate_suite, training_input_001):
+    def test_fold_validation(
+        self, training_config_001_validate_suite, training_input_001
+    ):
         """process_targets populates reports + contingency_tables for every composite key.
 
         After process_targets, all six SUITE_KEYS exist in both .reports and
@@ -190,7 +194,10 @@ class TestKFoldValidationSuite:
         assert isinstance(ds.contingency_tables["dt_psal"], pl.DataFrame)
         assert ds.contingency_tables["dt_psal"].height == 34
         assert ds.contingency_tables["dt_psal"].columns == [
-            "k", "label", "predicted_label", "score",
+            "k",
+            "label",
+            "predicted_label",
+            "score",
         ]
 
         # The ``{method}`` placeholder has been substituted with concrete names.
@@ -202,7 +209,10 @@ class TestKFoldValidationSuite:
     # ----- File output (per-key write, assert exists, manually remove) -----
 
     def test_write_reports(
-        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
+        test_output_dir,
     ):
         """write_reports produces a TSV per composite key (6 files: XGB+DT × 3 targets)."""
         ds = KFoldValidationSuite(
@@ -225,7 +235,10 @@ class TestKFoldValidationSuite:
             os.remove(output_paths[key])  # comment out to debug
 
     def test_write_contingency_tables(
-        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
+        test_output_dir,
     ):
         """write_contingency_tables produces a parquet per composite key."""
         ds = KFoldValidationSuite(
@@ -248,7 +261,10 @@ class TestKFoldValidationSuite:
             os.remove(output_paths[key])  # comment out to debug
 
     def test_create_metric_plots(
-        self, training_config_001_validate_suite, training_input_001, test_output_dir,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
+        test_output_dir,
     ):
         """create_metric_plots produces an SVG per composite key."""
         ds = KFoldValidationSuite(
@@ -273,7 +289,9 @@ class TestKFoldValidationSuite:
     # ----- Error cases (write before process_targets) -----
 
     def test_write_reports_empty_reports(
-        self, training_config_001_validate_suite, training_input_001,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
     ):
         """write_reports before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
@@ -284,7 +302,9 @@ class TestKFoldValidationSuite:
             ds.write_reports()
 
     def test_write_contingency_tables_empty(
-        self, training_config_001_validate_suite, training_input_001,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
     ):
         """write_contingency_tables before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
@@ -295,7 +315,9 @@ class TestKFoldValidationSuite:
             ds.write_contingency_tables()
 
     def test_create_metric_plots_empty(
-        self, training_config_001_validate_suite, training_input_001,
+        self,
+        training_config_001_validate_suite,
+        training_input_001,
     ):
         """create_metric_plots before process_targets raises ValueError."""
         ds = KFoldValidationSuite(

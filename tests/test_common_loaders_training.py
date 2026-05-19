@@ -54,6 +54,7 @@ from tests.conftest import TARGETS, TARGETS_NONEMPTY
 # Step 1: input
 # ---------------------------------------------------------------------------
 
+
 class TestTrainingInputClassLoader:
     """Tests for load_step1_input_training_set."""
 
@@ -73,6 +74,7 @@ class TestTrainingInputClassLoader:
 # ---------------------------------------------------------------------------
 # Step 2: validation
 # ---------------------------------------------------------------------------
+
 
 class TestModelValidationClassLoader:
     """Tests for load_step2_model_validation_class.
@@ -105,7 +107,8 @@ class TestModelValidationClassLoader:
         three targets have non-empty training data.
         """
         ds = load_step2_model_validation_class(
-            training_config_001, training_input_001.training_sets,
+            training_config_001,
+            training_input_001.training_sets,
         )
 
         expected_rows = {"temp": 22, "psal": 34, "pres": 18}
@@ -121,7 +124,8 @@ class TestModelValidationClassLoader:
             "KFoldValidationSuite"
         )
         ds = load_step2_model_validation_class(
-            training_config_001, training_input_001.training_sets,
+            training_config_001,
+            training_input_001.training_sets,
         )
 
         expected_rows = {"temp": 22, "psal": 34, "pres": 18}
@@ -134,6 +138,7 @@ class TestModelValidationClassLoader:
 # ---------------------------------------------------------------------------
 # Step 4: build
 # ---------------------------------------------------------------------------
+
 
 class TestBuildModelClassLoader:
     """Tests for load_step4_build_model_class.
@@ -153,7 +158,9 @@ class TestBuildModelClassLoader:
 
     def test_load_validation_suite_dataset(self, training_config_001_bo002):
         """Suite config produces a BuildModelSuite with step_name='build'."""
-        training_config_001_bo002.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+        training_config_001_bo002.data["step_class_set"]["steps"]["model"] = (
+            "ModelSuite"
+        )
         training_config_001_bo002.data["step_class_set"]["steps"]["build"] = (
             "BuildModelSuite"
         )
@@ -162,7 +169,9 @@ class TestBuildModelClassLoader:
         assert ds.step_name == "build"
 
     def test_training_and_test_sets(
-        self, training_config_001_bo002, training_input_001_bo002,
+        self,
+        training_config_001_bo002,
+        training_input_001_bo002,
     ):
         """Provided training_sets + test_sets propagate to BuildModel."""
         ds = load_step4_build_model_class(
@@ -183,10 +192,14 @@ class TestBuildModelClassLoader:
             assert ds.test_sets[tgt].shape[1] == 56
 
     def test_suit_training_and_test_sets(
-        self, training_config_001_bo002, training_input_001_bo002,
+        self,
+        training_config_001_bo002,
+        training_input_001_bo002,
     ):
         """Same as test_training_and_test_sets but for the suite variant."""
-        training_config_001_bo002.data["step_class_set"]["steps"]["model"] = "ModelSuite"
+        training_config_001_bo002.data["step_class_set"]["steps"]["model"] = (
+            "ModelSuite"
+        )
         training_config_001_bo002.data["step_class_set"]["steps"]["build"] = (
             "BuildModelSuite"
         )

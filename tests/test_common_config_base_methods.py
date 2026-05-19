@@ -28,6 +28,7 @@ import pytest
 # Path-related methods
 # ---------------------------------------------------------------------------
 
+
 class TestBaseConfigPathMethods:
     """Tests for path-resolution methods on DataSetConfig.
 
@@ -97,7 +98,9 @@ class TestBaseConfigPathMethods:
         """get_full_file_name with use_dataset_folder=False omits the dataset folder."""
         assert (
             dataset_config_001.get_full_file_name(
-                "input", "test_input_file.txt", use_dataset_folder=False,
+                "input",
+                "test_input_file.txt",
+                use_dataset_folder=False,
             )
             == "/path/to/input_1/input_folder_1/test_input_file.txt"
         )
@@ -120,6 +123,7 @@ class TestBaseConfigPathMethods:
 # ---------------------------------------------------------------------------
 # Base-class lookup
 # ---------------------------------------------------------------------------
+
 
 class TestBaseConfigBaseClass:
     """Tests for get_base_class — the step → class-name mapping from step_class_set."""
@@ -187,7 +191,8 @@ class TestBaseConfigTargets:
     def test_target_file_names(self, dataset_config_001):
         """get_target_file_names expands the ``{target_name}`` placeholder per target."""
         target_file_names = dataset_config_001.get_target_file_names(
-            "select", "{target_name}_features.parquet",
+            "select",
+            "{target_name}_features.parquet",
         )
         base = "/path/to/select_1/nrt_bo_001/select_folder_1"
         for tgt in _EXPECTED_TARGET_DICTS:
@@ -197,6 +202,7 @@ class TestBaseConfigTargets:
 # ---------------------------------------------------------------------------
 # Summary-stats lookups
 # ---------------------------------------------------------------------------
+
 
 class TestBaseConfigSummaryStats:
     """Tests for get_summary_stats and the feature-param update side-effect."""

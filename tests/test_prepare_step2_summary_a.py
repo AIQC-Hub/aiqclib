@@ -25,13 +25,13 @@ from types import SimpleNamespace
 import polars as pl
 import pytest
 
-from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.prepare.step2_calc_stats.dataset_a import SummaryDataSetA
 
 
 # ---------------------------------------------------------------------------
 # Fixtures specific to this test file
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def step2_setup(dataset_input_001, dataset_input_004):
@@ -51,6 +51,7 @@ def step2_setup(dataset_input_001, dataset_input_004):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestSummaryDataSetA:
     """Tests for SummaryDataSetA's stats calculation and file output."""

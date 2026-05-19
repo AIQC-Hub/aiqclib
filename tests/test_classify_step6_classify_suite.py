@@ -39,12 +39,15 @@ from tests.conftest import TARGETS_NONEMPTY, run_classify_prepare_pipeline
 # Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
 # 2 methods × 2 targets = 4 keys.
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
+SUITE_KEYS = tuple(
+    f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY
+)
 
 
 # ---------------------------------------------------------------------------
 # Suite-mutation helper (passed to run_classify_prepare_pipeline)
 # ---------------------------------------------------------------------------
+
 
 def _inject_suite_settings(config: ClassificationConfig) -> None:
     """Mutate a ClassificationConfig to use ClassifyAllSuite + ModelSuite + 2 methods.
@@ -65,6 +68,7 @@ def _inject_suite_settings(config: ClassificationConfig) -> None:
 # Suite-config fixture (static tests; no pipeline needed)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def classify_config_001_suite(classify_config_001):
     """classify_config_001 with suite settings injected."""
@@ -75,6 +79,7 @@ def classify_config_001_suite(classify_config_001):
 # ---------------------------------------------------------------------------
 # Pipeline-driven fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def classify_suite_pipeline_first(test_data_file, classify_yaml_001):
@@ -94,6 +99,7 @@ def classify_suite_pipeline_first(test_data_file, classify_yaml_001):
 # ---------------------------------------------------------------------------
 # Model file paths (composite keys, shared by all pipeline tests)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def suite_model_files(training_dir):
@@ -115,6 +121,7 @@ def suite_model_files(training_dir):
 # ---------------------------------------------------------------------------
 # Static tests (no pipeline output required)
 # ---------------------------------------------------------------------------
+
 
 class TestClassifyAllSuiteClass:
     """Tests against ClassifyAllSuite that don't need the prepare pipeline.
@@ -177,6 +184,7 @@ class TestClassifyAllSuiteClass:
 # ---------------------------------------------------------------------------
 # Pipeline-driven tests
 # ---------------------------------------------------------------------------
+
 
 class TestClassifyAllSuite:
     """Pipeline-driven tests against ClassifyAllSuite.
@@ -287,7 +295,9 @@ class TestClassifyAllSuite:
             classify_suite_pipeline_first.configs[0],
             test_sets=classify_suite_pipeline_first.extracts[0].target_features,
         )
-        ds.model_file_names["xgb_temp"] = str(training_dir / "model_does_not_exist.joblib")
+        ds.model_file_names["xgb_temp"] = str(
+            training_dir / "model_does_not_exist.joblib"
+        )
 
         with pytest.raises(FileNotFoundError):
             ds.read_models()
@@ -344,9 +354,9 @@ class TestClassifyAllSuite:
         self, classify_suite_pipeline_first, suite_model_files, test_output_dir
     ):
         """write_shap_values produces an aggregated parquet per target."""
-        classify_suite_pipeline_first.configs[0].data["step_param_set"]["steps"]["model"][
-            "calculate_shap"
-        ] = True
+        classify_suite_pipeline_first.configs[0].data["step_param_set"]["steps"][
+            "model"
+        ]["calculate_shap"] = True
         ds = ClassifyAllSuite(
             classify_suite_pipeline_first.configs[0],
             test_sets=classify_suite_pipeline_first.extracts[0].target_features,

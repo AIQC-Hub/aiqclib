@@ -23,10 +23,13 @@ from aiqclib.classify.step2_calc_stats.dataset_all import SummaryDataSetAll
 # Fixture: pair of (config, input) for the two-config parametrize
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def step2_setup(
-    classify_config_001, classify_config_002,
-    classify_input_001, classify_input_002,
+    classify_config_001,
+    classify_config_002,
+    classify_input_001,
+    classify_input_002,
 ):
     """SimpleNamespace combining the two configs and their step1 inputs.
 
@@ -43,6 +46,7 @@ def step2_setup(
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestSummaryDataSetAll:
     """Tests for SummaryDataSetAll's stats calculation and file output."""
@@ -66,7 +70,8 @@ class TestSummaryDataSetAll:
     def test_input_data(self, idx, step2_setup):
         """input_data is stored as a Polars DataFrame with the expected shape."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         assert isinstance(ds.input_data, pl.DataFrame)
         assert ds.input_data.shape[0] == 2456
@@ -76,7 +81,8 @@ class TestSummaryDataSetAll:
     def test_global_stats(self, idx, step2_setup):
         """calculate_global_stats returns a 1-row, 12-column DataFrame per target."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         df = ds.calculate_global_stats("temp")
         assert isinstance(df, pl.DataFrame)
@@ -88,7 +94,8 @@ class TestSummaryDataSetAll:
     def test_profile_stats(self, idx, step2_setup):
         """calculate_profile_stats returns one row per profile-group."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         grouped_df = ds.input_data.group_by(ds.profile_col_names)
         df = ds.calculate_profile_stats(grouped_df, "temp")
@@ -99,7 +106,8 @@ class TestSummaryDataSetAll:
     def test_summary_stats(self, idx, step2_setup):
         """calculate_stats populates summary_stats with the full aggregated frame."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         ds.calculate_stats()
         assert ds.summary_stats.shape[0] == 44
@@ -109,7 +117,8 @@ class TestSummaryDataSetAll:
     def test_write_summary_stats(self, idx, step2_setup, test_output_dir):
         """write_summary_stats produces a TSV at the configured path."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         output_path = str(test_output_dir / "test_summary_stats_classify.tsv")
         ds.output_file_name = output_path
@@ -123,7 +132,8 @@ class TestSummaryDataSetAll:
     def test_write_no_summary_stats(self, idx, step2_setup):
         """write_summary_stats before calculate_stats raises ValueError."""
         ds = SummaryDataSetAll(
-            step2_setup.configs[idx], input_data=step2_setup.input_ds[idx].input_data,
+            step2_setup.configs[idx],
+            input_data=step2_setup.input_ds[idx].input_data,
         )
         with pytest.raises(ValueError):
             ds.write_summary_stats()

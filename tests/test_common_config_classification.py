@@ -24,6 +24,7 @@ from aiqclib.common.config.classify_config import ClassificationConfig
 # Basic config tests against test_classify_001.yaml
 # ---------------------------------------------------------------------------
 
+
 class TestClassificationConfig:
     """Tests for ``ClassificationConfig`` against a real test YAML."""
 

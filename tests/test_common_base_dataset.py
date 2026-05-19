@@ -24,6 +24,7 @@ from aiqclib.common.base.dataset_base import DataSetBase
 # Module-level mock subclass
 # ---------------------------------------------------------------------------
 
+
 class DataSetWithExpectedName(DataSetBase):
     """Minimal concrete subclass for exercising DataSetBase plumbing."""
 
@@ -36,6 +37,7 @@ class DataSetWithExpectedName(DataSetBase):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestDatasetBaseMethods:
     """Tests for DataSetBase's abstract-class behaviour and __str__."""

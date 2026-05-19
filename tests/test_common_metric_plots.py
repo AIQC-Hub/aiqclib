@@ -39,6 +39,7 @@ from aiqclib.common.utils.metric_plots import create_metric_plots
 # Module-level mock
 # ---------------------------------------------------------------------------
 
+
 class MockModel:
     """Minimal stand-in for ValidationBase / BuildModelBase.
 
@@ -57,6 +58,7 @@ class MockModel:
 # Fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_model():
     """Fresh MockModel per test — avoids contingency_tables leaking across tests."""
@@ -66,6 +68,7 @@ def mock_model():
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCreateMetricPlots:
     """Tests for create_metric_plots's output-file generation behaviour."""
@@ -85,11 +88,13 @@ class TestCreateMetricPlots:
         target_name = "temp"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame({
-            "k": [1, 1, 1, 1, 1],
-            "label": [0, 0, 1, 1, 0],
-            "score": [0.1, 0.2, 0.8, 0.9, 0.4],
-        })
+        mock_model.contingency_tables[target_name] = pl.DataFrame(
+            {
+                "k": [1, 1, 1, 1, 1],
+                "label": [0, 0, 1, 1, 0],
+                "score": [0.1, 0.2, 0.8, 0.9, 0.4],
+            }
+        )
 
         create_metric_plots(mock_model)
 
@@ -107,11 +112,13 @@ class TestCreateMetricPlots:
         target_name = "psal"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame({
-            "k": [1, 1, 1, 2, 2, 2],
-            "label": [0, 1, 0, 0, 1, 1],
-            "score": [0.1, 0.9, 0.2, 0.3, 0.8, 0.7],
-        })
+        mock_model.contingency_tables[target_name] = pl.DataFrame(
+            {
+                "k": [1, 1, 1, 2, 2, 2],
+                "label": [0, 1, 0, 0, 1, 1],
+                "score": [0.1, 0.9, 0.2, 0.3, 0.8, 0.7],
+            }
+        )
 
         create_metric_plots(mock_model)
 
@@ -130,12 +137,14 @@ class TestCreateMetricPlots:
         target_name = "pres"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame({
-            # k=1 has both classes; k=2 has only class 0 (must be skipped).
-            "k": [1, 1, 2, 2],
-            "label": [0, 1, 0, 0],
-            "score": [0.1, 0.9, 0.2, 0.3],
-        })
+        mock_model.contingency_tables[target_name] = pl.DataFrame(
+            {
+                # k=1 has both classes; k=2 has only class 0 (must be skipped).
+                "k": [1, 1, 2, 2],
+                "label": [0, 1, 0, 0],
+                "score": [0.1, 0.9, 0.2, 0.3],
+            }
+        )
 
         # Should not raise.
         create_metric_plots(mock_model)

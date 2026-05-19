@@ -40,12 +40,15 @@ from tests.conftest import TARGETS_NONEMPTY
 # Composite keys produced by ModelSuite when methods=["XGB", "DT"]:
 # one model per (method, target) combination, 2 × 3 = 6 keys.
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
+SUITE_KEYS = tuple(
+    f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY
+)
 
 
 # ---------------------------------------------------------------------------
 # Suite-config fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def training_config_001_suite(training_config_001_bo002):
@@ -58,7 +61,9 @@ def training_config_001_suite(training_config_001_bo002):
 
     Only two methods are tested (not all 9 defaults) to keep tests fast.
     """
-    training_config_001_bo002.data["step_class_set"]["steps"]["build"] = "BuildModelSuite"
+    training_config_001_bo002.data["step_class_set"]["steps"]["build"] = (
+        "BuildModelSuite"
+    )
     training_config_001_bo002.data["step_class_set"]["steps"]["model"] = "ModelSuite"
     training_config_001_bo002.data["step_param_set"]["steps"]["model"] = {
         "methods": ["XGB", "DT"],
@@ -69,6 +74,7 @@ def training_config_001_suite(training_config_001_bo002):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestBuildModelSuite:
     """Tests for BuildModelSuite's multi-model build, test, save behaviour."""
@@ -104,14 +110,18 @@ class TestBuildModelSuite:
             assert method_obj.enable_shap is False
 
         # True at suite level propagates to every method.
-        training_config_001_suite.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
         ds = BuildModelSuite(training_config_001_suite)
         assert ds.base_model.enable_shap is True
         for method_obj in ds.base_model.method_objs.values():
             assert method_obj.enable_shap is True
 
         # False at suite level also propagates.
-        training_config_001_suite.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
         ds = BuildModelSuite(training_config_001_suite)
         assert ds.base_model.enable_shap is False
         for method_obj in ds.base_model.method_objs.values():
@@ -128,8 +138,7 @@ class TestBuildModelSuite:
             for tgt in TARGETS_NONEMPTY:
                 key = f"{method}_{tgt}"
                 assert (
-                    str(ds.model_file_names[key])
-                    == f"{model_base}/model_{key}.joblib"
+                    str(ds.model_file_names[key]) == f"{model_base}/model_{key}.joblib"
                 )
 
         # Aggregated output files: one per target (not per method)
@@ -158,7 +167,9 @@ class TestBuildModelSuite:
 
     # ----- Build / test pipeline behaviour -----
 
-    def test_build_final_model_targets(self, training_config_001_suite, training_input_001):
+    def test_build_final_model_targets(
+        self, training_config_001_suite, training_input_001
+    ):
         """build_final_model_targets populates final_models with all composite keys.
 
         Each (method, target) combination produces a distinct model, and the
@@ -238,7 +249,9 @@ class TestBuildModelSuite:
 
     def test_build_without_data(self, training_config_001_suite):
         """build_targets with no inputs raises ValueError."""
-        ds = BuildModelSuite(training_config_001_suite, training_sets=None, test_sets=None)
+        ds = BuildModelSuite(
+            training_config_001_suite, training_sets=None, test_sets=None
+        )
         with pytest.raises(ValueError):
             ds.build_targets()
 
@@ -256,7 +269,9 @@ class TestBuildModelSuite:
 
     def test_build_final_model_without_training_data(self, training_config_001_suite):
         """build_final_model_targets with no inputs raises ValueError."""
-        ds = BuildModelSuite(training_config_001_suite, training_sets=None, test_sets=None)
+        ds = BuildModelSuite(
+            training_config_001_suite, training_sets=None, test_sets=None
+        )
         with pytest.raises(ValueError):
             ds.build_final_model_targets()
 
@@ -293,14 +308,18 @@ class TestBuildModelSuite:
         with pytest.raises(ValueError):
             ds.write_models()
 
-    def test_read_models_no_file(self, training_config_001_suite, training_input_001, training_dir):
+    def test_read_models_no_file(
+        self, training_config_001_suite, training_input_001, training_dir
+    ):
         """Missing model files raise FileNotFoundError."""
         ds = BuildModelSuite(
             training_config_001_suite,
             training_sets=None,
             test_sets=training_input_001.test_sets,
         )
-        ds.model_file_names["xgb_temp"] = str(training_dir / "non_existent_model.joblib")
+        ds.model_file_names["xgb_temp"] = str(
+            training_dir / "non_existent_model.joblib"
+        )
 
         with pytest.raises(FileNotFoundError):
             ds.read_models()
@@ -316,7 +335,9 @@ class TestBuildModelSuite:
         asserted existence for all 15, then removed all 15 — ~90 lines.
         Same coverage here, ~15 lines via nested loops.
         """
-        training_config_001_suite.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        training_config_001_suite.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
         ds = BuildModelSuite(
             training_config_001_suite,
             training_sets=training_input_001.training_sets,
@@ -336,7 +357,8 @@ class TestBuildModelSuite:
         output_paths: dict[str, dict[str, str]] = {}
         for kind, template in output_specs:
             output_paths[kind] = {
-                tgt: str(test_output_dir / template.format(tgt=tgt)) for tgt in TARGETS_NONEMPTY
+                tgt: str(test_output_dir / template.format(tgt=tgt))
+                for tgt in TARGETS_NONEMPTY
             }
             ds.output_file_names[kind] = output_paths[kind]
 
@@ -354,7 +376,9 @@ class TestBuildModelSuite:
                 assert os.path.exists(output_paths[kind][tgt])
                 os.remove(output_paths[kind][tgt])  # comment out to debug
 
-    def test_write_models(self, training_config_001_suite, training_input_001, test_output_dir):
+    def test_write_models(
+        self, training_config_001_suite, training_input_001, test_output_dir
+    ):
         """write_models serialises one joblib per composite key (6 files for XGB+DT × 3 targets)."""
         ds = BuildModelSuite(
             training_config_001_suite,

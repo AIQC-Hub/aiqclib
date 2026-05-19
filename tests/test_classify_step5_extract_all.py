@@ -27,6 +27,7 @@ from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _make_extract(pipeline) -> ExtractDataSetAll:
     """Construct an ExtractDataSetAll from a build_classify_prepare_pipeline result.
 
@@ -46,6 +47,7 @@ def _make_extract(pipeline) -> ExtractDataSetAll:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestExtractDataSetAll:
     """Tests for the classify-side ExtractDataSetAll, parametrized over two configs.
@@ -124,7 +126,9 @@ class TestExtractDataSetAll:
         """write_target_features produces a parquet per target."""
         ds = _make_extract(pipelines[idx])
         output_paths = {
-            tgt: str(test_output_dir / f"test_extracted_features_classify_{tgt}.parquet")
+            tgt: str(
+                test_output_dir / f"test_extracted_features_classify_{tgt}.parquet"
+            )
             for tgt in TARGETS_NONEMPTY
         }
         for tgt in TARGETS_NONEMPTY:

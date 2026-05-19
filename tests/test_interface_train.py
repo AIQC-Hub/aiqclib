@@ -21,7 +21,6 @@ back to ``training_config_001`` and drop the ``TARGETS_NONEMPTY`` reference
 in ``targets_per_config``.
 """
 
-import os
 import shutil
 
 import pytest
@@ -34,6 +33,7 @@ from tests.conftest import TARGETS_NONEMPTY
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _wire_path_info(config, test_output_dir, input_dir):
     """Override path_info to read training inputs from input_dir and write under test_output_dir.
@@ -49,7 +49,9 @@ def _wire_path_info(config, test_output_dir, input_dir):
     }
 
 
-def _assert_train_outputs(output_folder, *, expect_shap=False, targets=TARGETS_NONEMPTY):
+def _assert_train_outputs(
+    output_folder, *, expect_shap=False, targets=TARGETS_NONEMPTY
+):
     """Assert every expected output file from train_and_evaluate exists.
 
     :param targets: which targets to check. Defaults to TARGETS; pass
@@ -93,6 +95,7 @@ def _cleanup_output_folder(config, test_output_dir):
 # Two-config tests (configs 001 [bo002] + 002)
 # ---------------------------------------------------------------------------
 
+
 class TestCreateTrainingDataSet:
     """train_and_evaluate against training configs 001 (bo002 variant) and 002.
 
@@ -104,8 +107,11 @@ class TestCreateTrainingDataSet:
 
     @pytest.fixture(autouse=True)
     def setup_and_clean(
-        self, training_config_001_bo002, training_config_002_bo002,
-        test_output_dir, training_dir,
+        self,
+        training_config_001_bo002,
+        training_config_002_bo002,
+        test_output_dir,
+        training_dir,
     ):
         """Wire two configs with training_dir as input_path; clean up afterwards."""
         self.configs = [training_config_001_bo002, training_config_002_bo002]
@@ -130,13 +136,17 @@ class TestCreateTrainingDataSet:
             self.test_output_dir / self.configs[idx].data["dataset_folder_name"]
         )
         _assert_train_outputs(
-            output_folder, expect_shap=False, targets=self.targets_per_config[idx],
+            output_folder,
+            expect_shap=False,
+            targets=self.targets_per_config[idx],
         )
 
     @pytest.mark.parametrize("idx", range(2))
     def test_shap_value_output(self, idx):
         """With ``calculate_shap=True``, SHAP value parquets are produced."""
-        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        self.configs[idx].data["step_param_set"]["steps"]["model"]["calculate_shap"] = (
+            True
+        )
         train_and_evaluate(self.configs[idx])
 
         output_folder = (
@@ -151,6 +161,7 @@ class TestCreateTrainingDataSet:
 # ---------------------------------------------------------------------------
 # NegX5 variant (config 003 with negx5_training/ as input)
 # ---------------------------------------------------------------------------
+
 
 class TestCreateTrainingDataSetNegX5:
     """train_and_evaluate against config 003 using the negx5_training fixtures."""

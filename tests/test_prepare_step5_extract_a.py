@@ -24,6 +24,7 @@ from tests.conftest import TARGETS, build_prepare_pipeline
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_extract(pipeline) -> ExtractDataSetA:
     """Construct an ExtractDataSetA from a build_prepare_pipeline result.
 
@@ -42,6 +43,7 @@ def _make_extract(pipeline) -> ExtractDataSetA:
 # ---------------------------------------------------------------------------
 # Tests against configs 001 + 004
 # ---------------------------------------------------------------------------
+
 
 class TestExtractDataSetA:
     """Tests parametrized over configs 001 and 004.
@@ -144,13 +146,16 @@ class TestExtractDataSetA:
 # Tests against config 003 (NegX5)
 # ---------------------------------------------------------------------------
 
+
 class TestExtractDataSetANegX5:
     """Tests against the NegX5 variant (config 003, neg_x_multiplier active)."""
 
     @pytest.fixture
     def pipeline(self, dataset_config_003, test_data_file):
         return build_prepare_pipeline(
-            dataset_config_003, test_data_file, stop_after="locate",
+            dataset_config_003,
+            test_data_file,
+            stop_after="locate",
         )
 
     def test_init_arguments(self, pipeline):
@@ -212,6 +217,7 @@ class TestExtractDataSetANegX5:
 # Tests against config 005 (selects all profiles)
 # ---------------------------------------------------------------------------
 
+
 class TestExtractDataSetAwithAll:
     """Tests against config 005, which selects all profiles (no filtering).
 
@@ -223,7 +229,9 @@ class TestExtractDataSetAwithAll:
     @pytest.fixture
     def pipeline(self, dataset_config_005, test_data_file):
         return build_prepare_pipeline(
-            dataset_config_005, test_data_file, stop_after="locate",
+            dataset_config_005,
+            test_data_file,
+            stop_after="locate",
         )
 
     def test_init_arguments(self, pipeline):

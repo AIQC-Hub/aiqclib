@@ -24,6 +24,7 @@ from tests.conftest import TARGETS, build_prepare_pipeline
 # Tests against config 001 (default)
 # ---------------------------------------------------------------------------
 
+
 class TestSplitDataSetA:
     """Tests for SplitDataSetA against config 001 (default selection)."""
 
@@ -31,7 +32,9 @@ class TestSplitDataSetA:
     def pipeline(self, dataset_config_001, test_data_file):
         """Run the prepare pipeline through step5 (extract)."""
         return build_prepare_pipeline(
-            dataset_config_001, test_data_file, stop_after="extract",
+            dataset_config_001,
+            test_data_file,
+            stop_after="extract",
         )
 
     def test_step_name(self, pipeline):
@@ -52,7 +55,9 @@ class TestSplitDataSetA:
 
     def test_target_features_data(self, pipeline):
         """target_features lands on the instance with expected per-target shape."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
 
         expected_rows = {"temp": 24, "psal": 36, "pres": 18}
         for tgt in TARGETS:
@@ -62,7 +67,9 @@ class TestSplitDataSetA:
 
     def test_split_features_data(self, pipeline):
         """process_targets produces (training_set, test_set) per target."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         expected_train_rows = {"temp": 22, "psal": 34, "pres": 18}
@@ -78,23 +85,30 @@ class TestSplitDataSetA:
 
     def test_default_test_set_fraction(self, pipeline):
         """test_set_fraction defaults to 0.1 when not set in config."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.config.data["step_param_set"]["steps"]["split"]["test_set_fraction"] = None
         assert ds.get_test_set_fraction() == 0.1
 
     def test_default_k_fold(self, pipeline):
         """k_fold defaults to 10 when not set in config."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.config.data["step_param_set"]["steps"]["split"]["k_fold"] = None
         assert ds.get_k_fold() == 10
 
     def test_write_training_sets(self, pipeline, test_output_dir):
         """write_training_sets produces a parquet per target."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         output_paths = {
-            tgt: str(test_output_dir / f"test_train_set_{tgt}.parquet") for tgt in TARGETS
+            tgt: str(test_output_dir / f"test_train_set_{tgt}.parquet")
+            for tgt in TARGETS
         }
         for tgt in TARGETS:
             ds.output_file_names["train"][tgt] = output_paths[tgt]
@@ -107,7 +121,9 @@ class TestSplitDataSetA:
 
     def test_write_empty_training_sets(self, pipeline):
         """write_training_sets with training_sets=None raises ValueError."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
         ds.training_sets = None
         with pytest.raises(ValueError):
@@ -115,11 +131,14 @@ class TestSplitDataSetA:
 
     def test_write_test_sets(self, pipeline, test_output_dir):
         """write_test_sets produces a parquet per target."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         output_paths = {
-            tgt: str(test_output_dir / f"test_test_set_{tgt}.parquet") for tgt in TARGETS
+            tgt: str(test_output_dir / f"test_test_set_{tgt}.parquet")
+            for tgt in TARGETS
         }
         for tgt in TARGETS:
             ds.output_file_names["test"][tgt] = output_paths[tgt]
@@ -132,7 +151,9 @@ class TestSplitDataSetA:
 
     def test_write_empty_test_sets(self, pipeline):
         """write_test_sets with test_sets=None raises ValueError."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
         ds.test_sets = None
         with pytest.raises(ValueError):
@@ -140,7 +161,9 @@ class TestSplitDataSetA:
 
     def test_write_data_sets(self, pipeline, test_output_dir):
         """write_data_sets produces both train and test parquets per target."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         output_paths = {}
@@ -164,6 +187,7 @@ class TestSplitDataSetA:
 # Tests against config 003 (NegX5)
 # ---------------------------------------------------------------------------
 
+
 class TestSplitDataSetANegX5:
     """Tests for SplitDataSetA against config 003 (NegX5).
 
@@ -176,12 +200,16 @@ class TestSplitDataSetANegX5:
     @pytest.fixture
     def pipeline(self, dataset_config_003, test_data_file):
         return build_prepare_pipeline(
-            dataset_config_003, test_data_file, stop_after="extract",
+            dataset_config_003,
+            test_data_file,
+            stop_after="extract",
         )
 
     def test_target_features_data(self, pipeline):
         """NegX5 target_features have the multiplied-negative row counts."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
 
         expected_rows = {"temp": 177, "psal": 249, "pres": 129}
         for tgt in TARGETS:
@@ -194,7 +222,9 @@ class TestSplitDataSetANegX5:
 
         The exact split varies with config, but the conservation law holds.
         """
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         expected_totals = {"temp": 177, "psal": 249, "pres": 129}
@@ -210,7 +240,9 @@ class TestSplitDataSetANegX5:
 
     def test_write_data_sets(self, pipeline, test_output_dir):
         """write_data_sets (NegX5 variant) produces both train and test parquets."""
-        ds = SplitDataSetA(pipeline.config, target_features=pipeline.extract.target_features)
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
         ds.process_targets()
 
         output_paths = {}

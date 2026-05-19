@@ -28,14 +28,18 @@ class TestSelectDataSetAll:
 
     def test_input_data(self, dataset_config_005, dataset_input_005):
         """input_data is loaded as a Polars DataFrame with the expected shape."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
         assert isinstance(ds.input_data, pl.DataFrame)
         assert ds.input_data.shape[0] == 3267
         assert ds.input_data.shape[1] == 30
 
     def test_positive_profiles(self, dataset_config_005, dataset_input_005):
         """select_positive_profiles populates pos_profile_df."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
         ds.select_positive_profiles()
         assert isinstance(ds.pos_profile_df, pl.DataFrame)
         assert ds.pos_profile_df.shape[0] == 7
@@ -43,7 +47,9 @@ class TestSelectDataSetAll:
 
     def test_negative_profiles(self, dataset_config_005, dataset_input_005):
         """select_negative_profiles populates neg_profile_df after positives."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
         ds.select_positive_profiles()
         ds.select_negative_profiles()
         assert isinstance(ds.neg_profile_df, pl.DataFrame)
@@ -52,7 +58,9 @@ class TestSelectDataSetAll:
 
     def test_label_profiles(self, dataset_config_005, dataset_input_005):
         """label_profiles combines positives + negatives into selected_profiles."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
         ds.label_profiles()
         assert ds.selected_profiles.shape[0] == 12
         assert ds.selected_profiles.shape[1] == 8
@@ -61,7 +69,9 @@ class TestSelectDataSetAll:
         self, dataset_config_005, dataset_input_005, test_output_dir
     ):
         """write_selected_profiles produces a parquet at the configured path."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
         output_path = str(test_output_dir / "test_selected_profiles_all.parquet")
         ds.output_file_name = output_path
 
@@ -74,8 +84,12 @@ class TestSelectDataSetAll:
         self, dataset_config_005, dataset_input_005, test_output_dir
     ):
         """write_selected_profiles before label_profiles raises ValueError."""
-        ds = SelectDataSetAll(dataset_config_005, input_data=dataset_input_005.input_data)
-        ds.output_file_name = str(test_output_dir / "test_selected_profiles_all.parquet")
+        ds = SelectDataSetAll(
+            dataset_config_005, input_data=dataset_input_005.input_data
+        )
+        ds.output_file_name = str(
+            test_output_dir / "test_selected_profiles_all.parquet"
+        )
 
         with pytest.raises(ValueError):
             ds.write_selected_profiles()

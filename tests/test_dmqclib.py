@@ -38,6 +38,7 @@ from tests.conftest import TARGETS, TARGETS_NONEMPTY
 # Template config (aq.write_config_template)
 # ---------------------------------------------------------------------------
 
+
 class TestDMQCLibTemplateConfig:
     """Verify ``aq.write_config_template`` is reachable via the top-level namespace."""
 
@@ -60,6 +61,7 @@ class TestDMQCLibTemplateConfig:
 # Read config (aq.read_config)
 # ---------------------------------------------------------------------------
 
+
 class TestDMQCLibReadConfig:
     """Verify ``aq.read_config`` returns the right type for each module."""
 
@@ -78,11 +80,15 @@ class TestDMQCLibReadConfig:
 # Full prepare workflow (aq.create_training_dataset)
 # ---------------------------------------------------------------------------
 
+
 class TestDMQCLibCreateTrainingDataSet:
     """Verify ``aq.create_training_dataset`` runs end-to-end via the aq namespace."""
 
     def test_create_training_data_set(
-        self, dataset_config_001, test_output_dir, input_dir,
+        self,
+        dataset_config_001,
+        test_output_dir,
+        input_dir,
     ):
         """End-to-end prepare via aq.create_training_dataset produces all outputs."""
         config = dataset_config_001
@@ -110,7 +116,9 @@ class TestDMQCLibCreateTrainingDataSet:
         # train test split that drops pres rows).
         for tgt in TARGETS:
             assert (output_folder / "locate" / f"selected_rows_{tgt}.parquet").exists()
-            assert (output_folder / "extract" / f"extracted_features_{tgt}.parquet").exists()
+            assert (
+                output_folder / "extract" / f"extracted_features_{tgt}.parquet"
+            ).exists()
             assert (output_folder / "split" / f"train_set_{tgt}.parquet").exists()
             assert (output_folder / "split" / f"test_set_{tgt}.parquet").exists()
 
@@ -121,6 +129,7 @@ class TestDMQCLibCreateTrainingDataSet:
 # Full train workflow (aq.train_and_evaluate)
 # ---------------------------------------------------------------------------
 
+
 class TestDMQCLibTrainAndEvaluate:
     """Verify ``aq.train_and_evaluate`` runs end-to-end via the aq namespace.
 
@@ -130,7 +139,9 @@ class TestDMQCLibTrainAndEvaluate:
     ``TARGETS_NONEMPTY``.
     """
 
-    def test_train_and_evaluate(self, training_config_001_bo002, test_output_dir, training_dir):
+    def test_train_and_evaluate(
+        self, training_config_001_bo002, test_output_dir, training_dir
+    ):
         """End-to-end train via aq.train_and_evaluate produces reports and models."""
         config = training_config_001_bo002
         config.data["path_info"] = {
@@ -146,7 +157,9 @@ class TestDMQCLibTrainAndEvaluate:
         # Per-target outputs across validate / build / model.
         # bo002 produces files only for temp + psal (no pres).
         for tgt in TARGETS_NONEMPTY:
-            assert (output_folder / "validate" / f"validation_report_{tgt}.tsv").exists()
+            assert (
+                output_folder / "validate" / f"validation_report_{tgt}.tsv"
+            ).exists()
             assert (output_folder / "build" / f"test_report_{tgt}.tsv").exists()
             assert (output_folder / "model" / f"model_{tgt}.joblib").exists()
 
@@ -156,6 +169,7 @@ class TestDMQCLibTrainAndEvaluate:
 # ---------------------------------------------------------------------------
 # Summary stats (aq.get_summary_stats, aq.format_summary_stats)
 # ---------------------------------------------------------------------------
+
 
 class TestGetSummaryStats:
     """Verify ``aq.get_summary_stats`` and ``aq.format_summary_stats`` are reachable."""

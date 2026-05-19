@@ -26,12 +26,12 @@ from aiqclib.interface.config import read_config, write_config_template
 # (module, variant, filename) triples for the write_config_template parametrize.
 # Variant "" means the default template for that module.
 TEMPLATE_SPECS = [
-    ("prepare", "",        "temp_dataset_template.yaml"),
-    ("prepare", "full",    "temp_dataset_full_template.yaml"),
+    ("prepare", "", "temp_dataset_template.yaml"),
+    ("prepare", "full", "temp_dataset_full_template.yaml"),
     ("prepare", "reduced", "temp_dataset_reduced_template.yaml"),
-    ("train",   "",        "temp_training_template.yaml"),
-    ("classify", "",       "temp_classification_template.yaml"),
-    ("classify", "full",   "temp_classification_template.yaml"),
+    ("train", "", "temp_training_template.yaml"),
+    ("classify", "", "temp_classification_template.yaml"),
+    ("classify", "full", "temp_classification_template.yaml"),
 ]
 
 

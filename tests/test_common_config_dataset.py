@@ -25,6 +25,7 @@ from aiqclib.common.config.dataset_config import DataSetConfig
 # Basic config tests against test_dataset_001.yaml
 # ---------------------------------------------------------------------------
 
+
 class TestDataSetConfig:
     """Tests for ``DataSetConfig`` against a real test YAML."""
 

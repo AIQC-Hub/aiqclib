@@ -49,6 +49,7 @@ N_JOBS_PER_CONFIG = [-1, -1, 2]
 # Fixtures specific to this test file
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def classify_pipeline_all(
     test_data_file, classify_yaml_001, classify_yaml_002, classify_yaml_003
@@ -74,7 +75,9 @@ def classify_pipeline_first(test_data_file, classify_yaml_001):
     Returns the same SimpleNamespace shape as classify_pipeline_all but
     with one-element lists.
     """
-    configs, extracts = run_classify_prepare_pipeline([classify_yaml_001], test_data_file)
+    configs, extracts = run_classify_prepare_pipeline(
+        [classify_yaml_001], test_data_file
+    )
     return SimpleNamespace(configs=configs, extracts=extracts)
 
 
@@ -92,6 +95,7 @@ def default_model_files(training_dir):
 # ---------------------------------------------------------------------------
 # Static tests (no pipeline setup required)
 # ---------------------------------------------------------------------------
+
 
 class TestClassifyAllClass:
     """Tests against ClassifyAll that don't need the prepare pipeline output.
@@ -142,17 +146,23 @@ class TestClassifyAllClass:
         ds = ClassifyAll(classify_config_001)
         assert ds.base_model.enable_shap is False
 
-        classify_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        classify_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
         ds = ClassifyAll(classify_config_001)
         assert ds.base_model.enable_shap is True
 
-        classify_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
+        classify_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
         ds = ClassifyAll(classify_config_001)
         assert ds.base_model.enable_shap is False
 
     def test_logistic_regression_model(self, classify_config_001):
         """Setting model=LogisticRegression in config produces a LogisticRegression base."""
-        classify_config_001.data["step_class_set"]["steps"]["model"] = "LogisticRegression"
+        classify_config_001.data["step_class_set"]["steps"]["model"] = (
+            "LogisticRegression"
+        )
         ds = ClassifyAll(classify_config_001)
         assert isinstance(ds.base_model, LogisticRegression)
 
@@ -168,6 +178,7 @@ class TestClassifyAllClass:
 # ---------------------------------------------------------------------------
 # Pipeline-driven tests (default XGBoost path, parametrized over 3 configs)
 # ---------------------------------------------------------------------------
+
 
 class TestClassifyAll:
     """Pipeline-driven tests against all three classify configs.
@@ -224,7 +235,10 @@ class TestClassifyAll:
             assert ds.contingency_tables[tgt].height == 2456
 
         assert ds.contingency_tables["temp"].columns == [
-            "k", "label", "predicted_label", "score",
+            "k",
+            "label",
+            "predicted_label",
+            "score",
         ]
 
     @pytest.mark.parametrize("idx", range(3))
@@ -423,6 +437,7 @@ class TestClassifyAll:
 # Per-model fan-out (parametrized over MODEL_CASES, single config)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("case", MODEL_CASES, ids=lambda c: c.config_name)
 class TestModels:
     """Per-model classification behavioural tests.
@@ -480,5 +495,8 @@ class TestModels:
             assert ds.contingency_tables[tgt].height == 2456
 
         assert ds.contingency_tables["temp"].columns == [
-            "k", "label", "predicted_label", "score",
+            "k",
+            "label",
+            "predicted_label",
+            "score",
         ]

@@ -26,6 +26,7 @@ from aiqclib.classify.step1_read_input.dataset_all import InputDataSetAll
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _read_input(config, test_data_file, *, file_type=None, read_file_options=None):
     """Construct InputDataSetAll, set the input file + options, read, return data.
 
@@ -50,6 +51,7 @@ def _read_input(config, test_data_file, *, file_type=None, read_file_options=Non
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestInputDataSetAll:
     """Tests for InputDataSetAll's identity, file path resolution, and reading."""
 
@@ -66,11 +68,15 @@ class TestInputDataSetAll:
             == "/path/to/input_1/input_folder_1/nrt_cora_bo_test.parquet"
         )
 
-    def test_read_input_data_with_explicit_type(self, classify_config_001, test_data_file):
+    def test_read_input_data_with_explicit_type(
+        self, classify_config_001, test_data_file
+    ):
         """Reading succeeds when 'parquet' is explicitly set as file_type."""
         df = _read_input(
-            classify_config_001, test_data_file,
-            file_type="parquet", read_file_options={},
+            classify_config_001,
+            test_data_file,
+            file_type="parquet",
+            read_file_options={},
         )
         assert isinstance(df, pl.DataFrame)
         assert df.shape[0] == 2456
@@ -79,8 +85,10 @@ class TestInputDataSetAll:
     def test_read_input_data_infer_type(self, classify_config_001, test_data_file):
         """Reading succeeds when file_type is inferred from the file extension."""
         df = _read_input(
-            classify_config_001, test_data_file,
-            file_type=None, read_file_options={},
+            classify_config_001,
+            test_data_file,
+            file_type=None,
+            read_file_options={},
         )
         assert isinstance(df, pl.DataFrame)
         assert df.shape[0] == 2456
@@ -89,8 +97,10 @@ class TestInputDataSetAll:
     def test_read_input_data_missing_options(self, classify_config_001, test_data_file):
         """Reading succeeds when read_file_options is None."""
         df = _read_input(
-            classify_config_001, test_data_file,
-            file_type="parquet", read_file_options=None,
+            classify_config_001,
+            test_data_file,
+            file_type="parquet",
+            read_file_options=None,
         )
         assert isinstance(df, pl.DataFrame)
         assert df.shape[0] == 2456
@@ -104,11 +114,15 @@ class TestInputDataSetAll:
         with pytest.raises(FileNotFoundError):
             ds.read_input_data()
 
-    def test_read_input_data_with_extra_options(self, classify_config_001, test_data_file):
+    def test_read_input_data_with_extra_options(
+        self, classify_config_001, test_data_file
+    ):
         """Polars read_file_options (e.g. ``n_rows=100``) are honoured."""
         df = _read_input(
-            classify_config_001, test_data_file,
-            file_type="parquet", read_file_options={"n_rows": 1000},
+            classify_config_001,
+            test_data_file,
+            file_type="parquet",
+            read_file_options={"n_rows": 1000},
         )
         assert isinstance(df, pl.DataFrame)
         # n_rows=100 limits the result regardless of the underlying file size.

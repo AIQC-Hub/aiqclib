@@ -95,6 +95,7 @@ TARGETS_NONEMPTY: tuple[str, ...] = ("temp", "psal")
 # Path fixtures
 # ----------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tests_dir() -> Path:
     """Absolute path to the ``tests/`` directory."""
@@ -146,6 +147,7 @@ def test_data_file() -> Path:
 # YAML path fixtures (paths, not loaded configs — used by tests that exercise
 # config loading itself, e.g. test_common_utils_config.py)
 # ----------------------------------------------------------------------------
+
 
 @pytest.fixture
 def dataset_yaml_001() -> Path:
@@ -217,14 +219,18 @@ def _load_dataset_config(filename: str, select: str = _DEFAULT_SELECT) -> DataSe
     return config
 
 
-def _load_training_config(filename: str, select: str = _DEFAULT_SELECT) -> TrainingConfig:
+def _load_training_config(
+    filename: str, select: str = _DEFAULT_SELECT
+) -> TrainingConfig:
     """Load and select a TrainingConfig from CONFIG_DIR/filename."""
     config = TrainingConfig(str(CONFIG_DIR / filename))
     config.select(select)
     return config
 
 
-def _load_classify_config(filename: str, select: str = _DEFAULT_SELECT) -> ClassificationConfig:
+def _load_classify_config(
+    filename: str, select: str = _DEFAULT_SELECT
+) -> ClassificationConfig:
     """Load and select a ClassificationConfig from CONFIG_DIR/filename."""
     config = ClassificationConfig(str(CONFIG_DIR / filename))
     config.select(select)
@@ -332,6 +338,7 @@ def classify_config_003() -> ClassificationConfig:
 # steps in the same pipeline.
 # ----------------------------------------------------------------------------
 
+
 def _build_dataset_input(config: DataSetConfig, test_data_file: Path):
     """Construct a step1 input dataset and read the input parquet.
 
@@ -405,6 +412,7 @@ def dataset_select_005(dataset_config_005, dataset_input_005):
 # Used by classify_step3_select_all and classify_step4_locate_all (and other
 # classify-stage `_all` tests that need step1 or step3 output).
 # ----------------------------------------------------------------------------
+
 
 def _build_classify_input(config: ClassificationConfig, test_data_file: Path):
     """Construct a classify-side step1 input dataset and read the input parquet."""
@@ -599,6 +607,7 @@ def build_classify_prepare_pipeline(
 # setup_training_step4 helpers
 # ----------------------------------------------------------------------------
 
+
 def _build_training_input(
     config: TrainingConfig, training_dir: Path, targets: tuple[str, ...] = TARGETS
 ):
@@ -660,6 +669,7 @@ def training_input_negx5(training_config_003):
 # Used by step6 (classify_all + classify_suite) and may be reused by future
 # step7 (concat) tests. Lives in conftest because two+ files use it.
 # ----------------------------------------------------------------------------
+
 
 def run_classify_prepare_pipeline(
     config_files: List[Path],

@@ -40,7 +40,10 @@ class TestLocateDataSetAll:
         assert ds.step_name == "locate"
 
     def test_input_data_and_selected_profiles(
-        self, classify_config_001, classify_input_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_input_001,
+        classify_select_001,
     ):
         """input_data and selected_profiles are correctly populated."""
         ds = LocateDataSetAll(
@@ -58,7 +61,10 @@ class TestLocateDataSetAll:
         assert ds.selected_profiles.shape[1] == 8
 
     def test_selected_rows(
-        self, classify_config_001, classify_input_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_input_001,
+        classify_select_001,
     ):
         """process_targets keeps every input row for each target (classify-side: no QC filtering)."""
         ds = LocateDataSetAll(
@@ -75,7 +81,9 @@ class TestLocateDataSetAll:
             assert ds.selected_rows[tgt].shape[1] == 9
 
     def test_selected_rows_with_empty_input(
-        self, classify_config_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_select_001,
     ):
         """process_targets with input_data=None raises ValueError."""
         ds = LocateDataSetAll(
@@ -87,7 +95,10 @@ class TestLocateDataSetAll:
             ds.process_targets()
 
     def test_write_selected_rows(
-        self, classify_config_001, classify_input_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_input_001,
+        classify_select_001,
         test_output_dir,
     ):
         """write_selected_rows produces a parquet per target."""
@@ -111,7 +122,10 @@ class TestLocateDataSetAll:
             os.remove(output_paths[tgt])  # comment out to debug
 
     def test_write_no_selected_rows(
-        self, classify_config_001, classify_input_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_input_001,
+        classify_select_001,
     ):
         """write_selected_rows before process_targets raises ValueError."""
         ds = LocateDataSetAll(

@@ -35,6 +35,7 @@ from aiqclib.common.config.training_config import TrainingConfig
 # Module-level mock subclass
 # ---------------------------------------------------------------------------
 
+
 class ConfigBaseWithExpectedName(ConfigBase):
     """Minimal concrete subclass for exercising ConfigBase plumbing."""
 
@@ -47,6 +48,7 @@ class ConfigBaseWithExpectedName(ConfigBase):
 # ---------------------------------------------------------------------------
 # Tests for ConfigBase methods (renamed from TestDatasetBaseMethods)
 # ---------------------------------------------------------------------------
+
 
 class TestConfigBaseMethods:
     """Tests for ConfigBase's abstract-class behaviour, __str__, and validation.
@@ -102,11 +104,11 @@ class TestConfigBaseMethods:
 # bundled templates. The ``template:`` prefix triggers in-package template
 # resolution rather than disk loading.
 _TEMPLATE_CASES = [
-    (DataSetConfig,        "template:data_sets",                  "dataset_0001"),
-    (DataSetConfig,        "template:data_sets_full",             "dataset_0001"),
-    (TrainingConfig,       "template:training_sets",              "training_0001"),
-    (ClassificationConfig, "template:classification_sets_full",   "classification_0001"),
-    (ClassificationConfig, "template:classification_sets",        "classification_0001"),
+    (DataSetConfig, "template:data_sets", "dataset_0001"),
+    (DataSetConfig, "template:data_sets_full", "dataset_0001"),
+    (TrainingConfig, "template:training_sets", "training_0001"),
+    (ClassificationConfig, "template:classification_sets_full", "classification_0001"),
+    (ClassificationConfig, "template:classification_sets", "classification_0001"),
 ]
 
 

@@ -37,16 +37,17 @@ from aiqclib.train.models.xgboost import XGBoost
 # Each row: (config string, expected wrapper class).
 # Both long-form names and their short aliases should map to the same class.
 _VALID_MODEL_NAMES = [
-    ("XGBoost",    XGBoost),
-    ("XGB",        XGBoost),
+    ("XGBoost", XGBoost),
+    ("XGB", XGBoost),
     ("ModelSuite", ModelSuite),
-    ("MS",         ModelSuite),
+    ("MS", ModelSuite),
 ]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestModelClassLoader:
     """Tests for load_model_class's XGBoost + ModelSuite paths and error states."""
@@ -57,7 +58,10 @@ class TestModelClassLoader:
         ids=[case[0] for case in _VALID_MODEL_NAMES],
     )
     def test_load_model_class_by_name(
-        self, config_name, expected_class, training_config_001,
+        self,
+        config_name,
+        expected_class,
+        training_config_001,
     ):
         """Each (config_name, expected_class) pair produces the right wrapper.
 
@@ -70,7 +74,9 @@ class TestModelClassLoader:
 
     def test_load_model_invalid_config(self, training_config_001):
         """An unrecognized model name in the config raises ValueError."""
-        training_config_001.data["step_class_set"]["steps"]["model"] = "invalid_model_name"
+        training_config_001.data["step_class_set"]["steps"]["model"] = (
+            "invalid_model_name"
+        )
         with pytest.raises(ValueError):
             _ = load_model_class(training_config_001)
 

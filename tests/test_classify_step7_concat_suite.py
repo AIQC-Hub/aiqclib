@@ -28,7 +28,9 @@ from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 # ---------------------------------------------------------------------------
 
 SUITE_METHODS = ("xgb", "dt")
-SUITE_KEYS = tuple(f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY)
+SUITE_KEYS = tuple(
+    f"{method}_{tgt}" for method in SUITE_METHODS for tgt in TARGETS_NONEMPTY
+)
 
 
 def _inject_suite_settings(config: ClassificationConfig) -> None:
@@ -50,6 +52,7 @@ def _inject_suite_settings(config: ClassificationConfig) -> None:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def suite_classify_config(classify_config_001):
@@ -73,10 +76,13 @@ def step7_suite_pipeline(suite_classify_config, test_data_file, training_dir):
     step's wide-pivot behaviour.
     """
     pipeline = build_classify_prepare_pipeline(
-        suite_classify_config, test_data_file, stop_after="extract",
+        suite_classify_config,
+        test_data_file,
+        stop_after="extract",
     )
     ds_classify = ClassifyAllSuite(
-        pipeline.config, test_sets=pipeline.extract.target_features,
+        pipeline.config,
+        test_sets=pipeline.extract.target_features,
     )
     ds_classify.model_file_names = {
         f"{method}_{tgt}": str(training_dir / f"model_{tgt}_{method}.joblib")
@@ -96,6 +102,7 @@ def step7_suite_pipeline(suite_classify_config, test_data_file, training_dir):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestConcatDataSetSuite:
     """Tests for ConcatDataSetSuite's wide-pivot merge and file output."""

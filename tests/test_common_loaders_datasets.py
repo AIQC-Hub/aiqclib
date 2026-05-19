@@ -118,7 +118,11 @@ class TestSummaryClassLoader:
         ids=[case[0] for case in _SUMMARY_LOADER_CASES],
     )
     def test_load_dataset_input_data(
-        self, config_fixture, expected_class, request, test_data_file,
+        self,
+        config_fixture,
+        expected_class,
+        request,
+        test_data_file,
     ):
         """Provided input_data propagates to the loader with the expected shape."""
         config = request.getfixturevalue(config_fixture)
@@ -168,7 +172,11 @@ class TestSelectClassLoader:
         ids=[case[0] for case in _SELECT_LOADER_CASES],
     )
     def test_load_dataset_input_data(
-        self, config_fixture, expected_class, request, test_data_file,
+        self,
+        config_fixture,
+        expected_class,
+        request,
+        test_data_file,
     ):
         """Provided input_data propagates with the expected shape."""
         config = request.getfixturevalue(config_fixture)
@@ -191,9 +199,8 @@ class TestSelectClassLoader:
 # (config_fixture, expected_class, expected_n_profiles)
 # n_profiles differs: standard config selects 50 profiles (positive/negative
 # pairs); select-all variant selects all 503 profiles.
-# TODO: update after data reduction.
 _LOCATE_LOADER_CASES = [
-    ("dataset_config_001", LocateDataSetA,   14),
+    ("dataset_config_001", LocateDataSetA, 14),
     ("dataset_config_005", LocateDataSetAll, 12),
 ]
 
@@ -207,7 +214,11 @@ class TestLocateClassLoader:
         ids=[case[0] for case in _LOCATE_LOADER_CASES],
     )
     def test_load_dataset_valid_config(
-        self, config_fixture, expected_class, expected_n_profiles, request,
+        self,
+        config_fixture,
+        expected_class,
+        expected_n_profiles,
+        request,
     ):
         """Each config produces its corresponding locate loader class."""
         config = request.getfixturevalue(config_fixture)
@@ -221,7 +232,11 @@ class TestLocateClassLoader:
         ids=[case[0] for case in _LOCATE_LOADER_CASES],
     )
     def test_load_dataset_input_data_and_profiles(
-        self, config_fixture, expected_class, expected_n_profiles, request,
+        self,
+        config_fixture,
+        expected_class,
+        expected_n_profiles,
+        request,
         test_data_file,
     ):
         """Provided input_data and selected_profiles propagate with expected shapes."""
@@ -235,7 +250,9 @@ class TestLocateClassLoader:
         ds_select.label_profiles()
 
         ds = load_step4_locate_dataset(
-            config, ds_input.input_data, ds_select.selected_profiles,
+            config,
+            ds_input.input_data,
+            ds_select.selected_profiles,
         )
         assert isinstance(ds, expected_class)
 
@@ -254,9 +271,9 @@ class TestLocateClassLoader:
 
 # (config_fixture, n_profiles, n_filtered, n_rows_temp, n_rows_psal).
 # Both configs share ExtractDataSetA as the loader class (there's no
-# ExtractDataSetAll). TODO: update values after data reduction.
+# ExtractDataSetAll).
 _EXTRACT_LOADER_CASES = [
-    ("dataset_config_001", 14,  2879,  24,    36),
+    ("dataset_config_001", 14, 2879, 24, 36),
     ("dataset_config_005", 12, 3267, 3267, 3267),
 ]
 
@@ -270,7 +287,12 @@ class TestExtractClassLoader:
         ids=[case[0] for case in _EXTRACT_LOADER_CASES],
     )
     def test_load_dataset_valid_config(
-        self, config_fixture, n_profiles, n_filtered, n_rows_temp, n_rows_psal,
+        self,
+        config_fixture,
+        n_profiles,
+        n_filtered,
+        n_rows_temp,
+        n_rows_psal,
         request,
     ):
         """Default config produces an ExtractDataSetA with step_name='extract'."""
@@ -285,8 +307,14 @@ class TestExtractClassLoader:
         ids=[case[0] for case in _EXTRACT_LOADER_CASES],
     )
     def test_load_dataset_input_data_and_profiles(
-        self, config_fixture, n_profiles, n_filtered, n_rows_temp, n_rows_psal,
-        request, test_data_file,
+        self,
+        config_fixture,
+        n_profiles,
+        n_filtered,
+        n_rows_temp,
+        n_rows_psal,
+        request,
+        test_data_file,
     ):
         """Provided upstream outputs propagate with expected shapes."""
         config = request.getfixturevalue(config_fixture)
@@ -302,7 +330,9 @@ class TestExtractClassLoader:
         ds_summary.calculate_stats()
 
         ds_locate = load_step4_locate_dataset(
-            config, ds_input.input_data, ds_select.selected_profiles,
+            config,
+            ds_input.input_data,
+            ds_select.selected_profiles,
         )
         ds_locate.process_targets()
 
@@ -346,9 +376,8 @@ class TestExtractClassLoader:
 # ---------------------------------------------------------------------------
 
 # (config_fixture, expected_class, n_target_features_temp, n_target_features_psal).
-# TODO: update after data reduction.
 _SPLIT_LOADER_CASES = [
-    ("dataset_config_001", SplitDataSetA,   24,    36),
+    ("dataset_config_001", SplitDataSetA, 24, 36),
     ("dataset_config_005", SplitDataSetAll, 3267, 3267),
 ]
 
@@ -362,7 +391,11 @@ class TestSplitClassLoader:
         ids=[case[0] for case in _SPLIT_LOADER_CASES],
     )
     def test_load_dataset_valid_config(
-        self, config_fixture, expected_class, n_features_temp, n_features_psal,
+        self,
+        config_fixture,
+        expected_class,
+        n_features_temp,
+        n_features_psal,
         request,
     ):
         """Each config produces its corresponding split loader class."""
@@ -377,8 +410,13 @@ class TestSplitClassLoader:
         ids=[case[0] for case in _SPLIT_LOADER_CASES],
     )
     def test_load_dataset_input_data(
-        self, config_fixture, expected_class, n_features_temp, n_features_psal,
-        request, test_data_file,
+        self,
+        config_fixture,
+        expected_class,
+        n_features_temp,
+        n_features_psal,
+        request,
+        test_data_file,
     ):
         """Provided target_features propagate with expected per-target shapes."""
         config = request.getfixturevalue(config_fixture)
@@ -394,7 +432,9 @@ class TestSplitClassLoader:
         ds_summary.calculate_stats()
 
         ds_locate = load_step4_locate_dataset(
-            config, ds_input.input_data, ds_select.selected_profiles,
+            config,
+            ds_input.input_data,
+            ds_select.selected_profiles,
         )
         ds_locate.process_targets()
 

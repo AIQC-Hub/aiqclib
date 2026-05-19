@@ -35,6 +35,7 @@ from tests.conftest import build_prepare_pipeline
 # Shared fixtures and helper
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def pipeline(dataset_config_001, test_data_file):
     """Prepare-pipeline output through step5 (extract) for config 001.
@@ -50,7 +51,9 @@ def pipeline(dataset_config_001, test_data_file):
     pre-processing output) but don't need the final ``target_features``.
     """
     return build_prepare_pipeline(
-        dataset_config_001, test_data_file, stop_after="extract",
+        dataset_config_001,
+        test_data_file,
+        stop_after="extract",
     )
 
 
@@ -233,7 +236,9 @@ class TestProfileSummaryStatsFeature:
     def test_init_arguments(self, pipeline):
         """Upstream input shapes pass through to the feature instance."""
         ds = _make_feature(
-            ProfileSummaryStats, PROFILE_SUMMARY_STATS_FEATURE_INFO, pipeline,
+            ProfileSummaryStats,
+            PROFILE_SUMMARY_STATS_FEATURE_INFO,
+            pipeline,
         )
         _assert_init_arguments(ds)
 
@@ -243,7 +248,9 @@ class TestProfileSummaryStatsFeature:
         16 columns = 3 variables × 5 stats + 1 (probably the target column).
         """
         ds = _make_feature(
-            ProfileSummaryStats, PROFILE_SUMMARY_STATS_FEATURE_INFO, pipeline,
+            ProfileSummaryStats,
+            PROFILE_SUMMARY_STATS_FEATURE_INFO,
+            pipeline,
         )
         ds.extract_features()
         ds.scale_second()

@@ -42,14 +42,18 @@ class TestSelectDataSetAll:
 
     def test_input_data(self, classify_config_001, classify_input_001):
         """input_data is a Polars DataFrame with the expected shape."""
-        ds = SelectDataSetAll(classify_config_001, input_data=classify_input_001.input_data)
+        ds = SelectDataSetAll(
+            classify_config_001, input_data=classify_input_001.input_data
+        )
         assert isinstance(ds.input_data, pl.DataFrame)
         assert ds.input_data.shape[0] == 2456
         assert ds.input_data.shape[1] == 30
 
     def test_selected_profiles(self, classify_config_001, classify_input_001):
         """select_all_profiles populates selected_profiles with every profile."""
-        ds = SelectDataSetAll(classify_config_001, input_data=classify_input_001.input_data)
+        ds = SelectDataSetAll(
+            classify_config_001, input_data=classify_input_001.input_data
+        )
         ds.select_all_profiles()
         assert isinstance(ds.selected_profiles, pl.DataFrame)
         assert ds.selected_profiles.shape[0] == 10
@@ -57,16 +61,23 @@ class TestSelectDataSetAll:
 
     def test_label_profiles(self, classify_config_001, classify_input_001):
         """label_profiles produces the same shape as select_all_profiles."""
-        ds = SelectDataSetAll(classify_config_001, input_data=classify_input_001.input_data)
+        ds = SelectDataSetAll(
+            classify_config_001, input_data=classify_input_001.input_data
+        )
         ds.label_profiles()
         assert ds.selected_profiles.shape[0] == 10
         assert ds.selected_profiles.shape[1] == 8
 
     def test_write_selected_profiles(
-        self, classify_config_001, classify_input_001, test_output_dir,
+        self,
+        classify_config_001,
+        classify_input_001,
+        test_output_dir,
     ):
         """write_selected_profiles produces a parquet at the configured path."""
-        ds = SelectDataSetAll(classify_config_001, input_data=classify_input_001.input_data)
+        ds = SelectDataSetAll(
+            classify_config_001, input_data=classify_input_001.input_data
+        )
         output_path = str(test_output_dir / "test_selected_profiles_classify.parquet")
         ds.output_file_name = output_path
 
@@ -76,11 +87,18 @@ class TestSelectDataSetAll:
         os.remove(output_path)  # comment out to debug
 
     def test_write_empty_selected_profiles(
-        self, classify_config_001, classify_input_001, test_output_dir,
+        self,
+        classify_config_001,
+        classify_input_001,
+        test_output_dir,
     ):
         """write_selected_profiles before label_profiles raises ValueError."""
-        ds = SelectDataSetAll(classify_config_001, input_data=classify_input_001.input_data)
-        ds.output_file_name = str(test_output_dir / "test_selected_profiles_classify.parquet")
+        ds = SelectDataSetAll(
+            classify_config_001, input_data=classify_input_001.input_data
+        )
+        ds.output_file_name = str(
+            test_output_dir / "test_selected_profiles_classify.parquet"
+        )
 
         with pytest.raises(ValueError):
             ds.write_selected_profiles()

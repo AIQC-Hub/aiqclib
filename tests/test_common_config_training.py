@@ -30,6 +30,7 @@ from aiqclib.common.config.training_config import TrainingConfig
 # Basic config tests against test_training_001.yaml
 # ---------------------------------------------------------------------------
 
+
 class TestTrainingConfig:
     """Tests for ``TrainingConfig`` against a real test YAML."""
 
@@ -71,6 +72,7 @@ class TestTrainingConfig:
 # ---------------------------------------------------------------------------
 # Template-config tests against the bundled training template
 # ---------------------------------------------------------------------------
+
 
 class TestTrainingConfigTemplate:
     """Tests for the bundled training template YAML."""

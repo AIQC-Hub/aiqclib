@@ -28,6 +28,7 @@ from tests.conftest import TARGETS_NONEMPTY, build_classify_prepare_pipeline
 # Fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def step7_pipeline(classify_config_001, test_data_file, training_dir):
     """Pipeline through step6: prepare (1-5) + classify (6) with default models.
@@ -37,10 +38,13 @@ def step7_pipeline(classify_config_001, test_data_file, training_dir):
     populated, ready for step7 (concat).
     """
     pipeline = build_classify_prepare_pipeline(
-        classify_config_001, test_data_file, stop_after="extract",
+        classify_config_001,
+        test_data_file,
+        stop_after="extract",
     )
     ds_classify = ClassifyAll(
-        pipeline.config, test_sets=pipeline.extract.target_features,
+        pipeline.config,
+        test_sets=pipeline.extract.target_features,
     )
     ds_classify.model_file_names = {
         tgt: str(training_dir / f"model_{tgt}.joblib") for tgt in TARGETS_NONEMPTY
@@ -58,6 +62,7 @@ def step7_pipeline(classify_config_001, test_data_file, training_dir):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestConcatPredictions:
     """Tests for ConcatDataSetAll's merge_predictions and file output."""

@@ -35,6 +35,7 @@ from aiqclib.common.base.model_base import ModelBase
 # Module-level mock subclasses
 # ---------------------------------------------------------------------------
 
+
 class ModelBaseWithEmptyName(ModelBase):
     """Subclass with no ``expected_class_name`` — used to test the
     NotImplementedError path in ModelBase's constructor."""
@@ -104,6 +105,7 @@ class ModelBaseWithWrongName(ModelBase):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestModelBaseMethods:
     """Tests for ModelBase's abstract-class behaviour, model loading, and
     contingency-table accumulation."""
@@ -166,11 +168,15 @@ class TestModelBaseMethods:
         model = ModelBaseWithExpectedName(training_config_001)
         assert model.enable_shap is False  # unset == False
 
-        training_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
         model = ModelBaseWithExpectedName(training_config_001)
         assert model.enable_shap is True
 
-        training_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
         model = ModelBaseWithExpectedName(training_config_001)
         assert model.enable_shap is False
 
@@ -209,37 +215,46 @@ class TestModelBaseMethods:
         # ----- Batch 1 (fold k=0) -----
         model.k = 0
         model.test_set = pl.DataFrame({"label": [0, 1, 0]})
-        model.predictions = pl.DataFrame({
-            "label": [0, 1, 0],
-            "predicted_label": [0, 1, 0],
-            "score": [0.1, 0.9, 0.4],
-        })
+        model.predictions = pl.DataFrame(
+            {
+                "label": [0, 1, 0],
+                "predicted_label": [0, 1, 0],
+                "score": [0.1, 0.9, 0.4],
+            }
+        )
 
         model.update_contingency_table()
 
         assert model.contingency_table is not None
         assert model.contingency_table.shape == (3, 4)
         assert model.contingency_table.columns == [
-            "k", "label", "predicted_label", "score",
+            "k",
+            "label",
+            "predicted_label",
+            "score",
         ]
 
         # Verify Batch 1 content equals the expected frame exactly.
-        expected_batch_1 = pl.DataFrame({
-            "k": [0, 0, 0],
-            "label": [0, 1, 0],
-            "predicted_label": [0, 1, 0],
-            "score": [0.1, 0.9, 0.4],
-        })
+        expected_batch_1 = pl.DataFrame(
+            {
+                "k": [0, 0, 0],
+                "label": [0, 1, 0],
+                "predicted_label": [0, 1, 0],
+                "score": [0.1, 0.9, 0.4],
+            }
+        )
         assert model.contingency_table.equals(expected_batch_1)
 
         # ----- Batch 2 (fold k=1) -----
         model.k = 1
         model.test_set = pl.DataFrame({"label": [1, 1]})
-        model.predictions = pl.DataFrame({
-            "label": [1, 0],
-            "predicted_label": [1, 0],
-            "score": [0.8, 0.3],
-        })
+        model.predictions = pl.DataFrame(
+            {
+                "label": [1, 0],
+                "predicted_label": [1, 0],
+                "score": [0.8, 0.3],
+            }
+        )
 
         model.update_contingency_table()
 

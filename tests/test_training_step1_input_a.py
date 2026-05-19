@@ -22,6 +22,7 @@ from tests.conftest import TARGETS
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _build_input_file_names(training_dir):
     """Build the ``input_file_names`` dict pointing at tests/data/training/.
 
@@ -37,6 +38,7 @@ def _build_input_file_names(training_dir):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestInputTrainingSetA:
     """Tests for InputTrainingSetA: identity, file-name resolution, and read."""
@@ -85,7 +87,9 @@ class TestInputTrainingSetA:
         with pytest.raises(FileNotFoundError):
             ds.process_targets()
 
-    def test_read_test_set_incorrect_file_names(self, training_config_001, training_dir):
+    def test_read_test_set_incorrect_file_names(
+        self, training_config_001, training_dir
+    ):
         """When train paths are valid but test paths aren't, process_targets fails.
 
         Sets train paths only; leaves test paths at their config-derived

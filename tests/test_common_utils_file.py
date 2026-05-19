@@ -44,17 +44,18 @@ _SINGLE_ROW = 1
 _COLUMN_COUNT = 30
 
 _READ_INPUT_CASES = [
-    ("nrt_cora_bo_test.parquet",            _PARQUET_ROW_COUNT, "parquet"),
-    ("nrt_cora_bo_test_2023_row1.csv",      _SINGLE_ROW,        "csv"),
-    ("nrt_cora_bo_test_2023_row1.tsv",      _SINGLE_ROW,        "tsv"),
-    ("nrt_cora_bo_test_2023_row1.csv.gz",   _SINGLE_ROW,        "csv.gz"),
-    ("nrt_cora_bo_test_2023_row1.tsv.gz",   _SINGLE_ROW,        "tsv.gz"),
+    ("nrt_cora_bo_test.parquet", _PARQUET_ROW_COUNT, "parquet"),
+    ("nrt_cora_bo_test_2023_row1.csv", _SINGLE_ROW, "csv"),
+    ("nrt_cora_bo_test_2023_row1.tsv", _SINGLE_ROW, "tsv"),
+    ("nrt_cora_bo_test_2023_row1.csv.gz", _SINGLE_ROW, "csv.gz"),
+    ("nrt_cora_bo_test_2023_row1.tsv.gz", _SINGLE_ROW, "tsv.gz"),
 ]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestReadInputFile:
     """Tests for read_input_file across file types and option configurations."""
@@ -65,7 +66,11 @@ class TestReadInputFile:
         ids=[case[0] for case in _READ_INPUT_CASES],
     )
     def test_read_input_file_explicit_type(
-        self, file_name, expected_rows, file_type, input_dir,
+        self,
+        file_name,
+        expected_rows,
+        file_type,
+        input_dir,
     ):
         """Each supported file type reads correctly with explicit file_type."""
         df = read_input_file(input_dir / file_name, file_type=file_type, options={})
@@ -79,7 +84,11 @@ class TestReadInputFile:
         ids=[case[0] for case in _READ_INPUT_CASES],
     )
     def test_read_input_file_infer_type(
-        self, file_name, expected_rows, file_type, input_dir,
+        self,
+        file_name,
+        expected_rows,
+        file_type,
+        input_dir,
     ):
         """Each supported file type also reads with file_type inferred from extension.
 
@@ -104,9 +113,12 @@ class TestReadInputFile:
     def test_non_existent_file(self):
         """A non-existent file path raises FileNotFoundError."""
         from pathlib import Path
+
         with pytest.raises(FileNotFoundError):
             _ = read_input_file(
-                Path("non_existent_file.csv"), file_type="csv", options={},
+                Path("non_existent_file.csv"),
+                file_type="csv",
+                options={},
             )
 
     def test_pass_additional_options(self, input_dir):

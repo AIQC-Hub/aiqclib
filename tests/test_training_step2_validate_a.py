@@ -37,6 +37,7 @@ from tests.conftest import TARGETS
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _run_fold_validation(ds: KFoldValidation) -> None:
     """Run ``process_targets`` and assert the shape/columns of its outputs.
 
@@ -64,13 +65,17 @@ def _run_fold_validation(ds: KFoldValidation) -> None:
         assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
         assert ds.contingency_tables[tgt].height == expected_heights[tgt]
         assert ds.contingency_tables[tgt].columns == [
-            "k", "label", "predicted_label", "score",
+            "k",
+            "label",
+            "predicted_label",
+            "score",
         ]
 
 
 # ---------------------------------------------------------------------------
 # Core KFoldValidation tests (XGBoost path — the default config)
 # ---------------------------------------------------------------------------
+
 
 class TestKFoldValidation:
     """Core tests against KFoldValidation with the default (XGBoost) model.
@@ -110,7 +115,9 @@ class TestKFoldValidation:
 
     def test_training_sets(self, training_config_001, training_input_001):
         """training_sets are loaded as DataFrames with the expected shape per target."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
 
         expected_shapes = {
             "temp": (22, 57),
@@ -130,25 +137,37 @@ class TestKFoldValidation:
         ds = KFoldValidation(training_config_001)
         assert ds.base_model.enable_shap is False
 
-        training_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = True
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = True
         ds = KFoldValidation(training_config_001)
-        assert ds.base_model.enable_shap is False  # NB: original asserted False here too
+        assert (
+            ds.base_model.enable_shap is False
+        )  # NB: original asserted False here too
 
-        training_config_001.data["step_param_set"]["steps"]["model"]["calculate_shap"] = False
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "calculate_shap"
+        ] = False
         ds = KFoldValidation(training_config_001)
         assert ds.base_model.enable_shap is False
 
     def test_default_k_fold(self, training_config_001, training_input_001):
         """When ``k_fold`` is unset, ``get_k_fold`` defaults to 10."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         ds.config.data["step_param_set"]["steps"]["validate"]["k_fold"] = None
         assert ds.get_k_fold() == 10
 
     # ----- File-output tests (write, assert exists, manually remove) -----
 
-    def test_write_reports(self, training_config_001, training_input_001, test_output_dir):
+    def test_write_reports(
+        self, training_config_001, training_input_001, test_output_dir
+    ):
         """write_reports produces a TSV per target at the configured path."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         output_paths = {
             tgt: str(test_output_dir / f"test_validation_report_{tgt}.tsv")
             for tgt in TARGETS
@@ -162,9 +181,13 @@ class TestKFoldValidation:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
-    def test_write_contingency_tables(self, training_config_001, training_input_001, test_output_dir):
+    def test_write_contingency_tables(
+        self, training_config_001, training_input_001, test_output_dir
+    ):
         """write_contingency_tables produces a parquet per target."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         output_paths = {
             tgt: str(test_output_dir / f"test_contingency_{tgt}.parquet")
             for tgt in TARGETS
@@ -178,9 +201,13 @@ class TestKFoldValidation:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
-    def test_create_metric_plots(self, training_config_001, training_input_001, test_output_dir):
+    def test_create_metric_plots(
+        self, training_config_001, training_input_001, test_output_dir
+    ):
         """create_metric_plots produces an SVG per target."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         output_paths = {
             tgt: str(test_output_dir / f"test_metric_plots_{tgt}.svg")
             for tgt in TARGETS
@@ -198,19 +225,27 @@ class TestKFoldValidation:
 
     def test_write_reports_empty_reports(self, training_config_001, training_input_001):
         """Calling write_reports before process_targets raises ValueError."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_contingency_tables_empty(self, training_config_001, training_input_001):
+    def test_write_contingency_tables_empty(
+        self, training_config_001, training_input_001
+    ):
         """Calling write_contingency_tables before process_targets raises ValueError."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         with pytest.raises(ValueError):
             ds.write_contingency_tables()
 
     def test_create_metric_plots_empty(self, training_config_001, training_input_001):
         """Calling create_metric_plots before process_targets raises ValueError."""
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         with pytest.raises(ValueError):
             ds.create_metric_plots()
 
@@ -218,6 +253,7 @@ class TestKFoldValidation:
 # ---------------------------------------------------------------------------
 # Per-model fan-out
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("case", MODEL_CASES, ids=lambda c: c.config_name)
 class TestModels:
@@ -236,5 +272,7 @@ class TestModels:
     def test_fold_validation(self, case, training_config_001, training_input_001):
         """End-to-end fold validation with the configured model produces correct outputs."""
         training_config_001.data["step_class_set"]["steps"]["model"] = case.config_name
-        ds = KFoldValidation(training_config_001, training_sets=training_input_001.training_sets)
+        ds = KFoldValidation(
+            training_config_001, training_sets=training_input_001.training_sets
+        )
         _run_fold_validation(ds)

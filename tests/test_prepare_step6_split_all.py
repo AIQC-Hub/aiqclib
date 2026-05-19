@@ -27,7 +27,9 @@ class TestSplitDataSetAll:
     def pipeline(self, dataset_config_005, test_data_file):
         """Run the prepare pipeline through step5 (extract) for the select-all config."""
         return build_prepare_pipeline(
-            dataset_config_005, test_data_file, stop_after="extract",
+            dataset_config_005,
+            test_data_file,
+            stop_after="extract",
         )
 
     def test_step_name(self, pipeline):
@@ -38,7 +40,8 @@ class TestSplitDataSetAll:
     def test_target_features_data(self, pipeline):
         """target_features arrives with the expected per-target shape (full input width)."""
         ds = SplitDataSetAll(
-            pipeline.config, target_features=pipeline.extract.target_features,
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
 
         for tgt in TARGETS:
@@ -47,11 +50,10 @@ class TestSplitDataSetAll:
             assert ds.target_features[tgt].shape[1] == 58
 
     def test_split_features_data(self, pipeline):
-        """process_targets produces non-empty (training_set, test_set) per target.
-
-        """
+        """process_targets produces non-empty (training_set, test_set) per target."""
         ds = SplitDataSetAll(
-            pipeline.config, target_features=pipeline.extract.target_features,
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
         ds.process_targets()
 
@@ -69,7 +71,8 @@ class TestSplitDataSetAll:
     def test_write_training_sets(self, pipeline, test_output_dir):
         """write_training_sets produces a parquet per target."""
         ds = SplitDataSetAll(
-            pipeline.config, target_features=pipeline.extract.target_features,
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
         ds.process_targets()
 
@@ -89,7 +92,8 @@ class TestSplitDataSetAll:
     def test_write_test_sets(self, pipeline, test_output_dir):
         """write_test_sets produces a parquet per target."""
         ds = SplitDataSetAll(
-            pipeline.config, target_features=pipeline.extract.target_features,
+            pipeline.config,
+            target_features=pipeline.extract.target_features,
         )
         ds.process_targets()
 

@@ -35,6 +35,7 @@ from aiqclib.train.models.model_suite import ModelSuite
 # Suite-config fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def training_config_001_modelsuite(training_config_001):
     """training_config_001 with just ``model=ModelSuite`` set.
@@ -51,6 +52,7 @@ def training_config_001_modelsuite(training_config_001):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestModelSuite:
     """Tests for ModelSuite's multi flag, SHAP propagation, and method loading."""

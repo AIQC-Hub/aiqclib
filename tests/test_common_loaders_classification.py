@@ -71,6 +71,7 @@ _CLASSIFY_PROFILE_COUNT = 10
 # Step 1: input
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyInputClassLoader:
     """Tests for load_classify_step1_input_dataset."""
 
@@ -91,6 +92,7 @@ class TestClassifyInputClassLoader:
 # Step 2: summary
 # ---------------------------------------------------------------------------
 
+
 class TestClassifySummaryClassLoader:
     """Tests for load_classify_step2_summary_dataset."""
 
@@ -103,7 +105,8 @@ class TestClassifySummaryClassLoader:
     def test_load_dataset_input_data(self, classify_config_001, classify_input_001):
         """Provided input_data propagates with the expected shape."""
         ds = load_classify_step2_summary_dataset(
-            classify_config_001, classify_input_001.input_data,
+            classify_config_001,
+            classify_input_001.input_data,
         )
         assert isinstance(ds, SummaryDataSetAll)
         assert isinstance(ds.input_data, pl.DataFrame)
@@ -114,6 +117,7 @@ class TestClassifySummaryClassLoader:
 # ---------------------------------------------------------------------------
 # Step 3: select
 # ---------------------------------------------------------------------------
+
 
 class TestClassifySelectClassLoader:
     """Tests for load_classify_step3_select_dataset."""
@@ -127,7 +131,8 @@ class TestClassifySelectClassLoader:
     def test_load_dataset_input_data(self, classify_config_001, classify_input_001):
         """Provided input_data propagates with the expected shape."""
         ds = load_classify_step3_select_dataset(
-            classify_config_001, classify_input_001.input_data,
+            classify_config_001,
+            classify_input_001.input_data,
         )
         assert isinstance(ds, SelectDataSetAll)
         assert isinstance(ds.input_data, pl.DataFrame)
@@ -139,6 +144,7 @@ class TestClassifySelectClassLoader:
 # Step 4: locate
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyLocateClassLoader:
     """Tests for load_classify_step4_locate_dataset."""
 
@@ -149,7 +155,10 @@ class TestClassifyLocateClassLoader:
         assert ds.step_name == "locate"
 
     def test_load_dataset_input_data_and_profiles(
-        self, classify_config_001, classify_input_001, classify_select_001,
+        self,
+        classify_config_001,
+        classify_input_001,
+        classify_select_001,
     ):
         """Provided input_data + selected_profiles propagate with expected shapes."""
         ds = load_classify_step4_locate_dataset(
@@ -173,6 +182,7 @@ class TestClassifyLocateClassLoader:
 # Step 5: extract
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyExtractClassLoader:
     """Tests for load_classify_step5_extract_dataset."""
 
@@ -183,7 +193,9 @@ class TestClassifyExtractClassLoader:
         assert ds.step_name == "extract"
 
     def test_load_dataset_input_data_and_profiles(
-        self, classify_config_001, test_data_file,
+        self,
+        classify_config_001,
+        test_data_file,
     ):
         """Provided upstream outputs (input/summary/select/locate) propagate correctly.
 
@@ -192,7 +204,9 @@ class TestClassifyExtractClassLoader:
         directly with the assembled inputs.
         """
         pipeline = build_classify_prepare_pipeline(
-            classify_config_001, test_data_file, stop_after="locate",
+            classify_config_001,
+            test_data_file,
+            stop_after="locate",
         )
 
         ds = load_classify_step5_extract_dataset(
@@ -234,6 +248,7 @@ class TestClassifyExtractClassLoader:
 # Step 6: classify
 # ---------------------------------------------------------------------------
 
+
 def _inject_suite_classify_settings(config) -> None:
     """Mutate config to use ClassifyAllSuite + ModelSuite."""
     config.data["step_class_set"]["steps"]["model"] = "ModelSuite"
@@ -259,11 +274,14 @@ class TestClassifyClassifyClassLoader:
     def test_load_dataset_input_data(self, classify_config_001, test_data_file):
         """Provided target_features (from step5) populate test_sets per target."""
         pipeline = build_classify_prepare_pipeline(
-            classify_config_001, test_data_file, stop_after="extract",
+            classify_config_001,
+            test_data_file,
+            stop_after="extract",
         )
 
         ds = load_classify_step6_classify_dataset(
-            classify_config_001, pipeline.extract.target_features,
+            classify_config_001,
+            pipeline.extract.target_features,
         )
 
         assert isinstance(ds, ClassifyAll)
@@ -276,11 +294,14 @@ class TestClassifyClassifyClassLoader:
         """Same as test_load_dataset_input_data but for the suite variant."""
         _inject_suite_classify_settings(classify_config_001)
         pipeline = build_classify_prepare_pipeline(
-            classify_config_001, test_data_file, stop_after="extract",
+            classify_config_001,
+            test_data_file,
+            stop_after="extract",
         )
 
         ds = load_classify_step6_classify_dataset(
-            classify_config_001, pipeline.extract.target_features,
+            classify_config_001,
+            pipeline.extract.target_features,
         )
 
         assert isinstance(ds, ClassifyAllSuite)
@@ -324,7 +345,10 @@ class TestClassifyConcatClassLoader:
         assert ds.step_name == "concat"
 
     def test_load_dataset_input_data(
-        self, classify_config_001, test_data_file, training_dir,
+        self,
+        classify_config_001,
+        test_data_file,
+        training_dir,
     ):
         """Provided input_data + predictions populate the concat wrapper.
 
@@ -333,11 +357,14 @@ class TestClassifyConcatClassLoader:
         loader on the resulting predictions.
         """
         pipeline = build_classify_prepare_pipeline(
-            classify_config_001, test_data_file, stop_after="extract",
+            classify_config_001,
+            test_data_file,
+            stop_after="extract",
         )
 
         ds_classify = load_classify_step6_classify_dataset(
-            classify_config_001, pipeline.extract.target_features,
+            classify_config_001,
+            pipeline.extract.target_features,
         )
         # 3-target model file dict; the 2-target classify config only loads
         # temp + psal, but extra dict entries are ignored.
@@ -348,7 +375,9 @@ class TestClassifyConcatClassLoader:
         ds_classify.test_targets()
 
         ds = load_classify_step7_concat_dataset(
-            classify_config_001, pipeline.input.input_data, ds_classify.predictions,
+            classify_config_001,
+            pipeline.input.input_data,
+            ds_classify.predictions,
         )
 
         assert isinstance(ds, ConcatDataSetAll)
@@ -358,7 +387,10 @@ class TestClassifyConcatClassLoader:
             assert ds.predictions[tgt].shape[1] == 7
 
     def test_load_suite_dataset_input_data(
-        self, classify_config_001, test_data_file, training_dir,
+        self,
+        classify_config_001,
+        test_data_file,
+        training_dir,
     ):
         """Same as test_load_dataset_input_data but for the suite variant.
 
@@ -367,11 +399,14 @@ class TestClassifyConcatClassLoader:
         """
         _inject_suite_concat_settings(classify_config_001)
         pipeline = build_classify_prepare_pipeline(
-            classify_config_001, test_data_file, stop_after="extract",
+            classify_config_001,
+            test_data_file,
+            stop_after="extract",
         )
 
         ds_classify = load_classify_step6_classify_dataset(
-            classify_config_001, pipeline.extract.target_features,
+            classify_config_001,
+            pipeline.extract.target_features,
         )
         # 4-key suite model dict (2 methods × 2 targets); 2-target config
         # ignores the pres entries.
@@ -384,7 +419,9 @@ class TestClassifyConcatClassLoader:
         ds_classify.test_targets()
 
         ds = load_classify_step7_concat_dataset(
-            classify_config_001, pipeline.input.input_data, ds_classify.predictions,
+            classify_config_001,
+            pipeline.input.input_data,
+            ds_classify.predictions,
         )
 
         assert isinstance(ds, ConcatDataSetSuite)

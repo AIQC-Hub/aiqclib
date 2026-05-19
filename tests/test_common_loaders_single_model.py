@@ -50,30 +50,31 @@ from aiqclib.train.models.xgboost import XGBoost
 # ---------------------------------------------------------------------------
 
 _MODEL_NAMES = [
-    ("XGBoost",                    XGBoost),
-    ("XGB",                        XGBoost),
-    ("LogisticRegression",         LogisticRegression),
-    ("Logit",                      LogisticRegression),
+    ("XGBoost", XGBoost),
+    ("XGB", XGBoost),
+    ("LogisticRegression", LogisticRegression),
+    ("Logit", LogisticRegression),
     ("LinearDiscriminantAnalysis", LinearDiscriminantAnalysis),
-    ("LDA",                        LinearDiscriminantAnalysis),
-    ("SupportVectorMachine",       SupportVectorMachine),
-    ("SVM",                        SupportVectorMachine),
-    ("DecisionTree",               DecisionTree),
-    ("DT",                         DecisionTree),
-    ("RandomForest",               RandomForest),
-    ("RF",                         RandomForest),
-    ("KNearestNeighbors",          KNearestNeighbors),
-    ("KNN",                        KNearestNeighbors),
-    ("GaussianNaiveBayes",         GaussianNaiveBayes),
-    ("GNB",                        GaussianNaiveBayes),
-    ("MultilayerPerceptron",       MultilayerPerceptron),
-    ("MLP",                        MultilayerPerceptron),
+    ("LDA", LinearDiscriminantAnalysis),
+    ("SupportVectorMachine", SupportVectorMachine),
+    ("SVM", SupportVectorMachine),
+    ("DecisionTree", DecisionTree),
+    ("DT", DecisionTree),
+    ("RandomForest", RandomForest),
+    ("RF", RandomForest),
+    ("KNearestNeighbors", KNearestNeighbors),
+    ("KNN", KNearestNeighbors),
+    ("GaussianNaiveBayes", GaussianNaiveBayes),
+    ("GNB", GaussianNaiveBayes),
+    ("MultilayerPerceptron", MultilayerPerceptron),
+    ("MLP", MultilayerPerceptron),
 ]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestModelClassLoader:
     """Tests for load_model_class across all 9 single-model wrappers."""
@@ -84,7 +85,10 @@ class TestModelClassLoader:
         ids=[case[0] for case in _MODEL_NAMES],
     )
     def test_load_model_class_by_name(
-        self, config_name, expected_class, training_config_001,
+        self,
+        config_name,
+        expected_class,
+        training_config_001,
     ):
         """Each (config_name, expected_class) pair produces the right wrapper.
 
@@ -99,7 +103,9 @@ class TestModelClassLoader:
 
     def test_load_model_invalid_config(self, training_config_001):
         """An unrecognized model name in the config raises ValueError."""
-        training_config_001.data["step_class_set"]["steps"]["model"] = "invalid_model_name"
+        training_config_001.data["step_class_set"]["steps"]["model"] = (
+            "invalid_model_name"
+        )
         with pytest.raises(ValueError):
             _ = load_model_class(training_config_001)
 
