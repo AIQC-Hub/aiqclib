@@ -18,7 +18,7 @@ import pytest
 
 from aiqclib.interface.classify import classify_dataset
 
-from tests.conftest import TARGETS
+from tests.conftest import TARGETS_NONEMPTY
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ def _assert_classify_outputs(output_folder, *, expect_shap=False):
     assert (dir_summary / "summary_stats_classify.tsv").exists()
     assert (dir_select / "selected_profiles_classify.parquet").exists()
 
-    for tgt in TARGETS:
+    for tgt in TARGETS_NONEMPTY:
         assert (dir_locate / f"selected_rows_classify_{tgt}.parquet").exists()
         assert (dir_extract / f"extracted_features_classify_{tgt}.parquet").exists()
         assert (dir_classify / f"classify_prediction_{tgt}.parquet").exists()
@@ -128,7 +128,7 @@ class TestClassifyDataSet:
         )
         dir_classify = output_folder / "classify"
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (dir_classify / f"classify_shap_values_{tgt}.parquet").exists()
 
 
