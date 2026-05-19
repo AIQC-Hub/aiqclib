@@ -74,6 +74,12 @@ def test_something(self, ds):
         assert ds.training_sets[tgt].shape[0] == EXPECTED_ROWS  # TODO
 ```
 
+### Targets: TARGETS vs TARGETS_NONEMPTY
+Two target-list constants live in conftest.py. Use the one that matches what your test actually exercises.
+
+ - `TARGETS = ("temp", "psal", "pres")`: Canonical 3-target list.
+ - `TARGETS_NONEMPTY = ("temp", "psal")`: 2-target subset. Use when the per-target dict does not have the `pres` key.
+
 ## Output files: write, assert, manually remove
 
 Use `test_output_dir` for the destination. Clean up with `os.remove`
