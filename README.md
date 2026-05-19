@@ -274,7 +274,7 @@ We recommend using **uv** for managing the development environment.
     This places the fixtures under `tests/data/`. The script requires the [`gh` CLI](https://cli.github.com) (authenticated via `gh auth login`) and `unzip`. To pin a specific data version or pull from a fork, override the defaults via environment variables:
 
 ```bash
-    TEST_DATA_VERSION=test-data-v1.0.1 bash scripts/fetch_test_data.sh
+    TEST_DATA_VERSION=test-data-v1.0.2 bash scripts/fetch_test_data.sh
 ```
 
     You only need to re-run this when the test data version changes.
