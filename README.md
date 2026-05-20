@@ -315,25 +315,13 @@ uv run ruff format tests
 
 ### Building Docs Locally
 
-1.  **Update Docstrings (Requires Google Gemini API Key):**
-    ```bash
-    # Update docstrings for source files
-    python ./docs/scripts/update_docstrings.py src docs/scripts/prompt_main.txt
-
-    # Update docstrings for test files
-    python ./docs/scripts/update_docstrings.py tests docs/scripts/prompt_unittest.txt
-    ```
-
-2.  **Review Docstrings:**
-    Manually review all modified files. Remove generated headers/footers and correct any sections marked with "Issues:".
-
-3.  **Update API Documents:**
+1. **Update API Documents:**
     From the project root, run:
     ```bash
     uv run sphinx-apidoc -f --remove-old --module-first -o docs/source/api src/aiqclib
     ```
 
-4.  **Build HTML:**
+2. **Build HTML:**
     From the project root, run:
     ```bash
     cd docs; uv run make html; cd ..

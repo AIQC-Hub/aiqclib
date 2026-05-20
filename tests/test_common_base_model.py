@@ -9,8 +9,8 @@ Coverage:
 - ``load_model`` raises FileNotFoundError on missing path and ValueError on
   type mismatch between the loaded joblib and ``_get_model_class()``
 - The SHAP flag (``calculate_shap``) propagates from config to ``enable_shap``
-- ``update_contingency_table`` validates required member variables and
-  correctly accumulates per-fold contingency rows
+- ``update_model_score`` validates required member variables and
+  correctly accumulates per-fold model_scores rows
 
 Refactored from a ``unittest.TestCase`` class. The three module-level mock
 subclasses (ModelBaseWithEmptyName, ModelBaseWithExpectedName,
@@ -62,6 +62,7 @@ class ModelBaseWithExpectedName(ModelBase):
     type-checking paths."""
 
     expected_class_name: str = "XGBoost"
+    short_name: str = "XGB"
 
     def __init__(self, config: ConfigBase) -> None:
         super().__init__(config)
@@ -108,7 +109,7 @@ class ModelBaseWithWrongName(ModelBase):
 
 class TestModelBaseMethods:
     """Tests for ModelBase's abstract-class behaviour, model loading, and
-    contingency-table accumulation."""
+    model_scores-table accumulation."""
 
     # ----- Identity / construction -----
 
@@ -180,10 +181,8 @@ class TestModelBaseMethods:
         model = ModelBaseWithExpectedName(training_config_001)
         assert model.enable_shap is False
 
-    # ----- update_contingency_table -----
-
-    def test_update_contingency_table_validation(self, training_config_001):
-        """update_contingency_table raises ValueError when required vars are missing.
+    def test_update_model_score_validation(self, training_config_001):
+        """update_model_score raises ValueError when required vars are missing.
 
         Two cases:
         1. test_set is None (with predictions set) → "Member variable 'test_set'"
@@ -195,16 +194,16 @@ class TestModelBaseMethods:
         model.test_set = None
         model.predictions = pl.DataFrame({"score": [0.5]})
         with pytest.raises(ValueError, match="Member variable 'test_set'"):
-            model.update_contingency_table()
+            model.update_model_score()
 
         # Case 2: predictions is None
         model.test_set = pl.DataFrame({"label": [1]})
         model.predictions = None
         with pytest.raises(ValueError, match="Member variable 'predictions'"):
-            model.update_contingency_table()
+            model.update_model_score()
 
-    def test_update_contingency_table_flow(self, training_config_001):
-        """Multi-batch contingency-table updates correctly initialize then append.
+    def test_update_model_score_flow(self, training_config_001):
+        """Multi-batch model_scores-table updates correctly initialize then append.
 
         Verifies the table is initialized on the first call (k=0) with the
         expected shape (3, 4) and columns, and that a subsequent k=1 call
@@ -223,27 +222,22 @@ class TestModelBaseMethods:
             }
         )
 
-        model.update_contingency_table()
+        model.update_model_score()
 
-        assert model.contingency_table is not None
-        assert model.contingency_table.shape == (3, 4)
-        assert model.contingency_table.columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert model.model_score is not None
+        assert model.model_score.shape == (3, 4)
+        assert model.model_score.columns == ["method", "k", "label", "score"]
 
         # Verify Batch 1 content equals the expected frame exactly.
         expected_batch_1 = pl.DataFrame(
             {
+                "method": ["xgb", "xgb", "xgb"],
                 "k": [0, 0, 0],
                 "label": [0, 1, 0],
-                "predicted_label": [0, 1, 0],
                 "score": [0.1, 0.9, 0.4],
             }
         )
-        assert model.contingency_table.equals(expected_batch_1)
+        assert model.model_score.equals(expected_batch_1)
 
         # ----- Batch 2 (fold k=1) -----
         model.k = 1
@@ -256,12 +250,12 @@ class TestModelBaseMethods:
             }
         )
 
-        model.update_contingency_table()
+        model.update_model_score()
 
         # Total rows now 3 + 2 = 5.
-        assert model.contingency_table.shape == (5, 4)
+        assert model.model_score.shape == (5, 4)
 
         # k=1 rows specifically: 2 rows with the new scores.
-        k1_rows = model.contingency_table.filter(pl.col("k") == 1)
+        k1_rows = model.model_score.filter(pl.col("k") == 1)
         assert k1_rows.shape == (2, 4)
         assert k1_rows["score"].to_list() == [0.8, 0.3]

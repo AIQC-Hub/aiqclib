@@ -72,8 +72,8 @@ class KFoldValidation(ValidationBase):
     def validate(self, target_name: str) -> None:
         """
         Conduct k-fold cross-validation for the given target name,
-        storing model objects, test results, and contingency tables in
-        :attr:`models`, :attr:`reports`, and :attr:`contingency_tables`.
+        storing model objects, test results, and model-scores tables in
+        :attr:`models`, :attr:`reports`, and :attr:`model_scores`.
 
         For each fold out of :meth:`get_k_fold`:
 
@@ -81,7 +81,7 @@ class KFoldValidation(ValidationBase):
           2. Set ``base_model.k`` to the fold index.
           3. Build the model using all training data except rows in the current fold.
           4. Test the model on the held-out fold.
-          5. Accumulate test results and contingency tables.
+          5. Accumulate test results and model-scores tables.
 
         :param target_name: The identifier for which target dataset to validate,
                             referring to the corresponding DataFrame within
@@ -90,7 +90,7 @@ class KFoldValidation(ValidationBase):
         """
         self.models[target_name] = []
         reports: List[pl.DataFrame] = []
-        contingency_tables: List[pl.DataFrame] = []
+        model_scores: List[pl.DataFrame] = []
 
         k_fold: int = self.get_k_fold()
         for k in range(k_fold):
@@ -114,10 +114,10 @@ class KFoldValidation(ValidationBase):
             current_fold_model.test()
             reports.append(current_fold_model.report)
 
-            if current_fold_model.contingency_table is not None:
-                contingency_tables.append(current_fold_model.contingency_table)
+            if current_fold_model.model_score is not None:
+                model_scores.append(current_fold_model.model_score)
 
         self.reports[target_name] = pl.concat(reports)
 
-        if contingency_tables:
-            self.contingency_tables[target_name] = pl.concat(contingency_tables)
+        if model_scores:
+            self.model_scores[target_name] = pl.concat(model_scores)

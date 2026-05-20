@@ -99,14 +99,14 @@ class SklearnModelBase(ModelBase):
         Steps:
           1. Call :meth:`predict` to generate predictions on the test set.
           2. Call :meth:`create_report` to compute metrics.
-          3. Call :meth:`update_contingency_table` to store scores.
+          3. Call :meth:`update_model_score` to store scores.
           4. Call :meth:`calculate_shap` to compute feature importances (if enabled).
 
         :raises ValueError: If :attr:`test_set` is ``None``.
         """
         self.predict()
         self.create_report()
-        self.update_contingency_table()
+        self.update_model_score()
 
         if self.enable_shap:
             self.calculate_shap()
@@ -140,10 +140,13 @@ class SklearnModelBase(ModelBase):
         x_test = self.test_set.select(pl.exclude("label")).to_pandas()
 
         if self.allow_na:
+            scores = self.model.predict_proba(x_test)[:, 1]
             self.predictions = pl.DataFrame(
                 {
-                    "predicted_label": self.model.predict(x_test),
-                    "score": self.model.predict_proba(x_test)[:, 1],
+                    "predicted_label": (
+                        scores >= self.predicted_label_threshold
+                    ).astype(int),
+                    "score": scores,
                 }
             )
         else:
@@ -154,18 +157,22 @@ class SklearnModelBase(ModelBase):
 
         nan_rows = x_test.isna().any(axis=1).to_numpy()
 
-        predictions = np.zeros(len(x_test), dtype=int)
         probs = np.zeros((len(x_test), 2))
         probs[:, 0] = 1.0
 
         if (~nan_rows).any():
-            predictions[~nan_rows] = self.model.predict(x_test[~nan_rows])
             probs[~nan_rows] = self.model.predict_proba(x_test[~nan_rows])
+
+        # Derive labels from the positive-class score using the configured
+        # threshold. NaN rows keep their default score of 0.0 (probs[:, 1]),
+        # so they fall below any threshold > 0 and resolve to label 0.
+        scores = probs[:, 1]
+        predictions = (scores >= self.predicted_label_threshold).astype(int)
 
         self.predictions = pl.DataFrame(
             {
                 "predicted_label": predictions,
-                "score": probs[:, 1],
+                "score": scores,
             }
         )
 

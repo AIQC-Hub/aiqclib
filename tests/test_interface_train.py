@@ -67,11 +67,11 @@ def _assert_train_outputs(
     for tgt in targets:
         # Validate stage
         assert (dir_validate / f"validation_report_{tgt}.tsv").exists()
-        assert (dir_validate / f"contingency_tables_{tgt}.parquet").exists()
+        assert (dir_validate / f"model_scores_{tgt}.parquet").exists()
         assert (dir_validate / f"metric_plots_{tgt}.svg").exists()
         # Build stage
         assert (dir_build / f"test_report_{tgt}.tsv").exists()
-        assert (dir_build / f"test_contingency_tables_{tgt}.parquet").exists()
+        assert (dir_build / f"test_model_scores_{tgt}.parquet").exists()
         assert (dir_build / f"test_metric_plots_{tgt}.svg").exists()
         # Model artifacts
         assert (dir_model / f"model_{tgt}.joblib").exists()
@@ -186,17 +186,17 @@ class TestCreateTrainingDataSetNegX5:
 
         output_folder = self.test_output_dir / self.config.data["dataset_folder_name"]
 
-        # Original NegX5 test only asserted reports/contingency/plots/models
+        # Original NegX5 test only asserted reports/model_scores/plots/models
         # (it didn't check SHAP absence). Preserving that behaviour: assert
-        # validate + build report/contingency/plots + model joblibs.
+        # validate + build report/model_scores/plots + model joblibs.
         dir_validate = output_folder / "validate"
         dir_build = output_folder / "build"
         dir_model = output_folder / "model"
         for tgt in TARGETS_NONEMPTY:
             assert (dir_validate / f"validation_report_{tgt}.tsv").exists()
-            assert (dir_validate / f"contingency_tables_{tgt}.parquet").exists()
+            assert (dir_validate / f"model_scores_{tgt}.parquet").exists()
             assert (dir_validate / f"metric_plots_{tgt}.svg").exists()
             assert (dir_build / f"test_report_{tgt}.tsv").exists()
-            assert (dir_build / f"test_contingency_tables_{tgt}.parquet").exists()
+            assert (dir_build / f"test_model_scores_{tgt}.parquet").exists()
             assert (dir_build / f"test_metric_plots_{tgt}.svg").exists()
             assert (dir_model / f"model_{tgt}.joblib").exists()

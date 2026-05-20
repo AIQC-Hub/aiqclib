@@ -1,9 +1,9 @@
 """Unit tests for the ``create_metric_plots`` utility.
 
-create_metric_plots takes a model-like object exposing ``contingency_tables``
+create_metric_plots takes a model-like object exposing ``model_scores``
 and ``output_file_names["metric_plot"]`` and writes ROC + Precision-Recall
 plots to disk as SVG files. The tests verify:
-- Empty contingency_tables raises ValueError
+- Empty model_scores raises ValueError
 - Single-fold (test-set) data produces a valid SVG file
 - Multi-fold (cross-validation) data also produces a valid SVG, exercising
   the mean-curve + std-deviation code path
@@ -43,14 +43,14 @@ from aiqclib.common.utils.metric_plots import create_metric_plots
 class MockModel:
     """Minimal stand-in for ValidationBase / BuildModelBase.
 
-    create_metric_plots only reads two attributes: ``contingency_tables``
+    create_metric_plots only reads two attributes: ``model_scores``
     (per-target DataFrame) and ``output_file_names["metric_plot"]``
     (per-target path). This mock supplies both without dragging in any
     of the real wrapper classes.
     """
 
     def __init__(self) -> None:
-        self.contingency_tables: Dict[str, pl.DataFrame] = {}
+        self.model_scores: Dict[str, pl.DataFrame] = {}
         self.output_file_names: Dict[str, Dict[str, str]] = {"metric_plot": {}}
 
 
@@ -61,7 +61,7 @@ class MockModel:
 
 @pytest.fixture
 def mock_model():
-    """Fresh MockModel per test — avoids contingency_tables leaking across tests."""
+    """Fresh MockModel per test — avoids model_scores leaking across tests."""
     return MockModel()
 
 
@@ -73,14 +73,14 @@ def mock_model():
 class TestCreateMetricPlots:
     """Tests for create_metric_plots's output-file generation behaviour."""
 
-    def test_empty_contingency_tables(self, mock_model):
-        """create_metric_plots with no contingency_tables raises ValueError."""
-        mock_model.contingency_tables = {}
+    def test_empty_model_scores(self, mock_model):
+        """create_metric_plots with no model_scores raises ValueError."""
+        mock_model.model_scores = {}
         with pytest.raises(ValueError):
             create_metric_plots(mock_model)
 
     def test_single_fold_plot_generation(self, mock_model, test_output_dir):
-        """A single-fold contingency table (e.g. test set with k=1) produces an SVG.
+        """A single-fold model-scores table (e.g. test set with k=1) produces an SVG.
 
         With one fold there's no mean/std logic — just the single ROC/PR
         curve. The output file must exist and have non-zero size.
@@ -88,7 +88,7 @@ class TestCreateMetricPlots:
         target_name = "temp"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame(
+        mock_model.model_scores[target_name] = pl.DataFrame(
             {
                 "k": [1, 1, 1, 1, 1],
                 "label": [0, 0, 1, 1, 0],
@@ -103,7 +103,7 @@ class TestCreateMetricPlots:
         os.remove(output_path)  # comment out to debug
 
     def test_multi_fold_plot_generation(self, mock_model, test_output_dir):
-        """Multi-fold contingency tables exercise the mean-curve + std-dev logic.
+        """Multi-fold model-scores tables exercise the mean-curve + std-dev logic.
 
         Two folds (k=1, k=2) means create_metric_plots computes per-fold
         ROC/PR curves, then averages them with a confidence band. The
@@ -112,7 +112,7 @@ class TestCreateMetricPlots:
         target_name = "psal"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame(
+        mock_model.model_scores[target_name] = pl.DataFrame(
             {
                 "k": [1, 1, 1, 2, 2, 2],
                 "label": [0, 1, 0, 0, 1, 1],
@@ -137,7 +137,7 @@ class TestCreateMetricPlots:
         target_name = "pres"
         output_path = str(test_output_dir / f"test_metric_plot_{target_name}.svg")
         mock_model.output_file_names["metric_plot"][target_name] = output_path
-        mock_model.contingency_tables[target_name] = pl.DataFrame(
+        mock_model.model_scores[target_name] = pl.DataFrame(
             {
                 # k=1 has both classes; k=2 has only class 0 (must be skipped).
                 "k": [1, 1, 2, 2],

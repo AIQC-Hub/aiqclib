@@ -75,7 +75,7 @@ def classify_dataset(config: ConfigBase) -> None:
     ds_classify.test_targets()
     ds_classify.write_predictions()
     ds_classify.write_reports()
-    ds_classify.write_contingency_tables()
+    ds_classify.write_model_scores()
     if ds_classify.base_model.enable_shap:
         ds_classify.write_shap_values()
     ds_classify.create_metric_plots()
