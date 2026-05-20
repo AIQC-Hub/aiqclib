@@ -193,12 +193,7 @@ class TestKFoldValidationSuite:
         # Spot-check one model-scores table's height (sum of all validation-fold rows).
         assert isinstance(ds.model_scores["dt_psal"], pl.DataFrame)
         assert ds.model_scores["dt_psal"].height == 34
-        assert ds.model_scores["dt_psal"].columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert ds.model_scores["dt_psal"].columns == ["method", "k", "label", "score"]
 
         # The ``{method}`` placeholder has been substituted with concrete names.
         assert (

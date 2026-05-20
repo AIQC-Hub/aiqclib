@@ -228,18 +228,12 @@ class BuildModelSuite(BuildModelBase):
             )
             target_predictions.append(pred_df.select(["method", pl.exclude("method")]))
 
-            # Append method column to model-scores table and standardize prediction types
+            # model_score already carries (method, k, label, score) with the
+            # correct lowercase method tag set by update_model_score in the
+            # base class — collect it as-is. No manual method-tagging needed,
+            # and predicted_label no longer exists in this frame.
             if current_model.model_score is not None:
-                ct_df = current_model.model_score.with_columns(
-                    [
-                        pl.lit(method_name).alias("method"),
-                        pl.col("predicted_label").cast(pl.Int64),
-                        pl.col("score").cast(pl.Float64),
-                    ]
-                )
-                target_model_scores.append(
-                    ct_df.select(["method", pl.exclude("method")])
-                )
+                target_model_scores.append(current_model.model_score)
 
             # Append method column to shap values and standardize prediction types
             if current_model.shap_values is not None:

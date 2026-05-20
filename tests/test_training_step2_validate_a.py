@@ -64,12 +64,7 @@ def _run_fold_validation(ds: KFoldValidation) -> None:
     for tgt in TARGETS:
         assert isinstance(ds.model_scores[tgt], pl.DataFrame)
         assert ds.model_scores[tgt].height == expected_heights[tgt]
-        assert ds.model_scores[tgt].columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert ds.model_scores[tgt].columns == ["method", "k", "label", "score"]
 
 
 # ---------------------------------------------------------------------------
@@ -231,9 +226,7 @@ class TestKFoldValidation:
         with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_model_scores_empty(
-        self, training_config_001, training_input_001
-    ):
+    def test_write_model_scores_empty(self, training_config_001, training_input_001):
         """Calling write_model_scores before process_targets raises ValueError."""
         ds = KFoldValidation(
             training_config_001, training_sets=training_input_001.training_sets

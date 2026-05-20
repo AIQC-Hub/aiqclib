@@ -96,12 +96,7 @@ def _run_test_with_trained_model(ds: BuildModel) -> None:
     for tgt in TARGETS_NONEMPTY:
         assert isinstance(ds.model_scores[tgt], pl.DataFrame)
         assert ds.model_scores[tgt].height == expected_heights[tgt]
-        assert ds.model_scores[tgt].columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert ds.model_scores[tgt].columns == ["method", "k", "label", "score"]
 
 
 # ---------------------------------------------------------------------------

@@ -80,7 +80,11 @@ class ModelBase(ABC):
             "calculate_shap", False
         )
 
-        # Score threshold used to convert predicted probabilities into binary labels
+        # Score threshold used to convert predicted probabilities into binary
+        # labels: predicted_label = 1 if score >= threshold else 0. Defaults to
+        # 0.5 when not configured (backward-compatible with the previous
+        # hardcoded behaviour). Stored as an instance attribute so it is
+        # serialized with the model and recovered on load.
         self.predicted_label_threshold: float = self.config.get_step_params(
             "model"
         ).get("predicted_label_threshold", 0.5)
@@ -172,9 +176,21 @@ class ModelBase(ABC):
         """
         Updates the internal model-scores table with the current test set predictions.
 
-        This method extracts the fold index (`k`), ground truth (`label`), and
-        predicted probability (`score`) from the current test set and predictions.
-        The data is stored in the :attr:`model_score` attribute as a Polars DataFrame.
+        Each row records the model that produced the prediction (`method`), the
+        fold index (`k`), the ground truth (`label`), and the predicted
+        probability (`score`). The data is stored in the :attr:`model_score`
+        attribute as a Polars DataFrame.
+
+        The ``method`` column is the lowercased ``short_name`` of the model
+        (e.g. ``"xgb"``, ``"dt"``) and is always present, for both single-model
+        and suite pipelines. This makes the model-scores file self-describing
+        about which model produced each row.
+
+        Note that ``predicted_label`` is intentionally NOT stored: it is
+        derivable from ``score`` and a threshold (``score >= threshold``), so
+        keeping it would bake in a single threshold and make the file less
+        useful for external threshold-sweeping (ROC/PR analysis). Consumers
+        apply their own threshold to ``score`` as needed.
 
         If :attr:`model_score` is already populated (e.g., during cross-validation),
         the new results are appended (vstacked) to the existing DataFrame.
@@ -187,14 +203,29 @@ class ModelBase(ABC):
         if self.predictions is None:
             raise ValueError("Member variable 'predictions' must not be empty.")
 
-        # Create a DataFrame for the current fold/batch
+        method = getattr(self, "short_name", "").lower()
+
+        # Create a DataFrame for the current fold/batch.
+        # Column order: method, k, label, score.
+        #
+        # Normalize dtypes so that frames from different models concat cleanly
+        # in the suite path: XGBoost's predict_proba yields Float32 while other
+        # sklearn models yield Float64, so cast score to Float64. k comes from a
+        # Python int but is cast to Int64 explicitly for cross-fold/cross-method
+        # consistency. (The old suite code did these casts per-method; doing it
+        # here makes every model_score frame uniform at the source.)
         current_data = pl.DataFrame(
             {
+                "method": method,
                 "k": self.k,
                 "label": self.test_set["label"],
-                "predicted_label": self.predictions["predicted_label"],
                 "score": self.predictions["score"],
             }
+        ).with_columns(
+            [
+                pl.col("k").cast(pl.Int64),
+                pl.col("score").cast(pl.Float64),
+            ]
         )
 
         # Append to the existing table if it exists, otherwise initialize it

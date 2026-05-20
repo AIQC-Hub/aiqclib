@@ -337,7 +337,9 @@ class TestClassifyAllSuite:
         )
         ds.model_file_names = suite_model_files
         output_paths = {
-            tgt: str(test_output_dir / f"test_classify_suite_model_scores_{tgt}.parquet")
+            tgt: str(
+                test_output_dir / f"test_classify_suite_model_scores_{tgt}.parquet"
+            )
             for tgt in TARGETS_NONEMPTY
         }
         ds.output_file_names["model_scores"] = output_paths

@@ -235,9 +235,9 @@ class TestClassifyAll:
             assert ds.model_scores[tgt].height == 2456
 
         assert ds.model_scores["temp"].columns == [
+            "method",
             "k",
             "label",
-            "predicted_label",
             "score",
         ]
 
@@ -432,6 +432,40 @@ class TestClassifyAll:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
+    @pytest.mark.parametrize("idx", range(3))
+    def test_prediction_file_honors_configured_threshold(
+        self, idx, classify_pipeline_all, default_model_files, test_output_dir
+    ):
+        """The classify prediction file's predicted_label must equal (score >= configured threshold)."""
+        config = classify_pipeline_all.configs[idx]
+        # The threshold is read from config when each model wrapper is constructed
+        # (read_models -> load_model_class -> ModelBase.__init__). Setting it on a
+        # model *instance* is futile because read_models builds fresh instances.
+        config.data["step_param_set"]["steps"]["model"]["predicted_label_threshold"] = (
+            0.99
+        )
+
+        ds = ClassifyAll(
+            config,
+            test_sets=classify_pipeline_all.extracts[idx].target_features,
+        )
+        ds.model_file_names = default_model_files
+        output_paths = {
+            tgt: str(test_output_dir / f"test_classify_prediction_{tgt}.parquet")
+            for tgt in TARGETS_NONEMPTY
+        }
+        ds.output_file_names["prediction"] = output_paths
+
+        ds.read_models()
+        ds.test_targets()
+        ds.write_predictions()
+
+        for tgt in TARGETS_NONEMPTY:
+            pred = pl.read_parquet(output_paths[tgt])
+            expected = (pred["score"] >= 0.99).cast(pl.Int64)
+            assert (pred["predicted_label"] == expected).all()
+            os.remove(output_paths[tgt])  # comment out to debug
+
 
 # ---------------------------------------------------------------------------
 # Per-model fan-out (parametrized over MODEL_CASES, single config)
@@ -495,8 +529,8 @@ class TestModels:
             assert ds.model_scores[tgt].height == 2456
 
         assert ds.model_scores["temp"].columns == [
+            "method",
             "k",
             "label",
-            "predicted_label",
             "score",
         ]

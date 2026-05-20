@@ -166,11 +166,9 @@ class KFoldValidationSuite(ValidationBase):
             self.output_file_names["report"][comp_key] = self.output_file_names[
                 "report"
             ][target_name].replace("{method}", method_lower)
-            self.output_file_names["model_scores"][comp_key] = (
-                self.output_file_names["model_scores"][target_name].replace(
-                    "{method}", method_lower
-                )
-            )
+            self.output_file_names["model_scores"][comp_key] = self.output_file_names[
+                "model_scores"
+            ][target_name].replace("{method}", method_lower)
             self.output_file_names["metric_plot"][comp_key] = self.output_file_names[
                 "metric_plot"
             ][target_name].replace("{method}", method_lower)

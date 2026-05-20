@@ -182,11 +182,15 @@ class TestSklearnModelBase:
         import numpy as np
 
         model_wrapper.model = MagicMock()
-        model_wrapper.model.predict_proba.return_value = np.array([[0.2, 0.8], [0.2, 0.8]])
-        model_wrapper.test_set = pl.DataFrame({
-            "feature1": [1.0, 2.0],
-            "label": [0, 1],
-        })
+        model_wrapper.model.predict_proba.return_value = np.array(
+            [[0.2, 0.8], [0.2, 0.8]]
+        )
+        model_wrapper.test_set = pl.DataFrame(
+            {
+                "feature1": [1.0, 2.0],
+                "label": [0, 1],
+            }
+        )
 
         model_wrapper.predict()
 
@@ -491,6 +495,8 @@ class TestSklearnModelBase:
 
         if non_nan_rows.any():
             scores = model_wrapper.predictions["score"].to_numpy()[non_nan_rows]
-            predicted = model_wrapper.predictions["predicted_label"].to_numpy()[non_nan_rows]
+            predicted = model_wrapper.predictions["predicted_label"].to_numpy()[
+                non_nan_rows
+            ]
             expected = (scores >= model_wrapper.predicted_label_threshold).astype(int)
             assert np.array_equal(predicted, expected)

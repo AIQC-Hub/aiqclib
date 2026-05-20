@@ -62,6 +62,7 @@ class ModelBaseWithExpectedName(ModelBase):
     type-checking paths."""
 
     expected_class_name: str = "XGBoost"
+    short_name: str = "XGB"
 
     def __init__(self, config: ConfigBase) -> None:
         super().__init__(config)
@@ -225,19 +226,14 @@ class TestModelBaseMethods:
 
         assert model.model_score is not None
         assert model.model_score.shape == (3, 4)
-        assert model.model_score.columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert model.model_score.columns == ["method", "k", "label", "score"]
 
         # Verify Batch 1 content equals the expected frame exactly.
         expected_batch_1 = pl.DataFrame(
             {
+                "method": ["xgb", "xgb", "xgb"],
                 "k": [0, 0, 0],
                 "label": [0, 1, 0],
-                "predicted_label": [0, 1, 0],
                 "score": [0.1, 0.9, 0.4],
             }
         )
