@@ -28,7 +28,7 @@ class SupportVectorMachine(SklearnModelBase):
       otherwise, uses default hyperparameters.
     - Uses :class:`sklearn.svm.SVC`.
     - Enforces ``probability=True`` by default to support the generation of
-      contingency tables and ROC/PR curves used in the parent class.
+      model-scores tables and ROC/PR curves used in the parent class.
     - Uses a linear kernel by default.
 
     .. note::

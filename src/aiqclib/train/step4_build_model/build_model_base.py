@@ -67,7 +67,7 @@ class BuildModelBase(DataSetBase):
         self.default_file_names: Dict[str, str] = {
             "report": "test_report_{target_name}.tsv",
             "prediction": "test_prediction_{target_name}.parquet",
-            "contingency_table": "test_contingency_tables_{target_name}.parquet",
+            "model_scores": "test_model_scores_{target_name}.parquet",
             "shap_value": "test_shap_values_{target_name}.parquet",
             "metric_plot": "test_metric_plots_{target_name}.svg",
         }
@@ -101,8 +101,8 @@ class BuildModelBase(DataSetBase):
 
         #: A dictionary to store test reports keyed by target name.
         self.reports: Dict[str, pl.DataFrame] = {}
-        #: A dictionary to store contingency tables keyed by target name.
-        self.contingency_tables: Dict[str, pl.DataFrame] = {}
+        #: A dictionary to store model-scores tables keyed by target name.
+        self.model_scores: Dict[str, pl.DataFrame] = {}
         #: A dictionary to store SHAP values keyed by target name.
         self.shap_values: Dict[str, pl.DataFrame] = {}
         #: A dictionary to store prediction results keyed by target name.
@@ -208,18 +208,18 @@ class BuildModelBase(DataSetBase):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_csv(output_path, separator="\t")
 
-    def write_contingency_tables(self) -> None:
+    def write_model_scores(self) -> None:
         """
-        Write each target's contingency table to a Parquet file.
+        Write each target's model-scores table to a Parquet file.
 
-        :raises ValueError: If :attr:`contingency_tables` is empty, indicating no tests
+        :raises ValueError: If :attr:`model_scores` is empty, indicating no tests
                             have been carried out or no tables stored.
         """
-        if not self.contingency_tables:
-            raise ValueError("Member variable 'contingency_tables' must not be empty.")
+        if not self.model_scores:
+            raise ValueError("Member variable 'model_scores' must not be empty.")
 
-        for target_name, df in self.contingency_tables.items():
-            output_path = self.output_file_names["contingency_table"][target_name]
+        for target_name, df in self.model_scores.items():
+            output_path = self.output_file_names["model_scores"][target_name]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_parquet(output_path)
 

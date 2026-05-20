@@ -27,7 +27,7 @@ class ClassifyAllSuite(BuildModelBase):
     multiple machine learning methods provided by a ModelSuite.
 
     This class reads previously trained models (with composite keys) and
-    aggregates test reports, predictions, and contingency tables into single
+    aggregates test reports, predictions, and model-scores tables into single
     datasets per target by introducing a 'method' column.
 
     .. note::
@@ -73,7 +73,7 @@ class ClassifyAllSuite(BuildModelBase):
         self.default_file_names: Dict[str, str] = {
             "report": "classify_report_{target_name}.tsv",
             "prediction": "classify_prediction_{target_name}.parquet",
-            "contingency_table": "classify_contingency_tables_{target_name}.parquet",
+            "model_scores": "classify_model_scores_{target_name}.parquet",
             "shap_value": "classify_shap_values_{target_name}.parquet",
             "metric_plot": "classify_metric_plots_{target_name}.svg",
         }
@@ -154,7 +154,7 @@ class ClassifyAllSuite(BuildModelBase):
 
         target_reports = []
         target_predictions = []
-        target_contingency = []
+        target_model_scores = []
         target_shap_values = []
 
         for method_name, method_obj in self.base_model.method_objs.items():
@@ -162,7 +162,7 @@ class ClassifyAllSuite(BuildModelBase):
             comp_key = f"{method_lower}_{target_name}"
 
             current_model = self.models[comp_key]
-            current_model.contingency_table = None  # Reset to prevent duplication
+            current_model.model_score = None  # Reset to prevent duplication
             current_model.test_set = test_set
             current_model.test()
 
@@ -192,19 +192,12 @@ class ClassifyAllSuite(BuildModelBase):
             )
             target_predictions.append(pred_df.select(["method", pl.exclude("method")]))
 
-            # Append method column to contingency table and standardize prediction types
-            if current_model.contingency_table is not None:
-                ct_df = current_model.contingency_table.with_columns(
-                    [
-                        pl.lit(method_name).alias("method"),
-                        pl.col("k").cast(pl.Int64),
-                        pl.col("predicted_label").cast(pl.Int64),
-                        pl.col("score").cast(pl.Float64),
-                    ]
-                )
-                target_contingency.append(
-                    ct_df.select(["method", pl.exclude("method")])
-                )
+            # model_score already carries (method, k, label, score) with the
+            # correct lowercase method tag set by update_model_score in the
+            # base class — collect it as-is. No manual method-tagging needed,
+            # and predicted_label no longer exists in this frame.
+            if current_model.model_score is not None:
+                target_model_scores.append(current_model.model_score)
 
             # Append method column to shap values and standardize prediction types
             if current_model.shap_values is not None:
@@ -233,8 +226,8 @@ class ClassifyAllSuite(BuildModelBase):
         self.predictions[target_name] = (
             pl.concat(target_predictions) if target_predictions else None
         )
-        self.contingency_tables[target_name] = (
-            pl.concat(target_contingency) if target_contingency else None
+        self.model_scores[target_name] = (
+            pl.concat(target_model_scores) if target_model_scores else None
         )
         self.shap_values[target_name] = (
             pl.concat(target_shap_values) if target_shap_values else None

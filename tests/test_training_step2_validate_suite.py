@@ -150,8 +150,8 @@ class TestKFoldValidationSuite:
             == f"{base}/validation_report_{{method}}_temp.tsv"
         )
         assert (
-            str(ds.output_file_names["contingency_table"]["temp"])
-            == f"{base}/contingency_tables_{{method}}_temp.parquet"
+            str(ds.output_file_names["model_scores"]["temp"])
+            == f"{base}/model_scores_{{method}}_temp.parquet"
         )
         assert (
             str(ds.output_file_names["metric_plot"]["temp"])
@@ -168,10 +168,10 @@ class TestKFoldValidationSuite:
     def test_fold_validation(
         self, training_config_001_validate_suite, training_input_001
     ):
-        """process_targets populates reports + contingency_tables for every composite key.
+        """process_targets populates reports + model_scores for every composite key.
 
         After process_targets, all six SUITE_KEYS exist in both .reports and
-        .contingency_tables. Dynamic path rewriting has also substituted the
+        .model_scores. Dynamic path rewriting has also substituted the
         ``{method}`` placeholder with the actual method name.
         """
         ds = KFoldValidationSuite(
@@ -180,25 +180,20 @@ class TestKFoldValidationSuite:
         )
         ds.process_targets()
 
-        # All composite keys exist in both reports and contingency tables.
+        # All composite keys exist in both reports and model-scores tables.
         for key in SUITE_KEYS:
             assert key in ds.reports
-            assert key in ds.contingency_tables
+            assert key in ds.model_scores
 
         # Spot-check one report's shape. k=3 folds × 6 metric rows = 18; cols structural.
         assert isinstance(ds.reports["xgb_temp"], pl.DataFrame)
         assert ds.reports["xgb_temp"].shape[0] == 18
         assert ds.reports["xgb_temp"].shape[1] == 8
 
-        # Spot-check one contingency table's height (sum of all validation-fold rows).
-        assert isinstance(ds.contingency_tables["dt_psal"], pl.DataFrame)
-        assert ds.contingency_tables["dt_psal"].height == 34
-        assert ds.contingency_tables["dt_psal"].columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        # Spot-check one model-scores table's height (sum of all validation-fold rows).
+        assert isinstance(ds.model_scores["dt_psal"], pl.DataFrame)
+        assert ds.model_scores["dt_psal"].height == 34
+        assert ds.model_scores["dt_psal"].columns == ["method", "k", "label", "score"]
 
         # The ``{method}`` placeholder has been substituted with concrete names.
         assert (
@@ -234,13 +229,13 @@ class TestKFoldValidationSuite:
             assert os.path.exists(output_paths[key])
             os.remove(output_paths[key])  # comment out to debug
 
-    def test_write_contingency_tables(
+    def test_write_model_scores(
         self,
         training_config_001_validate_suite,
         training_input_001,
         test_output_dir,
     ):
-        """write_contingency_tables produces a parquet per composite key."""
+        """write_model_scores produces a parquet per composite key."""
         ds = KFoldValidationSuite(
             training_config_001_validate_suite,
             training_sets=training_input_001.training_sets,
@@ -248,13 +243,13 @@ class TestKFoldValidationSuite:
         ds.process_targets()
 
         output_paths = {
-            key: str(test_output_dir / f"test_contingency_{key}.parquet")
+            key: str(test_output_dir / f"test_model_scores_{key}.parquet")
             for key in SUITE_KEYS
         }
         for key in SUITE_KEYS:
-            ds.output_file_names["contingency_table"][key] = output_paths[key]
+            ds.output_file_names["model_scores"][key] = output_paths[key]
 
-        ds.write_contingency_tables()
+        ds.write_model_scores()
 
         for key in SUITE_KEYS:
             assert os.path.exists(output_paths[key])
@@ -301,18 +296,18 @@ class TestKFoldValidationSuite:
         with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_contingency_tables_empty(
+    def test_write_model_scores_empty(
         self,
         training_config_001_validate_suite,
         training_input_001,
     ):
-        """write_contingency_tables before process_targets raises ValueError."""
+        """write_model_scores before process_targets raises ValueError."""
         ds = KFoldValidationSuite(
             training_config_001_validate_suite,
             training_sets=training_input_001.training_sets,
         )
         with pytest.raises(ValueError):
-            ds.write_contingency_tables()
+            ds.write_model_scores()
 
     def test_create_metric_plots_empty(
         self,

@@ -66,6 +66,8 @@ This section provides practical examples and solutions for common tasks related 
    how-to/quick_start
    how-to/data_preprocessing_utilities
    how-to/algorithm_selection
+   how-to/prediction_threshold
+   how-to/performance_evaluation
    how-to/shap_values
    how-to/down_sampling_negative
    how-to/feature_normalization

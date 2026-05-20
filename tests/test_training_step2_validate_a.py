@@ -3,7 +3,7 @@
 Exercises:
 - step_name, output_file_names resolution, base_model wiring
 - training_sets shape after wiring ds_input
-- write_reports / write_contingency_tables / create_metric_plots: file output
+- write_reports / write_model_scores / create_metric_plots: file output
   side effects, plus their empty-state error behaviour
 - The 9-model fan-out (XGBoost, LogisticRegression, LDA, SVM, DecisionTree,
   RandomForest, KNN, GaussianNaiveBayes, MLP), previously nine sibling
@@ -62,14 +62,9 @@ def _run_fold_validation(ds: KFoldValidation) -> None:
         "pres": 18,
     }
     for tgt in TARGETS:
-        assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-        assert ds.contingency_tables[tgt].height == expected_heights[tgt]
-        assert ds.contingency_tables[tgt].columns == [
-            "k",
-            "label",
-            "predicted_label",
-            "score",
-        ]
+        assert isinstance(ds.model_scores[tgt], pl.DataFrame)
+        assert ds.model_scores[tgt].height == expected_heights[tgt]
+        assert ds.model_scores[tgt].columns == ["method", "k", "label", "score"]
 
 
 # ---------------------------------------------------------------------------
@@ -100,8 +95,8 @@ class TestKFoldValidation:
                 == f"{base}/validation_report_{tgt}.tsv"
             )
             assert (
-                str(ds.output_file_names["contingency_table"][tgt])
-                == f"{base}/contingency_tables_{tgt}.parquet"
+                str(ds.output_file_names["model_scores"][tgt])
+                == f"{base}/model_scores_{tgt}.parquet"
             )
             assert (
                 str(ds.output_file_names["metric_plot"][tgt])
@@ -181,21 +176,21 @@ class TestKFoldValidation:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
-    def test_write_contingency_tables(
+    def test_write_model_scores(
         self, training_config_001, training_input_001, test_output_dir
     ):
-        """write_contingency_tables produces a parquet per target."""
+        """write_model_scores produces a parquet per target."""
         ds = KFoldValidation(
             training_config_001, training_sets=training_input_001.training_sets
         )
         output_paths = {
-            tgt: str(test_output_dir / f"test_contingency_{tgt}.parquet")
+            tgt: str(test_output_dir / f"test_model_scores_{tgt}.parquet")
             for tgt in TARGETS
         }
-        ds.output_file_names["contingency_table"] = output_paths
+        ds.output_file_names["model_scores"] = output_paths
 
         ds.process_targets()
-        ds.write_contingency_tables()
+        ds.write_model_scores()
 
         for tgt in TARGETS:
             assert os.path.exists(output_paths[tgt])
@@ -231,15 +226,13 @@ class TestKFoldValidation:
         with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_contingency_tables_empty(
-        self, training_config_001, training_input_001
-    ):
-        """Calling write_contingency_tables before process_targets raises ValueError."""
+    def test_write_model_scores_empty(self, training_config_001, training_input_001):
+        """Calling write_model_scores before process_targets raises ValueError."""
         ds = KFoldValidation(
             training_config_001, training_sets=training_input_001.training_sets
         )
         with pytest.raises(ValueError):
-            ds.write_contingency_tables()
+            ds.write_model_scores()
 
     def test_create_metric_plots_empty(self, training_config_001, training_input_001):
         """Calling create_metric_plots before process_targets raises ValueError."""

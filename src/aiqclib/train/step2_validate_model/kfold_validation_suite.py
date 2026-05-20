@@ -57,12 +57,12 @@ class KFoldValidationSuite(ValidationBase):
         # Redefine default file names to include the {method} placeholder
         self.default_file_names: Dict[str, str] = {
             "report": "validation_report_{method}_{target_name}.tsv",
-            "contingency_table": "contingency_tables_{method}_{target_name}.parquet",
+            "model_scores": "model_scores_{method}_{target_name}.parquet",
             "metric_plot": "metric_plots_{method}_{target_name}.svg",
         }
 
         # Re-generate output file names using the new pattern with {method}
-        # For each output type (report, contingency_table, metric_plot),
+        # For each output type (report, model_score, metric_plot),
         # get the target-specific filenames from config.
         # These filenames will still contain the {method} placeholder,
         # which will be replaced later in the validate method for each specific method.
@@ -108,7 +108,7 @@ class KFoldValidationSuite(ValidationBase):
           1. Iterate over the defined number of folds.
           2. Build the model using all training data except the current fold.
           3. Test the model on the held-out fold.
-          4. Accumulate test results and contingency tables under a composite
+          4. Accumulate test results and model-scores tables under a composite
              key (`{method_name}_{target_name}`).
           5. Update `output_file_names` to replace the `{method}` placeholder.
 
@@ -128,7 +128,7 @@ class KFoldValidationSuite(ValidationBase):
 
             self.models[comp_key] = []
             reports: List[pl.DataFrame] = []
-            contingency_tables: List[pl.DataFrame] = []
+            model_scores: List[pl.DataFrame] = []
 
             for k in range(k_fold):
                 # We need a fresh copy of the specific ML method model for each fold
@@ -151,14 +151,14 @@ class KFoldValidationSuite(ValidationBase):
                 current_fold_model.test()
                 reports.append(current_fold_model.report)
 
-                if current_fold_model.contingency_table is not None:
-                    contingency_tables.append(current_fold_model.contingency_table)
+                if current_fold_model.model_score is not None:
+                    model_scores.append(current_fold_model.model_score)
 
             # Store the aggregated results using the composite key
             self.reports[comp_key] = pl.concat(reports)
 
-            if contingency_tables:
-                self.contingency_tables[comp_key] = pl.concat(contingency_tables)
+            if model_scores:
+                self.model_scores[comp_key] = pl.concat(model_scores)
 
             # Resolve the {method} placeholder in the output file paths specifically for this composite key.
             # The original target_name entry in self.output_file_names still contains the {method} placeholder.
@@ -166,11 +166,9 @@ class KFoldValidationSuite(ValidationBase):
             self.output_file_names["report"][comp_key] = self.output_file_names[
                 "report"
             ][target_name].replace("{method}", method_lower)
-            self.output_file_names["contingency_table"][comp_key] = (
-                self.output_file_names["contingency_table"][target_name].replace(
-                    "{method}", method_lower
-                )
-            )
+            self.output_file_names["model_scores"][comp_key] = self.output_file_names[
+                "model_scores"
+            ][target_name].replace("{method}", method_lower)
             self.output_file_names["metric_plot"][comp_key] = self.output_file_names[
                 "metric_plot"
             ][target_name].replace("{method}", method_lower)
