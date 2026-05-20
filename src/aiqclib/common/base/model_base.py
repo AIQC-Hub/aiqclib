@@ -80,6 +80,11 @@ class ModelBase(ABC):
             "calculate_shap", False
         )
 
+        # Score threshold used to convert predicted probabilities into binary labels
+        self.predicted_label_threshold: float = self.config.get_step_params(
+            "model"
+        ).get("predicted_label_threshold", 0.5)
+
         # Initialize storage for SHAP values explicitly
         self.shap_values: Optional[pl.DataFrame] = None
 

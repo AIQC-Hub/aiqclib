@@ -173,28 +173,66 @@ class TestSklearnModelBase:
     # ----- predict -----
 
     def test_predict(self, model_wrapper):
-        """predict() produces a 2-column (predicted_label, score) frame."""
-        model_wrapper.model = MockSklearnClassifier()
-        model_wrapper.test_set = pl.DataFrame(
-            {
-                "feature1": [1.0, 2.0],
-                "label": [0, 1],
-            }
-        )
+        """predict() produces a 2-column (predicted_label, score) frame.
+
+        Uses an off-boundary score (0.8) so the predicted label is unambiguous
+        regardless of the >= vs > convention at the threshold boundary.
+        """
+        from unittest.mock import MagicMock
+        import numpy as np
+
+        model_wrapper.model = MagicMock()
+        model_wrapper.model.predict_proba.return_value = np.array([[0.2, 0.8], [0.2, 0.8]])
+        model_wrapper.test_set = pl.DataFrame({
+            "feature1": [1.0, 2.0],
+            "label": [0, 1],
+        })
 
         model_wrapper.predict()
 
         assert model_wrapper.predictions is not None
         assert model_wrapper.predictions.shape == (2, 2)
         assert model_wrapper.predictions.columns == ["predicted_label", "score"]
-        # MockSklearnClassifier returns all 0s for predict, 0.5 for score.
-        assert model_wrapper.predictions["predicted_label"][0] == 0.0
-        assert model_wrapper.predictions["score"][0] == 0.5
+        # score 0.8 >= default threshold 0.5 → label 1
+        assert model_wrapper.predictions["predicted_label"][0] == 1
+        assert abs(model_wrapper.predictions["score"][0] - 0.8) < 1e-9
 
     def test_predict_empty_test_set(self, model_wrapper):
         """predict() with test_set=None raises ValueError mentioning test_set."""
         with pytest.raises(ValueError, match="test_set"):
             model_wrapper.predict()
+
+    def test_threshold_default(self, model_wrapper):
+        """predicted_label_threshold defaults to 0.5 when not configured."""
+        assert model_wrapper.predicted_label_threshold == 0.5
+
+    def test_threshold_from_config(self, training_config_001):
+        """A configured threshold is read into predicted_label_threshold."""
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "predicted_label_threshold"
+        ] = 0.7
+        wrapper = ConcreteSklearnModel(training_config_001)
+        assert wrapper.predicted_label_threshold == 0.7
+
+    def test_predict_honors_threshold(self, training_config_001):
+        """predict() labels a 0.6-score row as 1 at threshold 0.5 but 0 at threshold 0.7."""
+        # MockSklearnClassifier returns 0.5 for both classes, so craft a model
+        # whose predict_proba gives a known positive-class score.
+        import numpy as np
+        from unittest.mock import MagicMock
+
+        training_config_001.data["step_param_set"]["steps"]["model"][
+            "predicted_label_threshold"
+        ] = 0.7
+        wrapper = ConcreteSklearnModel(training_config_001)
+        wrapper.model = MagicMock()
+        wrapper.model.predict_proba.return_value = np.array([[0.4, 0.6]])
+        wrapper.test_set = pl.DataFrame({"f1": [1.0], "label": [1]})
+
+        wrapper.predict()
+        # score 0.6 < threshold 0.7 → label 0
+        assert wrapper.predictions["predicted_label"][0] == 0
+        assert abs(wrapper.predictions["score"][0] - 0.6) < 1e-9
 
     # ----- create_report -----
 
@@ -433,8 +471,13 @@ class TestSklearnModelBase:
         assert np.all(scores >= 0.0)
         assert np.all(scores <= 1.0)
 
-    def test_non_nan_rows_use_model_prediction(self, model_wrapper):
-        """Rows without NaN use the underlying model's actual prediction."""
+    def test_non_nan_rows_use_threshold_on_score(self, model_wrapper):
+        """Rows without NaN get labels by thresholding the score, not model.predict().
+
+        After the configurable-threshold change, predicted_label is derived from
+        predict_proba's positive-class score (score >= threshold), not from the
+        underlying model's .predict() output.
+        """
         model_wrapper.training_set = make_training_set()
         model_wrapper.test_set = make_test_set()
         model_wrapper.allow_na = False
@@ -443,14 +486,11 @@ class TestSklearnModelBase:
         model_wrapper.predict()
 
         x_test = model_wrapper.test_set.select(pl.exclude("label")).to_pandas()
-        nan_rows = pd.isna(x_test).any(axis=1)
+        nan_rows = pd.isna(x_test).any(axis=1).to_numpy()
         non_nan_rows = ~nan_rows
 
         if non_nan_rows.any():
-            expected = model_wrapper.model.predict(
-                np.asarray(x_test)[non_nan_rows],
-            )
-            predicted = model_wrapper.predictions["predicted_label"].to_numpy()[
-                non_nan_rows
-            ]
+            scores = model_wrapper.predictions["score"].to_numpy()[non_nan_rows]
+            predicted = model_wrapper.predictions["predicted_label"].to_numpy()[non_nan_rows]
+            expected = (scores >= model_wrapper.predicted_label_threshold).astype(int)
             assert np.array_equal(predicted, expected)
