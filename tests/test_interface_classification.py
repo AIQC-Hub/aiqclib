@@ -62,7 +62,7 @@ def _assert_classify_outputs(output_folder, *, expect_shap=False):
         assert (dir_extract / f"extracted_features_classify_{tgt}.parquet").exists()
         assert (dir_classify / f"classify_prediction_{tgt}.parquet").exists()
         assert (dir_classify / f"classify_report_{tgt}.tsv").exists()
-        assert (dir_classify / f"classify_contingency_tables_{tgt}.parquet").exists()
+        assert (dir_classify / f"classify_model_scores_{tgt}.parquet").exists()
         assert (dir_classify / f"classify_metric_plots_{tgt}.svg").exists()
 
         shap_path = dir_classify / f"classify_shap_values_{tgt}.parquet"

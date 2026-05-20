@@ -60,7 +60,7 @@ class ClassifyAll(BuildModelBase):
         self.default_file_names: Dict[str, str] = {
             "report": "classify_report_{target_name}.tsv",
             "prediction": "classify_prediction_{target_name}.parquet",
-            "contingency_table": "classify_contingency_tables_{target_name}.parquet",
+            "model_scores": "classify_model_scores_{target_name}.parquet",
             "shap_value": "classify_shap_values_{target_name}.parquet",
             "metric_plot": "classify_metric_plots_{target_name}.svg",
         }
@@ -118,13 +118,13 @@ class ClassifyAll(BuildModelBase):
         This method performs the following steps:
 
           1. Retrieves the trained model from :attr:`models[target_name]`.
-          2. **Resets the model's contingency table** to ensure no data duplication
+          2. **Resets the model's model-scores table** to ensure no data duplication
              from previous runs.
           3. Prepares the appropriate test set by dropping specified columns
              from :attr:`test_sets[target_name]` and attaches it to the
              :attr:`base_model`.
           4. Calls the :meth:`base_model.test` method to generate predictions and reports.
-          5. Stores the contingency table in :attr:`contingency_tables[target_name]`.
+          5. Stores the model-scores table in :attr:`model_scores[target_name]`.
           6. Concatenates relevant original test set columns with the
              generated predictions and stores them in :attr:`predictions[target_name]`.
           7. Stores the test report from the base model in :attr:`reports[target_name]`.
@@ -135,14 +135,14 @@ class ClassifyAll(BuildModelBase):
         """
         self.base_model = self.models[target_name]
 
-        # Reset contingency table to avoid duplication if test is run multiple times
-        self.base_model.contingency_table = None
+        # Reset model-scores table to avoid duplication if test is run multiple times
+        self.base_model.model_score = None
 
         self.base_model.test_set = self.test_sets[target_name].drop(self.drop_cols)
         self.base_model.test()
 
-        if self.base_model.contingency_table is not None:
-            self.contingency_tables[target_name] = self.base_model.contingency_table
+        if self.base_model.model_score is not None:
+            self.model_scores[target_name] = self.base_model.model_score
 
         if self.base_model.shap_values is not None:
             self.shap_values[target_name] = self.base_model.shap_values

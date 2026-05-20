@@ -18,7 +18,7 @@ def create_metric_plots(model) -> None:
     Create and save ROC and Precision-Recall plots as an SVG file for a single model.
 
     Generates a figure with two subplots (ROC on left, PR on right) based on
-    the data in ``model.contingency_tables``. If the contingency table contains
+    the data in ``model.model_scores``. If the model-scores table contains
     multiple unique 'k' values (folds), it plots individual fold curves and then
     the mean curve with a shaded confidence band (standard deviation).
 
@@ -27,7 +27,7 @@ def create_metric_plots(model) -> None:
     :param model: An object containing evaluation results and output configuration.
                   It is expected to have the following attributes:
 
-                  - ``contingency_tables`` (dict[str, polars.DataFrame]): A dictionary
+                  - ``model_scores`` (dict[str, polars.DataFrame]): A dictionary
                     where keys are target names and values are Polars DataFrames. Each
                     DataFrame must contain at least 'k' (fold identifier), 'label'
                     (true binary labels), and 'score' (prediction probabilities/scores)
@@ -38,14 +38,14 @@ def create_metric_plots(model) -> None:
                     the full path where the plot for a given target will be saved.
 
     :type model: object
-    :raises ValueError: If ``model.contingency_tables`` is empty.
+    :raises ValueError: If ``model.model_scores`` is empty.
     :return: None
     :rtype: None
     """
-    if not model.contingency_tables:
-        raise ValueError("Member variable 'contingency_tables' must not be empty.")
+    if not model.model_scores:
+        raise ValueError("Member variable 'model_scores' must not be empty.")
 
-    for target_name, df in model.contingency_tables.items():
+    for target_name, df in model.model_scores.items():
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -188,14 +188,14 @@ def create_metric_plots(model) -> None:
 def create_multi_method_metric_plots(model) -> None:
     """
     Create and save ROC and Precision-Recall plots for multiple methods overlaid
-    on the same figure. Assumes the contingency tables have a 'method' column.
+    on the same figure. Assumes the model-scores tables have a 'method' column.
 
     The output file path is determined by ``model.output_file_names['metric_plot']``.
 
     :param model: An object containing evaluation results and output configuration.
                   It is expected to have the following attributes:
 
-                  - ``contingency_tables`` (dict[str, polars.DataFrame]): A dictionary
+                  - ``model_scores`` (dict[str, polars.DataFrame]): A dictionary
                     where keys are target names and values are Polars DataFrames. Each
                     DataFrame must contain at least 'method' (method identifier), 'label'
                     (true binary labels), and 'score' (prediction probabilities/scores)
@@ -206,7 +206,7 @@ def create_multi_method_metric_plots(model) -> None:
                     the full path where the plot for a given target will be saved.
 
     :type model: object
-    :raises ValueError: If ``model.contingency_tables`` is empty.
+    :raises ValueError: If ``model.model_scores`` is empty.
     :return: None
     :rtype: None
 
@@ -221,10 +221,10 @@ def create_multi_method_metric_plots(model) -> None:
        Reversing `rec` and `prec` before passing them to `auc` when `rec` is already
        increasing will lead to an incorrect AP value.
     """
-    if not model.contingency_tables:
-        raise ValueError("Member variable 'contingency_tables' must not be empty.")
+    if not model.model_scores:
+        raise ValueError("Member variable 'model_scores' must not be empty.")
 
-    for target_name, df in model.contingency_tables.items():
+    for target_name, df in model.model_scores.items():
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

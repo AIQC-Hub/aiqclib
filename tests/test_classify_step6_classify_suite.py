@@ -167,8 +167,8 @@ class TestClassifyAllSuiteClass:
                 == f"{out_base}/classify_report_{tgt}.tsv"
             )
             assert (
-                str(ds.output_file_names["contingency_table"][tgt])
-                == f"{out_base}/classify_contingency_tables_{tgt}.parquet"
+                str(ds.output_file_names["model_scores"][tgt])
+                == f"{out_base}/classify_model_scores_{tgt}.parquet"
             )
             assert (
                 str(ds.output_file_names["metric_plot"][tgt])
@@ -244,7 +244,7 @@ class TestClassifyAllSuite:
     def test_with_models(self, classify_suite_pipeline_first, suite_model_files):
         """End-to-end: read_models + test_targets aggregates per-method predictions.
 
-        Predictions and contingency tables include a 'method' column, and
+        Predictions and model-scores tables include a 'method' column, and
         their row count is (test_set rows × number of methods).
         """
         ds = ClassifyAllSuite(
@@ -264,10 +264,10 @@ class TestClassifyAllSuite:
         assert ds.predictions["temp"].shape[0] == expected_aggregated_height
         assert "method" in ds.predictions["temp"].columns
 
-        # contingency_tables
-        assert isinstance(ds.contingency_tables["psal"], pl.DataFrame)
-        assert ds.contingency_tables["psal"].height == expected_aggregated_height
-        assert "method" in ds.contingency_tables["psal"].columns
+        # model_scores
+        assert isinstance(ds.model_scores["psal"], pl.DataFrame)
+        assert ds.model_scores["psal"].height == expected_aggregated_height
+        assert "method" in ds.model_scores["psal"].columns
 
     # ----- Error cases -----
 
@@ -327,24 +327,24 @@ class TestClassifyAllSuite:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
-    def test_write_contingency_tables(
+    def test_write_model_scores(
         self, classify_suite_pipeline_first, suite_model_files, test_output_dir
     ):
-        """write_contingency_tables produces an aggregated parquet per target."""
+        """write_model_scores produces an aggregated parquet per target."""
         ds = ClassifyAllSuite(
             classify_suite_pipeline_first.configs[0],
             test_sets=classify_suite_pipeline_first.extracts[0].target_features,
         )
         ds.model_file_names = suite_model_files
         output_paths = {
-            tgt: str(test_output_dir / f"test_classify_suite_contingency_{tgt}.parquet")
+            tgt: str(test_output_dir / f"test_classify_suite_model_scores_{tgt}.parquet")
             for tgt in TARGETS_NONEMPTY
         }
-        ds.output_file_names["contingency_table"] = output_paths
+        ds.output_file_names["model_scores"] = output_paths
 
         ds.read_models()
         ds.test_targets()
-        ds.write_contingency_tables()
+        ds.write_model_scores()
 
         for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])

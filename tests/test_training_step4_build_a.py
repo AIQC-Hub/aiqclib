@@ -12,7 +12,7 @@ Exercises:
 - Distinct-object invariants: ``test_model_objects``,
   ``test_test_model_objects`` (each target gets its own model instance, not
   a shared reference).
-- File-output behaviour: write_reports, write_contingency_tables,
+- File-output behaviour: write_reports, write_model_scores,
   write_shap_values, write_models, write_predictions, create_metric_plots,
   plus their empty-state ValueError counterparts.
 - The 9-model fan-out (XGBoost, LogisticRegression, LDA, SVM, DecisionTree,
@@ -94,9 +94,9 @@ def _run_test_with_trained_model(ds: BuildModel) -> None:
         "psal": 2,
     }
     for tgt in TARGETS_NONEMPTY:
-        assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-        assert ds.contingency_tables[tgt].height == expected_heights[tgt]
-        assert ds.contingency_tables[tgt].columns == [
+        assert isinstance(ds.model_scores[tgt], pl.DataFrame)
+        assert ds.model_scores[tgt].height == expected_heights[tgt]
+        assert ds.model_scores[tgt].columns == [
             "k",
             "label",
             "predicted_label",
@@ -143,8 +143,8 @@ class TestBuildModel:
                 == f"{out_base}/test_report_{tgt}.tsv"
             )
             assert (
-                str(ds.output_file_names["contingency_table"][tgt])
-                == f"{out_base}/test_contingency_tables_{tgt}.parquet"
+                str(ds.output_file_names["model_scores"][tgt])
+                == f"{out_base}/test_model_scores_{tgt}.parquet"
             )
             assert (
                 str(ds.output_file_names["shap_value"][tgt])
@@ -352,17 +352,17 @@ class TestBuildModel:
         with pytest.raises(ValueError):
             ds.write_reports()
 
-    def test_write_empty_contingency_tables(
+    def test_write_empty_model_scores(
         self, training_config_001_bo002, training_input_001_bo002
     ):
-        """write_contingency_tables before test_targets raises ValueError."""
+        """write_model_scores before test_targets raises ValueError."""
         ds = BuildModel(
             training_config_001_bo002,
             training_sets=training_input_001_bo002.training_sets,
             test_sets=training_input_001_bo002.test_sets,
         )
         with pytest.raises(ValueError):
-            ds.write_contingency_tables()
+            ds.write_model_scores()
 
     def test_create_empty_metric_plots(
         self, training_config_001_bo002, training_input_001_bo002
@@ -424,25 +424,25 @@ class TestBuildModel:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
 
-    def test_write_contingency_tables(
+    def test_write_model_scores(
         self, training_config_001_bo002, training_input_001_bo002, test_output_dir
     ):
-        """write_contingency_tables produces a parquet per target."""
+        """write_model_scores produces a parquet per target."""
         ds = BuildModel(
             training_config_001_bo002,
             training_sets=training_input_001_bo002.training_sets,
             test_sets=training_input_001_bo002.test_sets,
         )
         output_paths = {
-            tgt: str(test_output_dir / f"test_test_contingency_{tgt}.parquet")
+            tgt: str(test_output_dir / f"test_test_model_scores_{tgt}.parquet")
             for tgt in TARGETS_NONEMPTY
         }
         for tgt in TARGETS_NONEMPTY:
-            ds.output_file_names["contingency_table"][tgt] = output_paths[tgt]
+            ds.output_file_names["model_scores"][tgt] = output_paths[tgt]
 
         ds.build_targets()
         ds.test_targets()
-        ds.write_contingency_tables()
+        ds.write_model_scores()
 
         for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])

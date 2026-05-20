@@ -99,14 +99,14 @@ class SklearnModelBase(ModelBase):
         Steps:
           1. Call :meth:`predict` to generate predictions on the test set.
           2. Call :meth:`create_report` to compute metrics.
-          3. Call :meth:`update_contingency_table` to store scores.
+          3. Call :meth:`update_model_score` to store scores.
           4. Call :meth:`calculate_shap` to compute feature importances (if enabled).
 
         :raises ValueError: If :attr:`test_set` is ``None``.
         """
         self.predict()
         self.create_report()
-        self.update_contingency_table()
+        self.update_model_score()
 
         if self.enable_shap:
             self.calculate_shap()

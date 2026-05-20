@@ -4,7 +4,7 @@ Exercises:
 - Identity, config wiring (step_name, output_file_names), base_model wiring
 - shap_flag forwarding (ClassifyAll honours the flag, like BuildModel does)
 - Default-XGBoost classification path: read default models, test_targets,
-  write reports/contingency tables/SHAP values/predictions, create metric
+  write reports/model-scores tables/SHAP values/predictions, create metric
   plots — plus all their empty-state ValueError counterparts.
 - Per-config behaviour: the three test_classify_*.yaml configs are exercised
   in parallel via the ``idx`` parametrize; ``test_n_jobs`` verifies each
@@ -124,8 +124,8 @@ class TestClassifyAllClass:
                 == f"{out_base}/classify_report_{tgt}.tsv"
             )
             assert (
-                str(ds.output_file_names["contingency_table"][tgt])
-                == f"{out_base}/classify_contingency_tables_{tgt}.parquet"
+                str(ds.output_file_names["model_scores"][tgt])
+                == f"{out_base}/classify_model_scores_{tgt}.parquet"
             )
             assert (
                 str(ds.output_file_names["metric_plot"][tgt])
@@ -217,7 +217,7 @@ class TestClassifyAll:
 
     @pytest.mark.parametrize("idx", range(3))
     def test_with_xgboost(self, idx, classify_pipeline_all, default_model_files):
-        """End-to-end: read_models + test_targets populates test_sets + contingency_tables."""
+        """End-to-end: read_models + test_targets populates test_sets + model_scores."""
         ds = ClassifyAll(
             classify_pipeline_all.configs[idx],
             test_sets=classify_pipeline_all.extracts[idx].target_features,
@@ -231,10 +231,10 @@ class TestClassifyAll:
             assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
 
-            assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            assert ds.contingency_tables[tgt].height == 2456
+            assert isinstance(ds.model_scores[tgt], pl.DataFrame)
+            assert ds.model_scores[tgt].height == 2456
 
-        assert ds.contingency_tables["temp"].columns == [
+        assert ds.model_scores["temp"].columns == [
             "k",
             "label",
             "predicted_label",
@@ -276,24 +276,24 @@ class TestClassifyAll:
             os.remove(output_paths[tgt])  # comment out to debug
 
     @pytest.mark.parametrize("idx", range(3))
-    def test_write_contingency_tables(
+    def test_write_model_scores(
         self, idx, classify_pipeline_all, default_model_files, test_output_dir
     ):
-        """write_contingency_tables produces a parquet per target."""
+        """write_model_scores produces a parquet per target."""
         ds = ClassifyAll(
             classify_pipeline_all.configs[idx],
             test_sets=classify_pipeline_all.extracts[idx].target_features,
         )
         ds.model_file_names = default_model_files
         output_paths = {
-            tgt: str(test_output_dir / f"test_classify_contingency_{tgt}.parquet")
+            tgt: str(test_output_dir / f"test_classify_model_scores_{tgt}.parquet")
             for tgt in TARGETS_NONEMPTY
         }
-        ds.output_file_names["contingency_table"] = output_paths
+        ds.output_file_names["model_scores"] = output_paths
 
         ds.read_models()
         ds.test_targets()
-        ds.write_contingency_tables()
+        ds.write_model_scores()
 
         for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
@@ -361,14 +361,14 @@ class TestClassifyAll:
             ds.write_reports()
 
     @pytest.mark.parametrize("idx", range(3))
-    def test_write_no_contingency_tables(self, idx, classify_pipeline_all):
-        """write_contingency_tables before test_targets raises ValueError."""
+    def test_write_no_model_scores(self, idx, classify_pipeline_all):
+        """write_model_scores before test_targets raises ValueError."""
         ds = ClassifyAll(
             classify_pipeline_all.configs[idx],
             test_sets=classify_pipeline_all.extracts[idx].target_features,
         )
         with pytest.raises(ValueError):
-            ds.write_contingency_tables()
+            ds.write_model_scores()
 
     @pytest.mark.parametrize("idx", range(3))
     def test_create_no_metric_plots(self, idx, classify_pipeline_all):
@@ -491,10 +491,10 @@ class TestModels:
             assert ds.test_sets[tgt].shape[0] == 2456
             assert ds.test_sets[tgt].shape[1] == 56
 
-            assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            assert ds.contingency_tables[tgt].height == 2456
+            assert isinstance(ds.model_scores[tgt], pl.DataFrame)
+            assert ds.model_scores[tgt].height == 2456
 
-        assert ds.contingency_tables["temp"].columns == [
+        assert ds.model_scores["temp"].columns == [
             "k",
             "label",
             "predicted_label",

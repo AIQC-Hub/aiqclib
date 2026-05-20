@@ -60,10 +60,10 @@ class ValidationBase(DataSetBase):
         """
         super().__init__(step_name="validate", config=config)
 
-        #: Default file naming pattern for validation reports and contingency tables.
+        #: Default file naming pattern for validation reports and model-scores tables.
         self.default_file_names: Dict[str, str] = {
             "report": "validation_report_{target_name}.tsv",
-            "contingency_table": "contingency_tables_{target_name}.parquet",
+            "model_scores": "model_scores_{target_name}.parquet",
             "metric_plot": "metric_plots_{target_name}.svg",
         }
 
@@ -91,8 +91,8 @@ class ValidationBase(DataSetBase):
         self.reports: Dict[str, pl.DataFrame] = {}
 
         #: A dictionary mapping each target name to a Polars DataFrame
-        #: of contingency tables (e.g., fold index, label, prediction score).
-        self.contingency_tables: Dict[str, pl.DataFrame] = {}
+        #: of model-scores tables (e.g., fold index, label, prediction score).
+        self.model_scores: Dict[str, pl.DataFrame] = {}
 
         #: A dictionary for storing any summarised metrics derived from :attr:`reports`.
         self.summarised_reports: Dict[str, pl.DataFrame] = {}
@@ -123,7 +123,7 @@ class ValidationBase(DataSetBase):
         Subclasses must implement the logic to use :attr:`training_sets`
         (and possibly :attr:`base_model` or :attr:`models`)
         to evaluate performance, store metrics in :attr:`reports` and
-        :attr:`contingency_tables`, etc.
+        :attr:`model_scores`, etc.
 
         :param target_name: The key identifying which target to validate.
         :type target_name: str
@@ -148,20 +148,20 @@ class ValidationBase(DataSetBase):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_csv(output_path, separator="\t")
 
-    def write_contingency_tables(self) -> None:
+    def write_model_scores(self) -> None:
         """
-        Write the contingency tables stored in :attr:`contingency_tables` to Parquet files.
+        Write the model-scores tables stored in :attr:`model_scores` to Parquet files.
 
-        Each target's contingency DataFrame is written to a file specified by
+        Each target's model_scores DataFrame is written to a file specified by
         :attr:`output_file_names`. Directories are created if they do not exist.
 
-        :raises ValueError: If :attr:`contingency_tables` is empty.
+        :raises ValueError: If :attr:`model_scores` is empty.
         """
-        if not self.contingency_tables:
-            raise ValueError("Member variable 'contingency_tables' must not be empty.")
+        if not self.model_scores:
+            raise ValueError("Member variable 'model_scores' must not be empty.")
 
-        for target_name, df in self.contingency_tables.items():
-            output_path = self.output_file_names["contingency_table"][target_name]
+        for target_name, df in self.model_scores.items():
+            output_path = self.output_file_names["model_scores"][target_name]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_parquet(output_path)
 

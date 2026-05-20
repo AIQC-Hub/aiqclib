@@ -7,7 +7,7 @@ Coverage spans the full life-cycle of a sklearn-wrapper model:
   empty test set raises ValueError
 - ``create_report``: computes overall_accuracy, balanced_accuracy, and
   classification_report metrics
-- ``test``: orchestrates predict → create_report → update_contingency_table;
+- ``test``: orchestrates predict → create_report → update_model_score;
   calls calculate_shap only if enable_shap is True (verified via MagicMock)
 - ``update_nthreads``: pushes ``model_params["n_jobs"]`` onto the underlying model
 - ``calculate_shap``: routes to TreeExplainer / LinearExplainer / KernelExplainer
@@ -266,20 +266,20 @@ class TestSklearnModelBase:
     # ----- test() workflow (MagicMock-based) -----
 
     def test_test_workflow_shap_disabled(self, model_wrapper):
-        """test() calls predict / create_report / update_contingency_table,
+        """test() calls predict / create_report / update_model_score,
         but skips calculate_shap when enable_shap is False."""
         model_wrapper.enable_shap = False
 
         model_wrapper.predict = MagicMock()
         model_wrapper.create_report = MagicMock()
-        model_wrapper.update_contingency_table = MagicMock()
+        model_wrapper.update_model_score = MagicMock()
         model_wrapper.calculate_shap = MagicMock()
 
         model_wrapper.test()
 
         model_wrapper.predict.assert_called_once()
         model_wrapper.create_report.assert_called_once()
-        model_wrapper.update_contingency_table.assert_called_once()
+        model_wrapper.update_model_score.assert_called_once()
         model_wrapper.calculate_shap.assert_not_called()
 
     def test_test_workflow_shap_enabled(self, model_wrapper):
@@ -288,7 +288,7 @@ class TestSklearnModelBase:
 
         model_wrapper.predict = MagicMock()
         model_wrapper.create_report = MagicMock()
-        model_wrapper.update_contingency_table = MagicMock()
+        model_wrapper.update_model_score = MagicMock()
         model_wrapper.calculate_shap = MagicMock()
 
         model_wrapper.test()

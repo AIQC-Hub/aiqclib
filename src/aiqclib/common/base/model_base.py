@@ -71,7 +71,7 @@ class ModelBase(ABC):
         self.model: Optional[Any] = None
         self.predictions: Optional[Any] = None
         self.report: Optional[Any] = None
-        self.contingency_table: Optional[pl.DataFrame] = None
+        self.model_score: Optional[pl.DataFrame] = None
         self.k: int = 0
         self.allow_na = True
 
@@ -168,15 +168,15 @@ class ModelBase(ABC):
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         dump(self.model, file_name)
 
-    def update_contingency_table(self) -> None:
+    def update_model_score(self) -> None:
         """
-        Updates the internal contingency table with the current test set predictions.
+        Updates the internal model-scores table with the current test set predictions.
 
         This method extracts the fold index (`k`), ground truth (`label`), and
         predicted probability (`score`) from the current test set and predictions.
-        The data is stored in the :attr:`contingency_table` attribute as a Polars DataFrame.
+        The data is stored in the :attr:`model_score` attribute as a Polars DataFrame.
 
-        If :attr:`contingency_table` is already populated (e.g., during cross-validation),
+        If :attr:`model_score` is already populated (e.g., during cross-validation),
         the new results are appended (vstacked) to the existing DataFrame.
 
         :raises ValueError: If :attr:`test_set` or :attr:`predictions` are ``None``.
@@ -198,10 +198,10 @@ class ModelBase(ABC):
         )
 
         # Append to the existing table if it exists, otherwise initialize it
-        if self.contingency_table is None:
-            self.contingency_table = current_data
+        if self.model_score is None:
+            self.model_score = current_data
         else:
-            self.contingency_table = self.contingency_table.vstack(current_data)
+            self.model_score = self.model_score.vstack(current_data)
 
     def __repr__(self) -> str:
         """

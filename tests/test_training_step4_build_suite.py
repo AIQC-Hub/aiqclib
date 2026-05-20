@@ -148,8 +148,8 @@ class TestBuildModelSuite:
                 == f"{out_base}/test_report_{tgt}.tsv"
             )
             assert (
-                str(ds.output_file_names["contingency_table"][tgt])
-                == f"{out_base}/test_contingency_tables_{tgt}.parquet"
+                str(ds.output_file_names["model_scores"][tgt])
+                == f"{out_base}/test_model_scores_{tgt}.parquet"
             )
             assert (
                 str(ds.output_file_names["shap_value"][tgt])
@@ -236,9 +236,9 @@ class TestBuildModelSuite:
 
         # Contingency tables aggregate the same way
         for tgt in TARGETS_NONEMPTY:
-            assert isinstance(ds.contingency_tables[tgt], pl.DataFrame)
-            assert "method" in ds.contingency_tables[tgt].columns
-            assert ds.contingency_tables[tgt].height == expected_pred_heights[tgt]
+            assert isinstance(ds.model_scores[tgt], pl.DataFrame)
+            assert "method" in ds.model_scores[tgt].columns
+            assert ds.model_scores[tgt].height == expected_pred_heights[tgt]
 
         # Reports include the 'method' column
         for tgt in TARGETS_NONEMPTY:
@@ -300,7 +300,7 @@ class TestBuildModelSuite:
         with pytest.raises(ValueError):
             ds.write_reports()
         with pytest.raises(ValueError):
-            ds.write_contingency_tables()
+            ds.write_model_scores()
         with pytest.raises(ValueError):
             ds.create_metric_plots()
         with pytest.raises(ValueError):
@@ -347,7 +347,7 @@ class TestBuildModelSuite:
         # (output_kind, filename_template) pairs. {tgt} substituted per target.
         output_specs = [
             ("report", "test_test_report_{tgt}.tsv"),
-            ("contingency_table", "test_test_contingency_{tgt}.parquet"),
+            ("model_scores", "test_test_model_scores_{tgt}.parquet"),
             ("shap_value", "test_test_shap_values_{tgt}.parquet"),
             ("prediction", "test_test_prediction_{tgt}.parquet"),
             ("metric_plot", "test_test_metric_plot_{tgt}.svg"),
@@ -366,7 +366,7 @@ class TestBuildModelSuite:
         ds.test_targets()
 
         ds.write_reports()
-        ds.write_contingency_tables()
+        ds.write_model_scores()
         ds.write_shap_values()
         ds.write_predictions()
         ds.create_metric_plots()

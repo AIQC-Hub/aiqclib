@@ -39,7 +39,7 @@ def train_and_evaluate(config: ConfigBase) -> None:
     ds_valid = load_step2_model_validation_class(config, ds_input.training_sets)
     ds_valid.process_targets()
     ds_valid.write_reports()
-    ds_valid.write_contingency_tables()
+    ds_valid.write_model_scores()
     ds_valid.create_metric_plots()
 
     # Step 4: Build and Test Model
@@ -49,7 +49,7 @@ def train_and_evaluate(config: ConfigBase) -> None:
     ds_build.build_targets()
     ds_build.test_targets()
     ds_build.write_reports()
-    ds_build.write_contingency_tables()
+    ds_build.write_model_scores()
     ds_build.create_metric_plots()
     if ds_build.base_model.enable_shap:
         ds_build.write_shap_values()
