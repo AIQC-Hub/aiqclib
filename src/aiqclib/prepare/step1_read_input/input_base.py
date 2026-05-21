@@ -13,6 +13,7 @@ import polars as pl
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
 from aiqclib.common.utils.file import read_input_file
+from aiqclib.common.utils.input_validation import validate_and_convert_input_columns
 
 
 class InputDataSetBase(DataSetBase):
@@ -61,8 +62,9 @@ class InputDataSetBase(DataSetBase):
         and uses :func:`aiqclib.common.utils.file.read_input_file` to read the file
         specified by :attr:`input_file_name`.
 
-        After reading the data, it optionally calls :meth:`rename_columns` and
-        :meth:`filter_rows` to modify the DataFrame.
+        After reading the data, it calls :meth:`rename_columns`,
+        :meth:`validate_input_columns` (which checks the mandatory columns and
+        corrects their types) and :meth:`filter_rows` to modify the DataFrame.
 
         :raises FileNotFoundError: If the specified file cannot be found.
         :raises polars.exceptions.NoDataError: If the file is empty or cannot be parsed.
@@ -76,6 +78,7 @@ class InputDataSetBase(DataSetBase):
 
         self.input_data = read_input_file(input_file, file_type, read_file_options)
         self.rename_columns()
+        self.validate_input_columns()
         self.filter_rows()
 
     def rename_columns(self) -> None:
@@ -94,6 +97,30 @@ class InputDataSetBase(DataSetBase):
             self.input_data = self.input_data.rename(
                 self.config.get_step_params("input")["rename_dict"]
             )
+
+    def validate_input_columns(self) -> None:
+        """
+        Validate mandatory input columns and correct their types in place.
+
+        Runs immediately after :meth:`rename_columns` so the final column names
+        are checked. It verifies that every column in
+        :data:`aiqclib.common.utils.input_validation.REQUIRED_INPUT_COLUMNS`
+        is present and, where a column's data type does not match the expected
+        type, attempts to convert it (helpful for TSV/CSV inputs whose numeric
+        and datetime columns are often read as strings).
+
+        Validation can be disabled by setting the optional input sub-step
+        ``validate_columns`` to ``false`` in the configuration; it is enabled by
+        default when the flag is absent.
+
+        :raises ValueError: If a required column is missing, or if a column's
+            type cannot be converted to the expected type.
+        """
+        sub_steps = self.config.get_step_params("input").get("sub_steps", {})
+        if not sub_steps.get("validate_columns", True):
+            return
+
+        self.input_data = validate_and_convert_input_columns(self.input_data)
 
     def filter_rows(self) -> None:
         """

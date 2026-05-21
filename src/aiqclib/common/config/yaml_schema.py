@@ -309,6 +309,8 @@ properties:
                       type: boolean
                     filter_rows:
                       type: boolean
+                    validate_columns:
+                      type: boolean
                   required:
                     - rename_columns
                     - filter_rows
@@ -940,6 +942,8 @@ properties:
                     rename_columns:
                       type: boolean
                     filter_rows:
+                      type: boolean
+                    validate_columns:
                       type: boolean
                   required:
                     - rename_columns
