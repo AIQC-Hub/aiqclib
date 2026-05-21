@@ -32,3 +32,11 @@ aiqclib.common.utils.metric\_plots module
    :members:
    :show-inheritance:
    :undoc-members:
+
+aiqclib.common.utils.normalization module
+-----------------------------------------
+
+.. automodule:: aiqclib.common.utils.normalization
+   :members:
+   :show-inheritance:
+   :undoc-members:

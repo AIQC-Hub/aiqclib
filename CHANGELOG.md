@@ -6,6 +6,13 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+### Added
+- Configurable threshold to predict labels
+- Extra normalization methods
+
+### Changed
+- Output format of model scores for performance evaluation
+
 ## [0.2.1] - 2026-05-19
 
 ### Changed
