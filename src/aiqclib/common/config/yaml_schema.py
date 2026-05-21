@@ -72,6 +72,14 @@ properties:
             step_folder_name:
               type: string
           additionalProperties: false
+        normalize:
+          type: object
+          properties:
+            base_path:
+              type: string
+            step_folder_name:
+              type: string
+          additionalProperties: false
       required:
         - name
         - common
@@ -216,6 +224,30 @@ properties:
             required:
               - name  
               - stats
+        auto_min_max:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
+        standard:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
       required:
         - name
       additionalProperties: false
@@ -307,6 +339,12 @@ properties:
                   type: boolean 
             split:
               type: object
+            normalize:
+              type: object
+              properties:
+                file_name:
+                  type: string
+              additionalProperties: false
           required:
             - input
             - summary
@@ -660,6 +698,14 @@ properties:
             step_folder_name:
               type: string
           additionalProperties: false
+        normalize:
+          type: object
+          properties:
+            base_path:
+              type: string
+            step_folder_name:
+              type: string
+          additionalProperties: false
       required:
         - name
         - common
@@ -804,6 +850,30 @@ properties:
             required:
               - name  
               - stats
+        auto_min_max:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
+        standard:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
       required:
         - name
       additionalProperties: false
@@ -902,6 +972,12 @@ properties:
               type: object
             concat:
               type: object
+            normalize:
+              type: object
+              properties:
+                file_name:
+                  type: string
+              additionalProperties: false
           required:
             - input
             - summary

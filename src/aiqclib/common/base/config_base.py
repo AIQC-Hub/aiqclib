@@ -439,18 +439,63 @@ class ConfigBase(ABC):
             for x in self.get_target_names()
         }
 
-    def update_feature_param_with_stats(self) -> None:
+    def update_feature_param_with_stats(
+        self, types: Optional[List[str]] = None
+    ) -> None:
         """
         Update feature parameters with corresponding summary statistics in-place.
 
+        For each feature whose ``stats_set.type`` is a scaling type (i.e. not
+        ``raw``), the resolved statistics are looked up in
+        :attr:`data`'s ``feature_stats_set`` (by name and type) and stored under
+        the feature's ``stats`` key, ready for use by the feature classes.
+
+        :param types: If provided, only resolve features whose ``stats_set.type``
+                      is in this list. This allows the manually-supplied
+                      ``min_max`` statistics to be resolved at configuration-load
+                      time while deferring the data-derived ``auto_min_max`` and
+                      ``standard`` statistics until after the summary statistics
+                      have been computed. If ``None``, every non-``raw`` feature
+                      is resolved (the historical behaviour).
+        :type types: Optional[List[str]]
         :return: None
         :rtype: NoneType
         """
         for x in self.data["feature_param_set"]["params"]:
-            if ("stats_set" in x) and (x["stats_set"]["type"] != "raw"):
-                x["stats"] = self.get_summary_stats(
-                    x["stats_set"]["name"], x["stats_set"]["type"]
-                )
+            if "stats_set" not in x:
+                continue
+            stats_type = x["stats_set"]["type"]
+            if stats_type == "raw":
+                continue
+            if types is not None and stats_type not in types:
+                continue
+            stats_name = x["stats_set"].get("name", x.get("feature"))
+            x["stats"] = self.get_summary_stats(stats_name, stats_type)
+
+    def get_normalization_file_name(
+        self, default_file_name: str = "normalization_stats.yaml"
+    ) -> str:
+        """
+        Resolve the full path of the normalization statistics file.
+
+        This file holds the data-derived normalization values (for
+        ``auto_min_max`` and ``standard`` features). It is written during
+        dataset preparation and read back during classification so that the
+        identical fitted normalization is applied without re-entering values.
+
+        The path is resolved through the standard step-path machinery using the
+        logical step name ``"normalize"``. The folder defaults to ``normalize``
+        and the file name can be overridden via
+        ``step_param_sets.steps.normalize.file_name`` in the configuration.
+
+        :param default_file_name: File name used when none is set in the config.
+        :type default_file_name: str
+        :return: The complete, normalized path to the normalization file.
+        :rtype: str
+        """
+        return self.get_full_file_name(
+            step_name="normalize", default_file_name=default_file_name
+        )
 
     def __repr__(self) -> str:
         """
