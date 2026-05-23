@@ -13,6 +13,7 @@ import polars as pl
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
 from aiqclib.common.utils.file import read_input_file
+from aiqclib.common.utils.input_preprocess import create_identifier_columns
 from aiqclib.common.utils.input_validation import validate_and_convert_input_columns
 
 
@@ -63,8 +64,10 @@ class InputDataSetBase(DataSetBase):
         specified by :attr:`input_file_name`.
 
         After reading the data, it calls :meth:`rename_columns`,
-        :meth:`validate_input_columns` (which checks the mandatory columns and
-        corrects their types) and :meth:`filter_rows` to modify the DataFrame.
+        :meth:`create_columns` (which derives ``profile_no`` / ``observation_no``
+        when enabled), :meth:`validate_input_columns` (which checks the mandatory
+        columns and corrects their types) and :meth:`filter_rows` to modify the
+        DataFrame.
 
         :raises FileNotFoundError: If the specified file cannot be found.
         :raises polars.exceptions.NoDataError: If the file is empty or cannot be parsed.
@@ -78,6 +81,7 @@ class InputDataSetBase(DataSetBase):
 
         self.input_data = read_input_file(input_file, file_type, read_file_options)
         self.rename_columns()
+        self.create_columns()
         self.validate_input_columns()
         self.filter_rows()
 
@@ -97,6 +101,36 @@ class InputDataSetBase(DataSetBase):
             self.input_data = self.input_data.rename(
                 self.config.get_step_params("input")["rename_dict"]
             )
+
+    def create_columns(self) -> None:
+        """
+        Derive the ``profile_no`` / ``observation_no`` identifier columns.
+
+        Runs after :meth:`rename_columns` and before
+        :meth:`validate_input_columns`, so the created columns are subsequently
+        validated. It is enabled by setting the optional input sub-step
+        ``create_columns`` to ``true`` (it is disabled by default, so inputs that
+        already provide these identifiers are never overwritten unintentionally).
+
+        The behaviour is tuned via the optional ``create_column_dict`` input
+        parameter, which may contain ``key_columns`` (columns that identify a
+        profile), ``sort_columns`` (ordering before numbering) and ``columns``
+        (which identifiers to create). Missing keys fall back to the documented
+        defaults.
+
+        :raises ValueError: If a required source column is missing.
+        """
+        input_params = self.config.get_step_params("input")
+        if not input_params.get("sub_steps", {}).get("create_columns", False):
+            return
+
+        create_params = input_params.get("create_column_dict", {})
+        self.input_data = create_identifier_columns(
+            self.input_data,
+            key_columns=create_params.get("key_columns"),
+            sort_columns=create_params.get("sort_columns"),
+            columns=create_params.get("columns"),
+        )
 
     def validate_input_columns(self) -> None:
         """

@@ -60,7 +60,7 @@ def test_auto_conversion_from_string_like_inputs():
     df = pl.DataFrame(
         {
             "platform_code": [1, 2],  # int -> text
-            "profile_no": ["10", "11"],  # str -> int
+            "profile_no": ["10", "11"],  # str -> integer
             "profile_timestamp": [
                 "2020-01-02 03:04:05",
                 "2021-06-07 08:09:10",

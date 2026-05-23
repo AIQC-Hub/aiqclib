@@ -311,6 +311,8 @@ properties:
                       type: boolean
                     validate_columns:
                       type: boolean
+                    create_columns:
+                      type: boolean
                   required:
                     - rename_columns
                     - filter_rows
@@ -323,6 +325,16 @@ properties:
                     remove_years:
                       type: array
                     keep_years:
+                      type: array
+                  additionalProperties: false
+                create_column_dict:
+                  type: object
+                  properties:
+                    key_columns:
+                      type: array
+                    sort_columns:
+                      type: array
+                    columns:
                       type: array
                   additionalProperties: false
               required:
@@ -945,6 +957,8 @@ properties:
                       type: boolean
                     validate_columns:
                       type: boolean
+                    create_columns:
+                      type: boolean
                   required:
                     - rename_columns
                     - filter_rows
@@ -957,6 +971,16 @@ properties:
                     remove_years:
                       type: array
                     keep_years:
+                      type: array
+                  additionalProperties: false
+                create_column_dict:
+                  type: object
+                  properties:
+                    key_columns:
+                      type: array
+                    sort_columns:
+                      type: array
+                    columns:
                       type: array
                   additionalProperties: false
               required:
