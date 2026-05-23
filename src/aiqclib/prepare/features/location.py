@@ -11,6 +11,7 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+from aiqclib.common.utils.normalization import is_scaling_type, scale_flat_columns
 
 
 class LocationFeat(FeatureBase):
@@ -91,14 +92,18 @@ class LocationFeat(FeatureBase):
 
     def scale_second(self) -> None:
         """
-        Apply a min-max scaling pass to each feature (column) specified in
-        :attr:`feature_info["stats"]`.
+        Apply scaling to each location feature column according to the
+        normalization type in :attr:`feature_info["stats_set"]["type"]`.
 
-        :returns: None. Scaling is applied in-place to the :attr:`features` DataFrame.
+        ``min_max``/``auto_min_max`` apply min-max scaling and ``standard``
+        applies standard scaling, both using :attr:`feature_info["stats"]`.
+        ``raw`` leaves the columns unchanged.
+
+        :returns: None. Scaling is applied to the :attr:`features` DataFrame.
         :rtype: None
         """
-        if self.feature_info["stats_set"]["type"] == "min_max":
-            for k, v in self.feature_info["stats"].items():
-                self.features = self.features.with_columns(
-                    ((pl.col(k) - v["min"]) / (v["max"] - v["min"])).alias(k)
-                )
+        stats_type = self.feature_info.get("stats_set", {}).get("type", "raw")
+        if is_scaling_type(stats_type) and self.feature_info.get("stats"):
+            self.features = scale_flat_columns(
+                self.features, self.feature_info["stats"], stats_type
+            )

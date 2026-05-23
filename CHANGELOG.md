@@ -6,6 +6,17 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-23
+### Added
+- Configurable threshold for predicting labels
+- Extra normalization methods (auto_min_max, standard)
+- Automatic input-column validation and type correction
+- Automatic creation of profile_no / observation_no
+- SHAP score import utility (read_shap_scores)
+
+### Changed
+- Output format of model scores for performance evaluation
+
 ## [0.2.1] - 2026-05-19
 
 ### Changed

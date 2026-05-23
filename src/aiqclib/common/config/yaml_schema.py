@@ -72,6 +72,14 @@ properties:
             step_folder_name:
               type: string
           additionalProperties: false
+        normalize:
+          type: object
+          properties:
+            base_path:
+              type: string
+            step_folder_name:
+              type: string
+          additionalProperties: false
       required:
         - name
         - common
@@ -216,6 +224,30 @@ properties:
             required:
               - name  
               - stats
+        auto_min_max:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
+        standard:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
       required:
         - name
       additionalProperties: false
@@ -277,6 +309,10 @@ properties:
                       type: boolean
                     filter_rows:
                       type: boolean
+                    validate_columns:
+                      type: boolean
+                    create_columns:
+                      type: boolean
                   required:
                     - rename_columns
                     - filter_rows
@@ -289,6 +325,16 @@ properties:
                     remove_years:
                       type: array
                     keep_years:
+                      type: array
+                  additionalProperties: false
+                create_column_dict:
+                  type: object
+                  properties:
+                    key_columns:
+                      type: array
+                    sort_columns:
+                      type: array
+                    columns:
                       type: array
                   additionalProperties: false
               required:
@@ -307,6 +353,12 @@ properties:
                   type: boolean 
             split:
               type: object
+            normalize:
+              type: object
+              properties:
+                file_name:
+                  type: string
+              additionalProperties: false
           required:
             - input
             - summary
@@ -660,6 +712,14 @@ properties:
             step_folder_name:
               type: string
           additionalProperties: false
+        normalize:
+          type: object
+          properties:
+            base_path:
+              type: string
+            step_folder_name:
+              type: string
+          additionalProperties: false
       required:
         - name
         - common
@@ -804,6 +864,30 @@ properties:
             required:
               - name  
               - stats
+        auto_min_max:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
+        standard:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              stats:
+                type: object    
+            required:
+              - name  
+              - stats
       required:
         - name
       additionalProperties: false
@@ -871,6 +955,10 @@ properties:
                       type: boolean
                     filter_rows:
                       type: boolean
+                    validate_columns:
+                      type: boolean
+                    create_columns:
+                      type: boolean
                   required:
                     - rename_columns
                     - filter_rows
@@ -883,6 +971,16 @@ properties:
                     remove_years:
                       type: array
                     keep_years:
+                      type: array
+                  additionalProperties: false
+                create_column_dict:
+                  type: object
+                  properties:
+                    key_columns:
+                      type: array
+                    sort_columns:
+                      type: array
+                    columns:
                       type: array
                   additionalProperties: false
               required:
@@ -902,6 +1000,12 @@ properties:
               type: object
             concat:
               type: object
+            normalize:
+              type: object
+              properties:
+                file_name:
+                  type: string
+              additionalProperties: false
           required:
             - input
             - summary

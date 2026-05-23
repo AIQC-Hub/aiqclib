@@ -9,6 +9,7 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+from aiqclib.common.utils.normalization import is_scaling_type, scale_flat_columns
 
 
 class FlankDown(FeatureBase):
@@ -209,13 +210,11 @@ class FlankDown(FeatureBase):
         :return: None
         :rtype: None
         """
-        if self.feature_info["stats_set"]["type"] == "min_max":
-            for col_name, v in self.feature_info["stats"].items():
-                self.filtered_input = self.filtered_input.with_columns(
-                    ((pl.col(col_name) - v["min"]) / (v["max"] - v["min"])).alias(
-                        col_name
-                    )
-                )
+        stats_type = self.feature_info.get("stats_set", {}).get("type", "raw")
+        if is_scaling_type(stats_type) and self.feature_info.get("stats"):
+            self.filtered_input = scale_flat_columns(
+                self.filtered_input, self.feature_info["stats"], stats_type
+            )
 
     def scale_second(self) -> None:
         """

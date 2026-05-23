@@ -9,6 +9,7 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+from aiqclib.common.utils.normalization import is_scaling_type, scale_nested_columns
 
 
 class ProfileSummaryStats(FeatureBase):
@@ -132,19 +133,16 @@ class ProfileSummaryStats(FeatureBase):
 
     def scale_second(self) -> None:
         """
-        Min-max scale the newly joined summary statistics based on :attr:`feature_info`.
+        Scale the newly joined summary statistics based on :attr:`feature_info`.
 
-        Transforms columns named "{variable}_{metric}" using the min/max values
-        provided in the configuration.
+        Transforms columns named ``{variable}_{metric}`` according to the
+        normalization type in ``feature_info["stats_set"]["type"]``:
+        ``min_max``/``auto_min_max`` apply min-max scaling and ``standard``
+        applies standard scaling, using the nested values in
+        :attr:`feature_info["stats"]`. ``raw`` leaves the columns unchanged.
         """
-        if self.feature_info["stats_set"]["type"] == "min_max":
-            columns_to_add = [
-                (
-                    (pl.col(f"{col_name}_{stat_name}") - scale_info["min"])
-                    / (scale_info["max"] - scale_info["min"])
-                ).alias(f"{col_name}_{stat_name}")
-                for col_name, variable_stats in self.feature_info["stats"].items()
-                for stat_name, scale_info in variable_stats.items()
-            ]
-
-            self.features = self.features.with_columns(columns_to_add)
+        stats_type = self.feature_info.get("stats_set", {}).get("type", "raw")
+        if is_scaling_type(stats_type) and self.feature_info.get("stats"):
+            self.features = scale_nested_columns(
+                self.features, self.feature_info["stats"], stats_type
+            )

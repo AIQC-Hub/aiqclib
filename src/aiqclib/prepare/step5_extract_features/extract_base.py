@@ -13,6 +13,14 @@ import polars as pl
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
 from aiqclib.common.loader.feature_loader import load_feature_class
+from aiqclib.common.utils.normalization import (
+    AUTO_SCALING_TYPES,
+    aggregate_profile_stats,
+    derive_observation_stats,
+    derive_profile_stats,
+    read_normalization_file,
+    write_normalization_file,
+)
 
 
 class ExtractFeatureBase(DataSetBase):
@@ -25,6 +33,13 @@ class ExtractFeatureBase(DataSetBase):
     compose feature extraction steps. The extracted features, once generated,
     can be written to Parquet files.
     """
+
+    #: Determines how data-derived normalization (``auto_min_max`` / ``standard``)
+    #: is handled. ``"fit"`` (the preparation default) derives the normalization
+    #: values from the dataset's summary statistics and writes them to the
+    #: normalization file. ``"apply"`` (used at classification time) loads those
+    #: previously-fitted values from the file instead. Subclasses override this.
+    normalization_role: str = "fit"
 
     def __init__(
         self,
@@ -105,12 +120,139 @@ class ExtractFeatureBase(DataSetBase):
         """
         Generate features for all targets found in the configuration.
 
-        Iterates over each target name returned by
-        :meth:`~aiqclib.common.base.config_base.ConfigBase.get_target_names`
-        and calls :meth:`extract_target_features` on them.
+        Data-derived normalization is resolved first (see
+        :meth:`apply_normalization`), then features are generated for each
+        target name returned by
+        :meth:`~aiqclib.common.base.config_base.ConfigBase.get_target_names`.
         """
+        self.apply_normalization()
         for target_name in self.config.get_target_names():
             self.extract_target_features(target_name)
+
+    def _auto_normalization_features(self) -> list[Dict]:
+        """
+        Return the feature parameters that use data-derived normalization.
+
+        These are the features whose ``stats_set.type`` is ``auto_min_max`` or
+        ``standard`` (the types whose values are computed from data rather than
+        supplied directly in the configuration).
+
+        :returns: A list of feature-parameter dictionaries.
+        :rtype: list[Dict]
+        """
+        return [
+            param
+            for param in self.feature_info
+            if param.get("stats_set", {}).get("type") in AUTO_SCALING_TYPES
+        ]
+
+    def apply_normalization(self) -> None:
+        """
+        Resolve and inject data-derived normalization statistics.
+
+        When at least one feature uses ``auto_min_max`` or ``standard``:
+
+        - in ``"fit"`` mode (dataset preparation) the statistics are derived
+          from :attr:`summary_stats` and written to the normalization file;
+        - in ``"apply"`` mode (classification) the statistics are read back from
+          the normalization file produced during preparation.
+
+        In both cases the resolved statistics are injected into the feature
+        parameters so the feature classes can scale their columns. Features that
+        only use ``raw`` or manual ``min_max`` are unaffected (and, if no feature
+        uses a data-derived type, this method does nothing).
+
+        :returns: None
+        :rtype: None
+        """
+        auto_features = self._auto_normalization_features()
+        if not auto_features:
+            return
+
+        if self.normalization_role == "apply":
+            self._load_normalization()
+        else:
+            self._fit_normalization(auto_features)
+
+        self.config.update_feature_param_with_stats(types=list(AUTO_SCALING_TYPES))
+
+    def _fit_normalization(self, auto_features: list[Dict]) -> None:
+        """
+        Derive normalization statistics from summary stats and persist them.
+
+        For each ``auto_min_max`` / ``standard`` feature, the relevant statistics
+        are derived from :attr:`summary_stats` (observation-level for features
+        based on raw variables, across-profile for ``profile_summary_stats``),
+        stored on the configuration's ``feature_stats_set`` and written to the
+        normalization file.
+
+        :param auto_features: The feature parameters using data-derived types.
+        :type auto_features: list[Dict]
+        :raises ValueError: If :attr:`summary_stats` is not available.
+        :returns: None
+        :rtype: None
+        """
+        if self.summary_stats is None:
+            raise ValueError(
+                "Summary statistics are required to fit 'auto_min_max' or "
+                "'standard' normalization but were not provided."
+            )
+
+        resolved: Dict[str, Dict[str, Dict]] = {}
+        profile_stats_long = None
+
+        for param in auto_features:
+            stats_type = param["stats_set"]["type"]
+            stats_name = param["stats_set"].get("name", param.get("feature"))
+            col_names = param.get("col_names", [])
+
+            if "summary_stats_names" in param:
+                # Features built from per-profile statistics need the
+                # across-profile distribution of each statistic.
+                if profile_stats_long is None:
+                    profile_stats_long = aggregate_profile_stats(self.summary_stats)
+                stats = derive_profile_stats(
+                    profile_stats_long,
+                    col_names,
+                    param["summary_stats_names"],
+                    stats_type,
+                )
+            else:
+                stats = derive_observation_stats(
+                    self.summary_stats, col_names, stats_type
+                )
+
+            resolved.setdefault(stats_type, {})[stats_name] = stats
+
+        feature_stats_set = self.config.data["feature_stats_set"]
+        for stats_type, entries in resolved.items():
+            feature_stats_set[stats_type] = [
+                {"name": name, "stats": stats} for name, stats in entries.items()
+            ]
+
+        write_normalization_file(
+            self.config.get_normalization_file_name(),
+            feature_stats_set.get("name", "normalization"),
+            resolved,
+        )
+
+    def _load_normalization(self) -> None:
+        """
+        Load previously-fitted normalization statistics from the file.
+
+        The data-derived sections (``auto_min_max`` / ``standard``) of the
+        normalization file are merged into the configuration's
+        ``feature_stats_set``. Any manual ``min_max`` section already present in
+        the configuration is left untouched.
+
+        :returns: None
+        :rtype: None
+        """
+        loaded = read_normalization_file(self.config.get_normalization_file_name())
+        feature_stats_set = self.config.data["feature_stats_set"]
+        for stats_type in AUTO_SCALING_TYPES:
+            if stats_type in loaded:
+                feature_stats_set[stats_type] = loaded[stats_type]
 
     def extract_target_features(self, target_name: str) -> None:
         """

@@ -96,4 +96,7 @@ class ClassificationConfig(ConfigBase):
         self.data["step_param_set"] = get_config_item(
             self.full_config, "step_param_sets", self.data["step_param_set"]
         )
-        self.update_feature_param_with_stats()
+        # Resolve only the manually-supplied ``min_max`` statistics here.
+        # ``auto_min_max`` and ``standard`` are data-derived and are
+        # resolved later, once the summary statistics are available.
+        self.update_feature_param_with_stats(types=["min_max"])

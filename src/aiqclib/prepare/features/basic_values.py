@@ -11,6 +11,7 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+from aiqclib.common.utils.normalization import is_scaling_type, scale_flat_columns
 
 
 class BasicValues(FeatureBase):
@@ -124,17 +125,17 @@ class BasicValues(FeatureBase):
         """
         Apply a pre-feature-extraction scaling step on :attr:`filtered_input`.
 
-        This method performs min-max scaling derived from
-        :attr:`feature_info["stats"]` for each relevant column,
-        modifying :attr:`filtered_input` in place.
+        This normalizes each relevant raw input column in place according to the
+        normalization type declared in ``feature_info["stats_set"]["type"]``:
+        ``min_max``/``auto_min_max`` apply min-max scaling and ``standard``
+        applies standard scaling, both using the values in
+        :attr:`feature_info["stats"]`. ``raw`` leaves the data untouched.
         """
-        if self.feature_info["stats_set"]["type"] == "min_max":
-            for col_name, v in self.feature_info["stats"].items():
-                self.filtered_input = self.filtered_input.with_columns(
-                    ((pl.col(col_name) - v["min"]) / (v["max"] - v["min"])).alias(
-                        col_name
-                    )
-                )
+        stats_type = self.feature_info.get("stats_set", {}).get("type", "raw")
+        if is_scaling_type(stats_type) and self.feature_info.get("stats"):
+            self.filtered_input = scale_flat_columns(
+                self.filtered_input, self.feature_info["stats"], stats_type
+            )
 
     def scale_second(self) -> None:
         """

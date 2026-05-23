@@ -31,7 +31,7 @@ To select an algorithm, set the ``model`` key in ``step_class_sets`` to the algo
 To customize the hyperparameters for your selected algorithm, add them to the ``model`` step within ``step_param_sets``.
 
 Training Configuration Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
    :emphasize-lines: 6, 14
@@ -53,7 +53,7 @@ Training Configuration Example
           build: { }
 
 Classification Configuration Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
    :emphasize-lines: 9
@@ -71,7 +71,8 @@ Classification Configuration Example
           concat: ConcatDataSetAll
 
 Imputation
------------------
+----------
+
 As non-tree-based machine learning methods do not accept NaN values, missing values are automatically imputed using ``SimpleImputer(strategy="median")`` provided by `scikit-learn <https://scikit-learn.org>`_ during the training phase.
 
 During the classification phase, instances containing NaN values in their features are handled such that non-tree-based models output a class value of 0 and a score of 0.
@@ -92,7 +93,7 @@ In addition, the ``ModelSuite`` class requires specific counterpart classes for 
 * ``ConcatDataSetSuite`` for the final result concatenation
 
 Training Configuration Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
    :emphasize-lines: 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22
@@ -122,7 +123,7 @@ Training Configuration Example
           build: { }
 
 Classification Configuration Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
    :emphasize-lines: 9, 10, 11, 21
@@ -265,7 +266,7 @@ XGBoost (XGB)
      - Number of parallel threads used to run XGBoost.
 
 Logistic Regression (Logit)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 25 20 55
@@ -274,21 +275,24 @@ Logistic Regression (Logit)
    * - Parameter
      - Default
      - Description
-   * - ``penalty``
-     - ``"l2"``
-     - Specifies the norm of the penalty used in regularization.
+   * - ``l1_ratio``
+     - ``0``
+     - Elastic-Net mixing parameter; only used when ``penalty`` is ``"elasticnet"``.
    * - ``C``
      - ``1.0``
      - Inverse of regularization strength; smaller values specify stronger regularization.
    * - ``solver``
      - ``"lbfgs"``
      - Algorithm to use in the optimization problem.
+   * - ``class_weight``
+     - ``"balanced"``
+     - Weights associated with classes (e.g., ``"balanced"``).
    * - ``max_iter``
      - ``200``
      - Maximum number of iterations taken for the solvers to converge.
 
 Linear Discriminant Analysis (LDA)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 25 20 55
@@ -317,7 +321,7 @@ Linear Discriminant Analysis (LDA)
      - Absolute threshold for a singular value of X to be considered significant.
 
 Support Vector Machine (SVM)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 25 20 55
@@ -366,7 +370,7 @@ Gaussian Naive Bayes (GNB)
      - Portion of the largest variance of all features added to variances for calculation stability.
 
 K-Nearest Neighbors (KNN)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 25 20 55
@@ -398,7 +402,7 @@ K-Nearest Neighbors (KNN)
      - The number of parallel jobs to run for neighbors search.
 
 Multilayer Perceptron (MLP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :widths: 25 20 55

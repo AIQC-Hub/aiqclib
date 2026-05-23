@@ -28,6 +28,10 @@ class ExtractDataSetAll(ExtractFeatureBase):
 
     expected_class_name: str = "ExtractDataSetAll"
 
+    #: At classification time, normalization values are loaded from the file
+    #: produced during preparation rather than re-derived from data.
+    normalization_role: str = "apply"
+
     def __init__(
         self,
         config: ConfigBase,

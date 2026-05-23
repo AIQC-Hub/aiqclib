@@ -175,7 +175,7 @@ class TestSummaryDataSetA:
         ds.calculate_stats()
         ds.create_summary_stats_profile()
         assert ds.summary_stats_profile.shape[0] == 27
-        assert ds.summary_stats_profile.shape[1] == 6
+        assert ds.summary_stats_profile.shape[1] == 7
 
     @pytest.mark.parametrize("idx", range(2))
     def test_summary_stats_profile_without_stats_ds(self, idx, step2_setup):

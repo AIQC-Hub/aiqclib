@@ -14,6 +14,7 @@ import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
+from aiqclib.common.utils.normalization import aggregate_profile_stats
 
 
 class SummaryStatsBase(DataSetBase):
@@ -232,21 +233,4 @@ class SummaryStatsBase(DataSetBase):
         if self.summary_stats is None:
             raise ValueError("Member variable 'summary_stats' must not be empty.")
 
-        self.summary_stats_profile = (
-            self.summary_stats.filter(
-                (pl.col("platform_code") != "all")
-                & ~pl.col("variable").is_in(["longitude", "latitude"])
-            )
-            .unpivot(
-                index=["platform_code", "profile_no", "variable"], variable_name="stats"
-            )
-            .group_by(["variable", "stats"])
-            .agg(
-                min=pl.col("value").min(),
-                mean=pl.col("value").mean(),
-                pct97_5=pl.col("value").quantile(0.975),
-                max=pl.col("value").max(),
-            )
-            .rename({"pct97_5": "pct97.5"})
-            .sort(["variable", "stats"])
-        )
+        self.summary_stats_profile = aggregate_profile_stats(self.summary_stats)

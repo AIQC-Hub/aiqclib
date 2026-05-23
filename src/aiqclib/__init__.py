@@ -21,6 +21,7 @@ from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
 from aiqclib.interface.config import write_config_template
 from aiqclib.interface.prepare import create_training_dataset
+from aiqclib.interface.shap_io import read_shap_scores
 from aiqclib.interface.stats import format_summary_stats
 from aiqclib.interface.stats import get_summary_stats
 from aiqclib.interface.train import train_and_evaluate
@@ -32,5 +33,6 @@ __all__ = [
     "create_training_dataset",
     "format_summary_stats",
     "get_summary_stats",
+    "read_shap_scores",
     "train_and_evaluate",
 ]
