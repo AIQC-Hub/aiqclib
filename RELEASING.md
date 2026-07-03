@@ -1,8 +1,8 @@
 # Releasing (for Maintainers)
 
 This document covers the release process, documentation builds, and deployment.
-For general development setup, tests, and linting, see the
-[Contributing & Development](README.md#contributing--development) section of the README.
+For general development setup, tests, and linting, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Release Checklist
 
