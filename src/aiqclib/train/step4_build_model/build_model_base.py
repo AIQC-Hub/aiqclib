@@ -204,6 +204,9 @@ class BuildModelBase(DataSetBase):
             raise ValueError("Member variable 'reports' must not be empty.")
 
         for target_name, df in self.reports.items():
+            if df is None:
+                # Label-free (skip_evaluation) target: no report to write.
+                continue
             output_path = self.output_file_names["report"][target_name]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_csv(output_path, separator="\t")
@@ -219,6 +222,9 @@ class BuildModelBase(DataSetBase):
             raise ValueError("Member variable 'model_scores' must not be empty.")
 
         for target_name, df in self.model_scores.items():
+            if df is None:
+                # Label-free (skip_evaluation) target: no model scores to write.
+                continue
             output_path = self.output_file_names["model_scores"][target_name]
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             df.write_parquet(output_path)

@@ -81,10 +81,37 @@ class LocateDataSetAll(LocatePositionBase):
                              positive flag values, and negative flag values.
         :type target_value: Dict
         :raises ValueError: If :attr:`input_data` is None when this method is called.
-        :raises KeyError: If 'flag' is not present in target_value.
+        :raises polars.exceptions.ColumnNotFoundError: If a non-empty ``flag``
+            column name is given but absent from the input data.
         """
         if self.input_data is None:
             raise ValueError("Member variable 'input_data' must not be empty.")
+
+        if self.config.get_skip_evaluation(target_name):
+            # Label-free path: no QC flag is required. Keep every row and emit
+            # null ``flag``/``label`` so the downstream output schema is
+            # unchanged while performance evaluation is skipped in later steps.
+            self.selected_rows[target_name] = (
+                self.input_data.with_row_index("row_id", offset=1)
+                .with_columns(
+                    pl.lit(0, dtype=pl.UInt32).alias("profile_id"),
+                    pl.lit("").alias("pair_id"),
+                    pl.lit(None, dtype=pl.Int64).alias("flag"),
+                    pl.lit(None, dtype=pl.Int64).alias("label"),
+                )
+                .select(
+                    pl.col("row_id"),
+                    pl.col("profile_id"),
+                    pl.col("platform_code"),
+                    pl.col("profile_no"),
+                    pl.col("observation_no"),
+                    pl.col("pres"),
+                    pl.col("flag"),
+                    pl.col("label"),
+                    pl.col("pair_id"),
+                )
+            )
+            return
 
         pos_flag_values = target_value.get("pos_flag_values", [4])
         neg_flag_values = target_value.get("neg_flag_values", [1])

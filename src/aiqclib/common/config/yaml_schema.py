@@ -741,16 +741,13 @@ properties:
               name:
                 type: string
               flag:
-                type: string
+                type: [string, "null"]
               pos_flag_values:
                 type: array
               neg_flag_values:
                 type: array
             required:
               - name
-              - flag
-              - pos_flag_values
-              - neg_flag_values
             additionalProperties: false
       required:
         - name

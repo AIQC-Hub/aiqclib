@@ -75,6 +75,12 @@ class ModelBase(ABC):
         self.k: int = 0
         self.allow_na = True
 
+        # When True, :meth:`test` runs prediction only and skips performance
+        # evaluation (report + model scores). Defaults to False so the training
+        # pipeline is unaffected; the classification pipeline sets it per target
+        # via ``config.get_skip_evaluation`` for label-free datasets.
+        self.skip_evaluation: bool = False
+
         # Check config to see if SHAP should be calculated
         self.enable_shap: bool = self.config.get_step_params("model").get(
             "calculate_shap", False

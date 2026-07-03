@@ -46,6 +46,9 @@ def create_metric_plots(model) -> None:
         raise ValueError("Member variable 'model_scores' must not be empty.")
 
     for target_name, df in model.model_scores.items():
+        if df is None:
+            # Label-free (skip_evaluation) target: nothing to plot.
+            continue
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -225,6 +228,9 @@ def create_multi_method_metric_plots(model) -> None:
         raise ValueError("Member variable 'model_scores' must not be empty.")
 
     for target_name, df in model.model_scores.items():
+        if df is None:
+            # Label-free (skip_evaluation) target: nothing to plot.
+            continue
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
