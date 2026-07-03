@@ -13,7 +13,6 @@ import pytest
 
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.utils.input_validation import (
-    REQUIRED_INPUT_COLUMNS,
     required_column_names,
     validate_and_convert_input_columns,
 )
@@ -90,7 +89,9 @@ def test_auto_conversion_from_string_like_inputs():
 
 def test_date_is_promoted_to_datetime():
     df = _good_frame().with_columns(
-        pl.Series("profile_timestamp", [date(2020, 1, 1), date(2020, 1, 2)], dtype=pl.Date)
+        pl.Series(
+            "profile_timestamp", [date(2020, 1, 1), date(2020, 1, 2)], dtype=pl.Date
+        )
     )
     out = validate_and_convert_input_columns(df)
     assert isinstance(out.schema["profile_timestamp"], pl.Datetime)
@@ -160,9 +161,9 @@ def test_input_step_validates_after_rename():
 
 def test_input_step_validation_can_be_disabled():
     config = _config()
-    config.get_step_params("input").setdefault("sub_steps", {})[
-        "validate_columns"
-    ] = False
+    config.get_step_params("input").setdefault("sub_steps", {})["validate_columns"] = (
+        False
+    )
 
     extractor = InputDataSetA(config)
     # 'pres' deliberately stays an int; with validation off it must be untouched.

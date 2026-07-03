@@ -13,7 +13,6 @@ import pytest
 
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.utils.input_preprocess import create_identifier_columns
-from aiqclib.common.utils.input_validation import validate_and_convert_input_columns
 from aiqclib.prepare.step1_read_input.dataset_a import InputDataSetA
 
 
@@ -51,15 +50,17 @@ def test_creates_both_identifier_columns():
     assert sorted(
         out.filter(pl.col("platform_code") == "A")["profile_no"].unique().to_list()
     ) == [1, 2]
-    assert out.filter(pl.col("platform_code") == "B")["profile_no"].unique().to_list() == [1]
+    assert out.filter(pl.col("platform_code") == "B")[
+        "profile_no"
+    ].unique().to_list() == [1]
 
 
 def test_observation_no_is_one_indexed_and_pressure_ordered():
     out = create_identifier_columns(_raw_frame())
     # Profile A/1 had pres 2.0 and 1.0; after numbering, obs 1 -> pres 1.0.
-    a1 = out.filter((pl.col("platform_code") == "A") & (pl.col("profile_no") == 1)).sort(
-        "observation_no"
-    )
+    a1 = out.filter(
+        (pl.col("platform_code") == "A") & (pl.col("profile_no") == 1)
+    ).sort("observation_no")
     assert a1["observation_no"].to_list() == [1, 2]
     assert a1["pres"].to_list() == [1.0, 2.0]
 

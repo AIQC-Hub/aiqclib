@@ -56,3 +56,11 @@ aiqclib.common.utils.normalization module
    :members:
    :show-inheritance:
    :undoc-members:
+
+aiqclib.common.utils.shap\_io module
+------------------------------------
+
+.. automodule:: aiqclib.common.utils.shap_io
+   :members:
+   :show-inheritance:
+   :undoc-members:
