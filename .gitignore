@@ -35,3 +35,6 @@ conda/.cache
 docs/build/
 tests/data/
 test-data.zip
+
+# Personal, machine-local Claude Code instructions (not shared)
+CLAUDE.local.md

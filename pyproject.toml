@@ -38,11 +38,11 @@ dev = [
     "sphinx-tabs>=3.4.7",
 ]
 
-[tool.setuptools]
-include-package-data = true
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiqclib"]
 
-[tool.setuptools.package-data]
-"" = ["CHANGELOG.md"]
-
-[tool.setuptools.packages.find]
-exclude = ["tests*"]
+# Bundle CHANGELOG.md into the installed package.
+# (Replaces tool.setuptools include-package-data + package-data. Tests live
+#  outside src/, so the src/ layout already keeps them out of the wheel.)
+[tool.hatch.build.targets.wheel.force-include]
+"CHANGELOG.md" = "aiqclib/CHANGELOG.md"
