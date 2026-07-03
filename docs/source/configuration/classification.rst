@@ -168,6 +168,7 @@ This section provides general parameters for the workflow processes defined in `
 *   **steps.input.filter_method_dict.keep_years**: Specifies a list of years from which data should be kept for classification. Other years will be excluded.
 *   **steps.input.rename_dict**: Dictionary for renaming columns during input processing.
 *   **steps.model.calculate_shap**: This is used to control SHAP value calculation.
+*   **steps.model.skip_evaluation**: An optional boolean to classify data without label columns. When enabled, the pipeline predicts every row but skips label creation and performance evaluation. If omitted, it is auto-detected per target from whether a QC ``flag`` is set. See the :doc:`../../how-to/classification_labels` guide for details.
 *   **steps.model.model_params.n_jobs**: The number of threads used by XGBoost. It tries to use all available CPU cores if it is set to `-1`.
 *   Parameters for other steps (``summary``, ``select``, ``locate``, ``extract``, ``classify``, ``concat``) are also defined here, often left empty if default behavior is sufficient or if parameters are handled by the model itself.
 
