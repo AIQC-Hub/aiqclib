@@ -410,6 +410,47 @@ class ConfigBase(ABC):
         """
         return {x["name"]: x for x in self.get_target_variables()}
 
+    @staticmethod
+    def is_flag_missing(target_value: Dict) -> bool:
+        """
+        Return True when a target variable has no usable QC ``flag`` defined.
+
+        A flag is considered missing when the ``flag`` key is absent, ``None``,
+        or an empty/whitespace-only string. This is the trigger for the
+        label-free (``skip_evaluation``) classification path.
+
+        :param target_value: A single target variable definition.
+        :type target_value: dict
+        :return: True if no usable flag column is specified, else False.
+        :rtype: bool
+        """
+        flag = target_value.get("flag")
+        return flag is None or (isinstance(flag, str) and flag.strip() == "")
+
+    def get_skip_evaluation(self, target_name: str) -> bool:
+        """
+        Resolve whether performance evaluation and label creation should be
+        skipped for a given classification target.
+
+        Resolution order:
+
+          1. If ``skip_evaluation`` is explicitly set in the ``model`` step
+             params, that value wins for every target in the step.
+          2. Otherwise it is derived per target: True when the target's QC
+             ``flag`` is missing/empty (see :meth:`is_flag_missing`).
+
+        :param target_name: The name of the target variable.
+        :type target_name: str
+        :return: True to skip label creation and performance evaluation.
+        :rtype: bool
+        """
+        override = self.get_step_params("model").get("skip_evaluation")
+        if override is not None:
+            return bool(override)
+
+        target_value = self.get_target_dict().get(target_name, {})
+        return self.is_flag_missing(target_value)
+
     def get_target_file_names(
         self,
         step_name: str,

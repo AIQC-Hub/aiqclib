@@ -138,11 +138,15 @@ class ClassifyAll(BuildModelBase):
         # Reset model-scores table to avoid duplication if test is run multiple times
         self.base_model.model_score = None
 
+        # Skip label creation / performance evaluation for label-free targets.
+        self.base_model.skip_evaluation = self.config.get_skip_evaluation(target_name)
+
         self.base_model.test_set = self.test_sets[target_name].drop(self.drop_cols)
         self.base_model.test()
 
-        if self.base_model.model_score is not None:
-            self.model_scores[target_name] = self.base_model.model_score
+        # Always register the target (value may be None for label-free targets)
+        # so downstream writers/plots see a stable key set and skip None entries.
+        self.model_scores[target_name] = self.base_model.model_score
 
         if self.base_model.shap_values is not None:
             self.shap_values[target_name] = self.base_model.shap_values
