@@ -173,8 +173,8 @@ def test_summary_step_profile_aggregation_exposes_sd(tmp_path):
     agg = aggregate_profile_stats(_synthetic_summary_stats())
     assert "sd" in agg.columns
     # temp per-profile 'mean' statistic: values 10/20/30 across profiles.
-    row = agg.filter(
-        (pl.col("variable") == "temp") & (pl.col("stats") == "mean")
-    ).row(0, named=True)
+    row = agg.filter((pl.col("variable") == "temp") & (pl.col("stats") == "mean")).row(
+        0, named=True
+    )
     assert row["mean"] == pytest.approx(20.0)
     assert row["sd"] == pytest.approx(10.0)

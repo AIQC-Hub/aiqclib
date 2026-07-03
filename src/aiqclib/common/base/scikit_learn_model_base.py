@@ -105,8 +105,13 @@ class SklearnModelBase(ModelBase):
         :raises ValueError: If :attr:`test_set` is ``None``.
         """
         self.predict()
-        self.create_report()
-        self.update_model_score()
+
+        # In label-free classification (:attr:`skip_evaluation`) the test set has
+        # no ground-truth ``label``, so skip report and model-score generation.
+        # Prediction (above) and SHAP (below) do not require labels.
+        if not self.skip_evaluation:
+            self.create_report()
+            self.update_model_score()
 
         if self.enable_shap:
             self.calculate_shap()

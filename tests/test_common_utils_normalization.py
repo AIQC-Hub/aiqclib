@@ -6,8 +6,6 @@ frames in-memory and assert exact numeric results, so they run without any of
 the downloaded ``tests/data`` fixtures.
 """
 
-import math
-
 import polars as pl
 import pytest
 
@@ -63,9 +61,15 @@ def summary_stats():
     population statistics used for observation-level normalization.
     """
     rows = [
-        _row("A", 1, "temp", mean=10, median=10, sd=1, pct25=9, pct75=11, min=5, max=15),
-        _row("A", 2, "temp", mean=20, median=20, sd=2, pct25=18, pct75=22, min=10, max=30),
-        _row("A", 3, "temp", mean=30, median=30, sd=3, pct25=27, pct75=33, min=20, max=40),
+        _row(
+            "A", 1, "temp", mean=10, median=10, sd=1, pct25=9, pct75=11, min=5, max=15
+        ),
+        _row(
+            "A", 2, "temp", mean=20, median=20, sd=2, pct25=18, pct75=22, min=10, max=30
+        ),
+        _row(
+            "A", 3, "temp", mean=30, median=30, sd=3, pct25=27, pct75=33, min=20, max=40
+        ),
         # Location vars carry zero per-profile spread; they must be excluded
         # from across-profile aggregation.
         _row("A", 1, "longitude", mean=18, sd=0),
@@ -175,9 +179,9 @@ def test_aggregate_profile_stats_includes_sd_and_excludes_location_and_all(
     assert mean_row["max"] == pytest.approx(30.0)
 
     # across-profile distribution of the per-profile 'sd' statistic
-    sd_row = agg.filter(
-        (pl.col("variable") == "temp") & (pl.col("stats") == "sd")
-    ).row(0, named=True)
+    sd_row = agg.filter((pl.col("variable") == "temp") & (pl.col("stats") == "sd")).row(
+        0, named=True
+    )
     assert sd_row["mean"] == pytest.approx(2.0)  # mean([1,2,3])
     assert sd_row["sd"] == pytest.approx(1.0)  # std([1,2,3], ddof=1)
 
@@ -205,9 +209,7 @@ def test_derive_observation_stats_ignores_unknown_variable(summary_stats):
 
 def test_derive_profile_stats_nested(summary_stats):
     agg = aggregate_profile_stats(summary_stats)
-    nested = derive_profile_stats(
-        agg, ["temp"], ["mean", "sd"], "standard"
-    )
+    nested = derive_profile_stats(agg, ["temp"], ["mean", "sd"], "standard")
     assert nested["temp"]["mean"] == {"mean": 20.0, "sd": 10.0}
     assert nested["temp"]["sd"] == {"mean": 2.0, "sd": 1.0}
     # statistics not requested are excluded

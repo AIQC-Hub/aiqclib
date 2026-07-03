@@ -33,6 +33,14 @@ aiqclib.interface.prepare module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.interface.shap\_io module
+---------------------------------
+
+.. automodule:: aiqclib.interface.shap_io
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.interface.stats module
 ------------------------------
 

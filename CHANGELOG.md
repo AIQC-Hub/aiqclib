@@ -6,6 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-03
+### Added
+- `skip_evaluation` for classifying unlabeled data (optional/empty `flag`); skips label creation and performance evaluation
+
 ## [0.3.1] - 2026-07-03
 ### Fixed
 - Packaging config ported to hatchling; CHANGELOG.md now bundled in the wheel

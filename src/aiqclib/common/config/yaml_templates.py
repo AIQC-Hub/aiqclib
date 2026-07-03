@@ -636,6 +636,8 @@ step_param_sets:
       select: { }
       locate: { }
       extract: { }
+      # skip_evaluation: True classifies unlabeled data (no QC flag) and skips
+      # performance evaluation. Omit it to auto-detect per target from `flag`.
       model: { calculate_shap: False }
       classify: { }
       concat: { }
