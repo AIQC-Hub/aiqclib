@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-`aiqclib` — config-driven ML library for anomaly detection in CTD ocean data. See `README.md` for the full workflow and public API. Source in `src/aiqclib/` (`prepare/`, `train/`, `classify/`, `common/`, `interface/`).
+`aiqclib` — config-driven ML library for anomaly detection in CTD ocean data. See `README.md` for the full workflow and public API. Dev setup is in `CONTRIBUTING.md`; the release process in `RELEASING.md`. Source in `src/aiqclib/` (`prepare/`, `train/`, `classify/`, `common/`, `interface/`).
 
 ## Environment & dependencies
 
@@ -23,3 +23,8 @@
 - Follows **gitflow**: `main` (releases), `develop` (integration), plus `feature/*`, `release/*`, `hotfix/*` branches.
 - Branch off `develop` for features (`feature/<name>`); branch off `main` for hotfixes.
 - Do **not** commit directly to `main` or `develop` — merge via the appropriate feature/release/hotfix branch.
+
+## Releasing
+
+- Full checklist in `RELEASING.md`. Order: (ruff + `sphinx-apidoc` if needed) → update `CHANGELOG.md` → bump `version` in `pyproject.toml` → `uv sync` (updates `uv.lock`) → GitHub release triggers PyPI publish.
+- Keep `CHANGELOG.md` **compact**: terse one-line bullets under `### Added/Changed/Fixed`, added to the `## [Unreleased]` section (Keep a Changelog style).
