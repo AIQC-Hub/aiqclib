@@ -11,6 +11,8 @@ from aiqclib.nrtqc.step2_run_qc.dataset_all import QCDataSetAll
 from aiqclib.nrtqc.step2_run_qc.qc_base import QCDataSetBase
 from aiqclib.nrtqc.step3_concat_flags.concat_base import ConcatFlagsBase
 from aiqclib.nrtqc.step3_concat_flags.dataset_all import ConcatDataSetAll
+from aiqclib.nrtqc.step4_compare_flags.compare_base import CompareFlagsBase
+from aiqclib.nrtqc.step4_compare_flags.dataset_all import CompareFlagsAll
 from aiqclib.prepare.step1_read_input.input_base import InputDataSetBase
 
 #: A registry mapping class names (as strings, typically from YAML
@@ -38,4 +40,13 @@ QC_NRTQC_REGISTRY: Dict[str, Type[QCDataSetBase]] = {
 #: :type: Dict[str, Type[ConcatFlagsBase]]
 CONCAT_NRTQC_REGISTRY: Dict[str, Type[ConcatFlagsBase]] = {
     "ConcatDataSetAll": ConcatDataSetAll,
+}
+
+#: A registry mapping class names (as strings, typically from YAML
+#: configuration) to their corresponding Python classes for
+#: step4_compare_flags tasks in the NRT QC pipeline.
+#:
+#: :type: Dict[str, Type[CompareFlagsBase]]
+COMPARE_NRTQC_REGISTRY: Dict[str, Type[CompareFlagsBase]] = {
+    "CompareFlagsAll": CompareFlagsAll,
 }
