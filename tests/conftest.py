@@ -32,6 +32,7 @@ import pytest
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
+from aiqclib.common.config.nrtqc_config import NRTQCConfig
 from aiqclib.common.config.training_config import TrainingConfig
 from aiqclib.common.loader.classify_loader import (
     load_classify_step1_input_dataset,
@@ -327,6 +328,23 @@ def classify_config_002() -> ClassificationConfig:
 @pytest.fixture
 def classify_config_003() -> ClassificationConfig:
     return _load_classify_config("test_classify_003.yaml")
+
+
+@pytest.fixture
+def nrtqc_config_001() -> NRTQCConfig:
+    """NRT QC config from the bundled template, pointed at the test fixture.
+
+    There is no NRT QC YAML under ``tests/data/config`` yet, so the bundled
+    ``template:nrt_qc_sets`` is loaded and its paths are redirected
+    in-memory: input to the standard test parquet, outputs under
+    ``TEST_OUTPUT_DIR / "nrt_qc"``.
+    """
+    config = NRTQCConfig("template:nrt_qc_sets")
+    config.select("nrt_qc_0001")
+    config.data["path_info"]["common"]["base_path"] = str(TEST_OUTPUT_DIR / "nrt_qc")
+    config.data["path_info"]["input"]["base_path"] = str(INPUT_DIR)
+    config.data["input_file_name"] = "nrt_cora_bo_test.parquet"
+    return config
 
 
 # ----------------------------------------------------------------------------
