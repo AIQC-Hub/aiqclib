@@ -15,6 +15,9 @@ The NRT QC module applies automated real-time QC tests to CTD profile data and:
    the individual item results.
 3. Writes the **original parquet enriched with all QC-item columns and the
    final NRT flags** as its output.
+4. When the input already carries NRT QC flags (e.g. `temp_qc`, `psal_qc`),
+   produces a **summary report comparing the existing and newly computed
+   flags** (see §6.1).
 
 The module is structurally similar to Dataset Preparation but much simpler:
 read input → run configured QC items → aggregate flags → write output. Which
@@ -27,8 +30,10 @@ controlled by a YAML configuration file, following the existing
 The standard `aiqclib` input parquet with the mandatory columns
 (`REQUIRED_INPUT_COLUMNS`): `platform_code`, `profile_no`,
 `profile_timestamp`, `longitude`, `latitude`, `observation_no`, `pres`,
-plus the measured variables `temp` and `psal`. Existing QC/flag columns are
-**not** required (NRT QC runs on unflagged data).
+plus the measured variables `temp` and `psal`. Existing QC/flag columns
+(e.g. `temp_qc`, `psal_qc`) are **not** required (NRT QC runs on unflagged
+data); when they are present and configured, they are used for the flag
+comparison report (§6.1).
 
 Rows are grouped into profiles by (`platform_code`, `profile_no`) and ordered
 within a profile by `pres` (ascending; see RTQC8).
@@ -246,6 +251,29 @@ Item short names (used in column names and config): `impossible_date`,
 `pressure_increasing`, `spike`, `gradient`, `digit_rollover`, `stuck_value`,
 `density_inversion`, `temp_to_psal`.
 
+### 6.1 Flag comparison report
+
+When a variable has an existing NRT QC flag column configured (its `flag`
+entry in the `qc_variable_set`, e.g. `temp` → `temp_qc`), the module writes a
+summary report comparing the existing flags with the newly computed
+`{variable}_nrt_flag`. Per variable:
+
+1. **Contingency table** of existing flag value × new NRT flag value with
+   counts and percentages — works with any existing flag scheme (0–9), no
+   value mapping required.
+2. **Agreement metrics** (optional): when `pos_flag_values` /
+   `neg_flag_values` are given for the variable (same convention as the other
+   modules), existing flags are binarised and accuracy / precision / recall of
+   the new flags against the existing ones are reported.
+3. **Per-item breakdown**: for each enabled QC item, the count of
+   observations the item flagged, split by existing-flag value — shows which
+   items drive agreement or disagreement.
+
+Output: one TSV per variable, `nrt_qc_flag_comparison_{variable}.tsv`
+(configurable). Variables without a configured `flag` are silently skipped;
+if a configured flag column is missing from the input, the step raises an
+error (no silent skip on typos, consistent with the Classification module).
+
 ## 7. Configuration
 
 Follows the existing config conventions (named `*_sets` referenced from
@@ -262,7 +290,13 @@ qc_variable_sets:
   - name: qc_variable_set_1
     variables:
       - name: temp
+        flag: temp_qc                   # optional: existing NRT QC flag column
+        pos_flag_values: [ 4, 6, 7 ]    # optional: for agreement metrics
+        neg_flag_values: [ 1 ]
       - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
 
 qc_item_sets:
   - name: qc_item_set_1
@@ -302,6 +336,7 @@ step_class_sets:
       input: InputDataSetAll
       qc: QCDataSetAll
       concat: ConcatDataSetAll
+      compare: CompareFlagsAll
 
 step_param_sets:
   - name: nrt_qc_param_set_1
@@ -309,6 +344,7 @@ step_param_sets:
       input: { sub_steps: { rename_columns: false, filter_rows: false } }
       qc: { }
       concat: { }
+      compare: { }
 
 data_sets:
   - name: nrt_qc_0001
@@ -332,20 +368,31 @@ files share the same structure and differ only in region-dependent `params`
 ## 8. Module layout
 
 New package `src/aiqclib/nrtqc/` mirroring the existing stage structure, but
-with only three steps:
+with only four steps:
 
 ```
 src/aiqclib/nrtqc/
 ├── step1_read_input/     # reuse prepare's input reading + validation
-├── step2_run_qc/         # one class per QC item + a runner that applies
-│                         #   the configured items and adds item columns
-└── step3_concat_flags/   # aggregate item columns → {var}_nrt_flag,
-                          #   apply temp→psal propagation, write parquet
+├── step2_run_qc/         # runner that applies the configured QC items
+│                         #   (feature classes, see below) and adds columns
+├── step3_concat_flags/   # aggregate item columns → {var}_nrt_flag,
+│                         #   apply temp→psal propagation, write parquet
+└── step4_compare_flags/  # optional: existing vs new flag comparison
+                          #   report per variable (§6.1)
 ```
 
-- Each QC item is a small class with a common base (e.g. `QCItemBase`) exposing
-  `apply(df) -> pl.DataFrame` that appends its column(s); items are registered
-  by short name so the config can enable them by name.
+- **QC items are implemented under `prepare/features/` as `FeatureBase`
+  subclasses** (one module per item, e.g. `qc_spike.py`), following the
+  structure and polars-expression style of the existing feature classes
+  (`DayOfYearFeat`, `FlankUp`, …): `extract_features()` computes the flag
+  column(s), `scale_first`/`scale_second` are no-ops (a later scaling step,
+  e.g. mapping flags to [0, 1], can be added if the items are used for
+  training). They are registered in `FEATURE_REGISTRY` under `qc_`-prefixed
+  names (`qc_spike`, `qc_global_range`, …), so even without any current
+  training plans they are immediately usable in a prepare `feature_set`.
+- `step2_run_qc` is a thin runner: it resolves the items enabled in the
+  `qc_item_set` via the feature registry, instantiates each class, and joins
+  the produced columns back onto the data.
 - All computations are vectorised polars expressions over
   (`platform_code`, `profile_no`) windows — no per-profile Python loops.
 - No stdout/stderr output from the library (consumers surface warnings).
@@ -355,11 +402,15 @@ src/aiqclib/nrtqc/
 
 ## 9. Testing
 
-- Unit tests per QC item (`tests/test_nrtqc_*.py`) with small synthetic
-  profiles covering pass/fail/edge cases (profile boundaries, nulls, single
+- Unit tests per QC item feature class (`tests/test_prepare_qc_*.py`, since
+  the classes live under `prepare/features/`) with small synthetic profiles
+  covering pass/fail/edge cases (profile boundaries, nulls, single
   observation profiles, constant/reversed pressure segments).
 - One integration test running the full module on the existing CTD test
   fixture and checking output columns + final flags.
+- Comparison-report tests: with/without configured `flag` columns, agreement
+  metrics only when `pos_flag_values`/`neg_flag_values` are set, and an error
+  when a configured flag column is absent from the input.
 
 ## 10. Resolved decisions
 
