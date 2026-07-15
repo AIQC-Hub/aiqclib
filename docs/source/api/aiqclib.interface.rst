@@ -25,6 +25,14 @@ aiqclib.interface.config module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.interface.nrtqc module
+------------------------------
+
+.. automodule:: aiqclib.interface.nrtqc
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.interface.prepare module
 --------------------------------
 

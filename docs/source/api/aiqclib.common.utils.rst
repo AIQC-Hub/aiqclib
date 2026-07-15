@@ -57,6 +57,22 @@ aiqclib.common.utils.normalization module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.common.utils.qc\_flags module
+-------------------------------------
+
+.. automodule:: aiqclib.common.utils.qc_flags
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.common.utils.seawater module
+------------------------------------
+
+.. automodule:: aiqclib.common.utils.seawater
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.shap\_io module
 ------------------------------------
 
