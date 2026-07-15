@@ -25,6 +25,14 @@ aiqclib.common.config.dataset\_config module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.common.config.nrtqc\_config module
+------------------------------------------
+
+.. automodule:: aiqclib.common.config.nrtqc_config
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.config.training\_config module
 ---------------------------------------------
 

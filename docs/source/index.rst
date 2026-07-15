@@ -9,13 +9,15 @@ Welcome to the `aiqclib` documentation!
 Workflow of `aiqclib`
 ---------------------------------------------
 
-The library is designed around a three-stage workflow:
+The library is designed around a three-stage machine learning workflow:
 
 1.  **Dataset Preparation:** Prepare feature datasets from raw data and generate training, validation, and test data sets.
 2.  **Training & Evaluation:** Train machine learning models and evaluate their performance using cross-validation.
 3.  **Classification:** Apply a trained model to classify new, unseen data.
 
-Each stage is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
+In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable — see the :doc:`how-to/nrt_qc` guide.
+
+Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
 
 Algorithms supported by `aiqclib`
 ---------------------------------------------
@@ -68,6 +70,7 @@ This section provides practical examples and solutions for common tasks related 
    how-to/algorithm_selection
    how-to/prediction_threshold
    how-to/classification_labels
+   how-to/nrt_qc
    how-to/performance_evaluation
    how-to/shap_values
    how-to/down_sampling_negative
@@ -85,6 +88,7 @@ This section provides detailed reference information for all parameters in the Y
    configuration/preparation
    configuration/training
    configuration/classification
+   configuration/nrtqc
 
 ----------
 

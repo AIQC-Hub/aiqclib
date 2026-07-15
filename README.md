@@ -42,13 +42,15 @@ Project documentation is hosted on [Read the Docs](https://aiqclib.readthedocs.i
 
 ## Core Concepts
 
-The library is designed around a three-stage workflow:
+The library is designed around a three-stage machine learning workflow:
 
 1.  **Dataset Preparation:** Prepare feature datasets from raw data and generate training, validation, and test data sets.
 2.  **Training & Evaluation:** Train machine learning models and evaluate their performance using cross-validation.
 3.  **Classification:** Apply a trained model to classify new, unseen data.
 
-Each stage is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
+In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable.
+
+Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
 
 ## Usage
 
@@ -140,6 +142,34 @@ aq.classify_dataset(config)
 
 This workflow processes a dataset using a trained model and generates:
 - **classify**: The final classification results and a summary report.
+
+### 4. Near-Real Time Quality Control (NRT QC)
+
+This workflow applies automated real-time QC tests to a dataset without needing a trained model.
+
+**Step 1: Generate an NRT QC configuration template.**
+
+```python
+import aiqclib as aq
+
+aq.write_config_template(file_name="/path/to/nrt_qc_config.yaml", stage="nrt_qc")
+```
+
+**Step 2: Customize `nrt_qc_config.yaml`.**
+Edit the file to point to the input data and select the QC items and their thresholds. Prepare one configuration file per region (the regional ranges differ).
+
+**Step 3: Run the NRT QC process.**
+```python
+import aiqclib as aq
+
+config = aq.read_config("/path/to/nrt_qc_config.yaml")
+aq.run_nrt_qc(config)
+```
+
+This generates:
+- **qc**: The input data with one flag column per QC item.
+- **nrt_qc**: The final output parquet (input columns + item columns + `temp_nrt_flag` / `psal_nrt_flag`).
+- **compare**: Optional per-variable reports comparing existing NRT QC flags with the newly computed ones.
 
 ## Configuration
 

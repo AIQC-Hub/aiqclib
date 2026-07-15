@@ -20,6 +20,7 @@ except PackageNotFoundError:
 from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
 from aiqclib.interface.config import write_config_template
+from aiqclib.interface.nrtqc import run_nrt_qc
 from aiqclib.interface.prepare import create_training_dataset
 from aiqclib.interface.shap_io import read_shap_scores
 from aiqclib.interface.stats import format_summary_stats
@@ -34,5 +35,6 @@ __all__ = [
     "format_summary_stats",
     "get_summary_stats",
     "read_shap_scores",
+    "run_nrt_qc",
     "train_and_evaluate",
 ]
