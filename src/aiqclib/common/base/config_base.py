@@ -18,6 +18,7 @@ from aiqclib.common.config.yaml_schema import (
     get_data_set_config_schema,
     get_training_config_schema,
     get_classification_config_schema,
+    get_nrtqc_config_schema,
 )
 from aiqclib.common.config.yaml_templates import (
     get_config_data_set_template,
@@ -25,6 +26,7 @@ from aiqclib.common.config.yaml_templates import (
     get_config_train_set_template,
     get_config_classify_set_template,
     get_config_classify_set_full_template,
+    get_config_nrtqc_template,
 )
 from aiqclib.common.utils.config import get_config_item
 from aiqclib.common.utils.config import read_config
@@ -90,6 +92,7 @@ class ConfigBase(ABC):
             "training_sets": get_training_config_schema,
             "classification_sets": get_classification_config_schema,
             "classification_sets_with_norm": get_classification_config_schema,
+            "nrt_qc_sets": get_nrtqc_config_schema,
         }
         if section_name not in yaml_schemas:
             raise ValueError(f"Section name {section_name} is not supported.")
@@ -100,6 +103,7 @@ class ConfigBase(ABC):
             "template:training_sets": get_config_train_set_template,
             "template:classification_sets": get_config_classify_set_template,
             "template:classification_sets_full": get_config_classify_set_full_template,
+            "template:nrt_qc_sets": get_config_nrtqc_template,
         }
         if str(config_file).startswith("template:"):
             if str(config_file) not in yaml_templates:
