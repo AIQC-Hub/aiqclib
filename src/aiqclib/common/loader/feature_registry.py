@@ -18,10 +18,19 @@ from aiqclib.prepare.features.flank_down import FlankDown
 from aiqclib.prepare.features.flank_up import FlankUp
 from aiqclib.prepare.features.location import LocationFeat
 from aiqclib.prepare.features.profile_summary import ProfileSummaryStats
+from aiqclib.prepare.features.qc_global_range import QCGlobalRange
+from aiqclib.prepare.features.qc_impossible_date import QCImpossibleDate
+from aiqclib.prepare.features.qc_impossible_location import QCImpossibleLocation
+from aiqclib.prepare.features.qc_regional_range import QCRegionalRange
+from aiqclib.prepare.features.qc_stuck_value import QCStuckValue
 
 #: A dictionary mapping feature identifiers (str) to classes that inherit
 #: from :class:`FeatureBase`. These classes are dynamically loaded based
 #: on the "feature" key in a feature configuration dictionary.
+#:
+#: NRT QC items are registered under ``qc_``-prefixed names (the item's
+#: short name from the NRT QC configuration prefixed with ``qc_``) so they
+#: can also be used as training features in a prepare ``feature_set``.
 #:
 #: :type: Dict[str, Type[FeatureBase]]
 FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
@@ -31,4 +40,9 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "basic_values": BasicValues,
     "flank_up": FlankUp,
     "flank_down": FlankDown,
+    "qc_impossible_date": QCImpossibleDate,
+    "qc_impossible_location": QCImpossibleLocation,
+    "qc_global_range": QCGlobalRange,
+    "qc_regional_range": QCRegionalRange,
+    "qc_stuck_value": QCStuckValue,
 }
