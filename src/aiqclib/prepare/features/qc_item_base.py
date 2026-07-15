@@ -224,3 +224,89 @@ class QCItemFeatureBase(FeatureBase):
         can be added here if the flags are later used as model features.
         """
         pass  # pragma: no cover
+
+
+class QCNeighborStencilBase(QCItemFeatureBase):
+    """
+    Base class for QC items using the V1/V2/V3 neighbour stencil.
+
+    The spike (RTQC9) and gradient (RTQC11) tests both evaluate a test value
+    from a measurement V2 and its vertical neighbours V1 (above) and V3
+    (below), compared against a depth-dependent threshold: ``shallow`` for
+    pressures less than ``depth_threshold`` (500 db by default) and ``deep``
+    otherwise. Neighbours are taken in observation order within each profile;
+    the first and last observations of a profile have no complete stencil and
+    always pass, as do stencils involving null values.
+
+    Subclasses implement :meth:`test_value_expr` with their formula.
+    """
+
+    scalar_param_names: Tuple[str, ...] = ("depth_threshold",)
+
+    #: Column defining the vertical order of observations within a profile.
+    order_column: str = "observation_no"
+
+    @abstractmethod
+    def test_value_expr(self, v1: pl.Expr, v2: pl.Expr, v3: pl.Expr) -> pl.Expr:
+        """
+        Return the item's test value for the V1/V2/V3 stencil.
+
+        :param v1: The neighbouring value above V2.
+        :type v1: pl.Expr
+        :param v2: The value being tested.
+        :type v2: pl.Expr
+        :param v3: The neighbouring value below V2.
+        :type v3: pl.Expr
+        :return: The test value expression compared against the threshold.
+        :rtype: pl.Expr
+        """
+        pass  # pragma: no cover
+
+    def _stencil_thresholds(self, variable: str) -> Dict:
+        """
+        Return the validated {shallow, deep} thresholds for a variable.
+
+        :param variable: The variable to look up.
+        :type variable: str
+        :return: The thresholds dictionary with ``shallow`` and ``deep`` keys.
+        :rtype: Dict
+        :raises ValueError: If the variable has no complete threshold entry.
+        """
+        thresholds = self.params.get(variable)
+        if not isinstance(thresholds, dict) or not {"shallow", "deep"} <= set(
+            thresholds
+        ):
+            raise ValueError(
+                f"QC item '{self.item_name}' requires 'shallow' and 'deep' "
+                f"params for variable '{variable}'."
+            )
+        return thresholds
+
+    def compute_flags(self, df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Flag values whose stencil test value exceeds the depth-dependent
+        threshold.
+
+        :param df: The observations to check.
+        :type df: pl.DataFrame
+        :return: Observation keys plus one flag column per variable.
+        :rtype: pl.DataFrame
+        """
+        depth_threshold = self.params["depth_threshold"]
+
+        exprs: List[pl.Expr] = []
+        for variable in self.get_variables():
+            thresholds = self._stencil_thresholds(variable)
+            v2 = pl.col(variable)
+            v1 = v2.shift(1).over(PROFILE_KEYS, order_by=self.order_column)
+            v3 = v2.shift(-1).over(PROFILE_KEYS, order_by=self.order_column)
+
+            threshold = (
+                pl.when(pl.col("pres") < depth_threshold)
+                .then(pl.lit(thresholds["shallow"]))
+                .otherwise(pl.lit(thresholds["deep"]))
+            )
+            fail = self.test_value_expr(v1, v2, v3) > threshold
+            exprs.append(self._flag_expr(fail, self.flag_column_name(variable)))
+
+        return self._select_flags(df, exprs)
