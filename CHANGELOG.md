@@ -6,6 +6,12 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-15
+### Added
+- NRT QC module: automated real-time QC tests (RTQC2/3/6/7/8/9/11/12/13/14 + temp-to-psal propagation), per-item flag columns, final NRT flags, and flag comparison reports (`run_nrt_qc`, `stage="nrt_qc"`)
+- QC items as feature classes (`qc_*`), reusable in prepare feature sets
+- EOS-80 seawater utilities (UNESCO 1983 sigma0) and QC flag helpers
+
 ## [0.4.0] - 2026-07-03
 ### Added
 - `skip_evaluation` for classifying unlabeled data (optional/empty `flag`); skips label creation and performance evaluation
