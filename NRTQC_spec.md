@@ -284,7 +284,7 @@ path_info_sets:
   - name: nrt_qc_path_1
     common: { base_path: /path/to/data }
     input: { base_path: /path/to/input, step_folder_name: "" }
-    output: { step_folder_name: nrt_qc }
+    concat: { step_folder_name: nrt_qc }
 
 qc_variable_sets:
   - name: qc_variable_set_1
