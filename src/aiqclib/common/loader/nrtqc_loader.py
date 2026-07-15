@@ -16,12 +16,14 @@ import polars as pl
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
 from aiqclib.common.loader.nrtqc_registry import (
+    COMPARE_NRTQC_REGISTRY,
     CONCAT_NRTQC_REGISTRY,
     INPUT_NRTQC_REGISTRY,
     QC_NRTQC_REGISTRY,
 )
 from aiqclib.nrtqc.step2_run_qc.qc_base import QCDataSetBase
 from aiqclib.nrtqc.step3_concat_flags.concat_base import ConcatFlagsBase
+from aiqclib.nrtqc.step4_compare_flags.compare_base import CompareFlagsBase
 from aiqclib.prepare.step1_read_input.input_base import InputDataSetBase
 
 
@@ -92,3 +94,19 @@ def load_nrtqc_step3_concat_dataset(
     """
     dataset_class = _get_nrtqc_class(config, "concat", CONCAT_NRTQC_REGISTRY)
     return dataset_class(config=config, qc_data=qc_data)
+
+
+def load_nrtqc_step4_compare_dataset(
+    config: ConfigBase, merged_data: Optional[pl.DataFrame] = None
+) -> CompareFlagsBase:
+    """Instantiate the configured step 4 (compare flags) class.
+
+    :param config: The NRT QC configuration object.
+    :type config: ConfigBase
+    :param merged_data: The final frame produced by step 3.
+    :type merged_data: Optional[pl.DataFrame]
+    :returns: An instance of the configured flag comparison class.
+    :rtype: CompareFlagsBase
+    """
+    dataset_class = _get_nrtqc_class(config, "compare", COMPARE_NRTQC_REGISTRY)
+    return dataset_class(config=config, merged_data=merged_data)
