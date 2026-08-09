@@ -31,6 +31,12 @@ Rows are labelled from the flag, and the classify phase writes predictions plus
 the evaluation artefacts — the report, the **model-scores** file
 (see :doc:`performance_evaluation`), and the metric plots.
 
+The flag column may hold integers, strings or floats, and the values may be
+written as ``4`` or as ``"4"`` (see :ref:`qc-flag-columns`). Rows whose flag is
+missing or unreadable match neither list and are dropped from the labelled set,
+exactly like a flag value listed in neither ``pos_flag_values`` nor
+``neg_flag_values``.
+
 Option 2: without labels
 ------------------------
 
