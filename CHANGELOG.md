@@ -6,6 +6,7 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Changed
+- Single-class evaluations now warn that their 1.0 scores are degenerate and name the target, replacing matplotlib's "No artists with labels found to put in legend"; the empty metric plot says why it is empty
 - QC flag columns may be integer, string or float, and `pos_flag_values` / `neg_flag_values` may be written as `4` or `"4"`; the emitted `flag` column is now always Int64
 
 ### Fixed

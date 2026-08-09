@@ -17,6 +17,7 @@ from sklearn.impute import SimpleImputer
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
+from aiqclib.common.utils.diagnostics import warn_single_class_labels
 
 
 class SklearnModelBase(ModelBase):
@@ -284,6 +285,10 @@ class SklearnModelBase(ModelBase):
 
         if self.predictions is None:
             raise ValueError("Member variable 'predictions' must not be empty.")
+
+        warn_single_class_labels(
+            self.test_set["label"], target_name=self.target_name, k=self.k
+        )
 
         y_test = self.test_set["label"].to_pandas()
         y_pred = self.predictions["predicted_label"].to_pandas()
