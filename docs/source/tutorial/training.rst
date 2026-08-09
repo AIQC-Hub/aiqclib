@@ -30,6 +30,13 @@ First, use ``aiqclib`` to generate a boilerplate configuration template specific
        stage="train"
    )
 
+.. note::
+
+   ``write_config_template`` will not replace an existing file, so re-running
+   this after you have customized the config raises ``FileExistsError`` instead
+   of resetting your edits. Pass ``overwrite=True`` when you do want a fresh
+   template.
+
 Step 4.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

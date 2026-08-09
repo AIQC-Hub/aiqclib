@@ -33,6 +33,13 @@ First, use ``aiqclib`` to generate the boilerplate configuration template specif
        stage="classify"
    )
 
+.. note::
+
+   ``write_config_template`` will not replace an existing file, so re-running
+   this after you have customized the config raises ``FileExistsError`` instead
+   of resetting your edits. Pass ``overwrite=True`` when you do want a fresh
+   template.
+
 Step 5.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
