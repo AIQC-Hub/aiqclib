@@ -44,7 +44,7 @@ We recommend using **uv** for managing the development environment.
 ```
 
 4.  **Download the test data.**
-    The test fixtures (~15 MB of parquet, joblib, and YAML files) are not stored in the repository. They live as a GitHub release asset and need to be downloaded once before tests can run:
+    The test fixtures (a 3.7 MB download, ~6 MB extracted, of parquet, joblib, and YAML files) are not stored in the repository. They live as a GitHub release asset and need to be downloaded once before tests can run:
 
 ```bash
     bash scripts/fetch_test_data.sh
