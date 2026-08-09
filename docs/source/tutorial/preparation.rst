@@ -40,6 +40,15 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
        stage="prepare"
    )
 
+.. note::
+
+   The output directory must already exist — writing into a missing directory
+   is refused so that a mistyped path is reported instead of silently creating
+   folders. If you skipped the directory setup in :doc:`./input_data`, pass
+   ``create_dirs=True`` to create it as part of the call. Note also that ``~``
+   is not expanded for you, which is why the example wraps the path in
+   ``os.path.expanduser``.
+
 Step 3.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Now, open the newly created ``~/aiqc_project/config/prepare_config.yaml`` in a text editor. You need to tell ``aiqclib`` where to find your input data, where to save the processed output, and define your targets and features.
