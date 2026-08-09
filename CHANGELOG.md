@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-08-09
 ### Added
 - `verbose=True` on `create_training_dataset`, `train_and_evaluate`, `run_nrt_qc` and `classify_dataset` prints each main step with the elapsed time
 - `write_config_template(..., create_dirs=True)` creates a missing output directory; by default the refusal message names the option (and flags an unexpanded `~`)
