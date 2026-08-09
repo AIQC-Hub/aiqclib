@@ -107,6 +107,48 @@ Alongside these, you need the measurement columns you intend to model
    converting float timestamps, generating unique IDs), please refer to the
    :doc:`../how-to/data_preprocessing_utilities` guide.
 
+.. _which-qc-flags:
+
+Which QC Flags Provide the Labels
+----------------------------------
+
+The ``temp_qc`` / ``psal_qc`` / ``pres_qc`` columns that these tutorials label
+from are **near-real-time (NRT) QC** flags: the automated checks applied when
+the data is first distributed. They are not delayed-mode (DMQC) flags, which
+are assigned later, with expert review and the benefit of hindsight.
+
+This holds for both routes described on this page. The example dataset carries
+NRT flags, and ``ctddump`` reads the NRT products, so its output carries the NRT
+flags and nothing else.
+
+.. important::
+
+   A model trained on these labels learns to **reproduce the NRT QC decisions**,
+   including their mistakes. That is a legitimate goal (for instance, applying
+   consistent NRT-quality screening to a new region), but it is a different task
+   from predicting delayed-mode quality. Judge your evaluation metrics
+   accordingly: agreement with the NRT flags is agreement with an automated
+   system, not with ground truth.
+
+If you do have delayed-mode flags, point ``flag`` at those columns instead in
+the ``target_sets`` section of your configuration; nothing else in the workflow
+changes:
+
+.. code-block:: yaml
+
+   target_sets:
+     - name: target_set_1
+       variables:
+         - name: temp
+           flag: temp_qc_dm        # delayed-mode flags instead of temp_qc
+           pos_flag_values: [ 4, 6, 7 ]
+           neg_flag_values: [ 1 ]
+
+A related but separate module is available if what you want is to *compute* NRT
+QC flags rather than learn from them: see the :doc:`../how-to/nrt_qc` guide,
+which applies the standard RTQC tests directly and can compare its results
+against the flags already in your file.
+
 Generating Input Files with ``ctddump``
 ----------------------------------------
 
@@ -184,11 +226,12 @@ Parquet file per platform, per profile, or as a whole:
 
 .. important::
 
-   The labels come from the QC flag columns, so the region and period you
-   convert must actually contain flagged-bad observations. If every
-   ``temp_qc`` in your extract is ``1``, the preparation step will find no
-   positive profiles and produce an empty training set. ``ctddump report`` and
-   the flag comparison report of the :doc:`../how-to/nrt_qc` module are both
+   The labels come from the QC flag columns, which here are the NRT flags of
+   the source product (see `Which QC Flags Provide the Labels`_). The region and
+   period you convert must therefore actually contain flagged-bad observations:
+   if every ``temp_qc`` in your extract is ``1``, the preparation step will find
+   no positive profiles and produce an empty training set. ``ctddump report``
+   and the flag comparison report of the :doc:`../how-to/nrt_qc` module are both
    useful for checking this before you invest in a full run.
 
 For the complete command reference, see the
