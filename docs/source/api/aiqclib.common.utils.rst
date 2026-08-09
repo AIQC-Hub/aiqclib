@@ -17,6 +17,14 @@ aiqclib.common.utils.config module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.common.utils.diagnostics module
+---------------------------------------
+
+.. automodule:: aiqclib.common.utils.diagnostics
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.file module
 --------------------------------
 
@@ -53,6 +61,14 @@ aiqclib.common.utils.normalization module
 -----------------------------------------
 
 .. automodule:: aiqclib.common.utils.normalization
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.common.utils.progress module
+------------------------------------
+
+.. automodule:: aiqclib.common.utils.progress
    :members:
    :show-inheritance:
    :undoc-members:
