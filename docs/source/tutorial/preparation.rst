@@ -1,7 +1,11 @@
-Step 2: Dataset Preparation
+Step 3: Dataset Preparation
 ===========================
 
 The dataset preparation workflow is the first crucial step in the ``aiqclib`` pipeline. It's designed to prepare feature data sets from your raw data. This includes creating training, validation, and test data sets.
+
+This tutorial starts from the input Parquet file produced in
+:doc:`./input_data`, either the downloaded example
+(``nrt_cora_bo_4.parquet``) or one you generated yourself.
 
 This entire process is driven by a YAML configuration file, ensuring your data preparation is repeatable, transparent, and easy to manage across different experiments.
 
@@ -17,91 +21,11 @@ This entire process is driven by a YAML configuration file, ensuring your data p
 
    Feel free to adapt the examples to your preferred environment.
 
-Getting the Example Data
-------------------------
-
-This tutorial uses the Copernicus Marine NRT CTD dataset, publicly available on ``Kaggle``. Before proceeding, let's set up your project directory structure and download the necessary data.
-
-First, create the directories for your project. This structure will be used consistently throughout the tutorials:
-
-.. code-block:: bash
-
-   # Create a main project directory for all aiqclib outputs and configs
-   mkdir -p ~/aiqc_project
-
-   # Create subdirectories for configuration files and raw input data
-   mkdir -p ~/aiqc_project/config
-   mkdir -p ~/aiqc_project/input
-
-Now, choose one of the following options to download the dataset. Both methods will place the required data in ``~/aiqc_project/input/``.
-
-.. tabs::
-
-   .. tab:: Option 1: Kaggle API (Recommended)
-
-      This method is ideal for reproducibility and for users who frequently work with Kaggle datasets.
-
-      1. **Install and configure the Kaggle API:**
-         If you haven't already, install the ``kaggle`` client and set up your API credentials.
-
-         .. code-block:: bash
-
-            pip install kaggle
-
-         Follow the official `Kaggle API authentication instructions <https://www.kaggle.com/docs/api#getting-started-installation-&-authentication>`_ to obtain your ``kaggle.json`` file and place it in the correct location (``~/.kaggle/``).
-
-      2. **Download and unzip the data:**
-         This single command downloads and extracts the dataset directly into your ``input`` folder.
-
-         .. code-block:: bash
-
-            kaggle datasets download -d takaya88/copernicus-marine-nrt-ctd-data-for-aiqc -p ~/aiqc_project/input --unzip
-
-   .. tab:: Option 2: cURL (Quickstart)
-
-      This method is the fastest way to get the data, as it requires no extra tools or setup beyond standard command-line utilities.
-
-      1. **Download the zip file using cURL:**
-
-         .. code-block:: bash
-
-            curl -L -o ~/aiqc_project/input/data.zip \
-              https://www.kaggle.com/api/v1/datasets/download/takaya88/copernicus-marine-nrt-ctd-data-for-aiqc
-
-      2. **Unzip the file:**
-         Extract the downloaded archive into your input directory.
-
-         .. code-block:: bash
-
-            unzip ~/aiqc_project/input/data.zip -d ~/aiqc_project/input/
-
-----------
-
-After following either set of instructions, you should now have a file named ``nrt_cora_bo_4.parquet`` inside ``~/aiqc_project/input/``.
-
-Required Input Data Structure
------------------------------
-``aiqclib`` expects your raw input data (a Parquet file) to contain specific columns, which are crucial for identifying unique profiles and observations. If your raw data already contains these, you're good to go. Otherwise, you may need to preprocess your data to create them.
-
-The required columns are:
-
-*   **platform_code**: A unique identifier for the measurement platform (e.g., buoy, ship).
-*   **profile_no**: A unique, sequential number identifying each distinct "profile" (a set of measurements taken at a specific time and location) within a ``platform_code``.
-*   **profile_timestamp**: The exact datetime of the profile. This column should be of a datetime type (e.g., Pandas/Polars datetime, or similar).
-*   **longitude**: The longitude of the measurement profile.
-*   **latitude**: The latitude of the measurement profile.
-*   **observation_no**: A unique, sequential number identifying each individual observation (row) within a ``profile_no``.
-*   **pres**: Pressure values for each observation.
-
-.. important::
-
-   If your raw data lacks ``profile_no``, ``profile_timestamp``, or ``observation_no``, you will need to generate them. For detailed examples and helper code on how to perform these common data preprocessing steps (e.g., converting float timestamps, generating unique IDs), please refer to the :doc:`../../how-to/data_preprocessing_utilities` guide.
-
 The Dataset Preparation Workflow
 --------------------------------
 The ``aiqclib`` data preparation workflow consists of three main programmatic steps: generating a configuration template, customizing this template to match your data and desired processing, and finally running the preparation script.
 
-Step 2.1: Generate the Configuration Template
+Step 3.1: Generate the Configuration Template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 First, use ``aiqclib`` to generate a boilerplate configuration template. This file will contain all the necessary sections for the data preparation task, which you will then customize.
 
@@ -116,7 +40,7 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
        stage="prepare"
    )
 
-Step 2.2: Customize the Configuration File
+Step 3.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Now, open the newly created ``~/aiqc_project/config/prepare_config.yaml`` in a text editor. You need to tell ``aiqclib`` where to find your input data, where to save the processed output, and define your targets and features.
 
@@ -130,7 +54,7 @@ You will primarily focus on updating the following sections:
 *   **data_sets**: Assemble the full pipeline by linking the named blocks.
 
 **Updating path_info_sets and data_sets:**
-Update your ``prepare_config.yaml`` to match the following for the ``path_info_sets`` and ``data_sets`` sections, replacing the placeholder paths with the ones you created in "Getting the Example Data".
+Update your ``prepare_config.yaml`` to match the following for the ``path_info_sets`` and ``data_sets`` sections, replacing the placeholder paths with the ones you created in :doc:`./input_data`.
 
 .. code-block:: yaml
 
@@ -152,13 +76,13 @@ Update your ``prepare_config.yaml`` to match the following for the ``path_info_s
         input_file_name: nrt_cora_bo_4.parquet # The specific raw input file to process
 
 .. note::
-   The ``prepare_config.yaml`` can be quite detailed. For a complete reference of all available configuration options, please consult the dedicated :doc:`../../configuration/preparation` page.
+   The ``prepare_config.yaml`` can be quite detailed. For a complete reference of all available configuration options, please consult the dedicated :doc:`../configuration/preparation` page.
 
 .. note::
 
-   ``dmaclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../../how-to/down_sampling_negative` guide for details.
+   ``dmaclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../how-to/down_sampling_negative` guide for details.
 
-Step 2.2: Run the Preparation Process
+Step 3.3: Run the Preparation Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once you have customized your ``prepare_config.yaml`` with the correct paths, input file name, and definitions for targets, features, and summary statistics, you can execute the data preparation workflow.
 
