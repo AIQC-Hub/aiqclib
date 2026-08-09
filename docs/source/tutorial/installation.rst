@@ -20,11 +20,20 @@ You can install ``aiqclib`` directly from PyPI using ``pip``.
 
 Using conda or mamba
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``aiqclib`` package is available on the `conda-forge` channel, which is the recommended community-maintained channel for Conda packages. You can use either ``conda`` or ``mamba`` to install it.
+``conda-forge`` is the recommended community-maintained channel for Conda
+packages, and either ``conda`` or ``mamba`` can install from it.
+
+.. note::
+
+   ``aiqclib`` is **not on conda-forge yet** — the recipe submission is still in
+   progress, so the commands below will not find the package. Install with
+   ``pip`` or ``uv`` for now.
+
+Once it is published, either of these will work:
 
 .. code-block:: bash
 
-   # Using conda (creates a new environment if ``aiqclib`` does not need to be found globally)
+   # Using conda
    conda install -c conda-forge aiqclib
 
    # Or using mamba (for a faster installation and better dependency resolution)
@@ -65,7 +74,7 @@ This method is highly recommended for all users, especially those managing multi
 
 **Step 1: Install `uv` into your base mamba environment**
 
-This makes the ``uv`` command available globally without cluttering your ``base`` environment.
+This makes the ``uv`` command available from any environment, while the project's own dependencies stay in its virtual environment rather than in ``base``.
 
 .. code-block:: bash
 
@@ -91,22 +100,17 @@ This makes the ``uv`` command available globally without cluttering your ``base`
 
     source .venv/bin/activate
 
-**Step 5: Install the dependencies**
+**Step 5: Install the dependencies and the project**
+
+``uv sync`` installs every dependency from ``pyproject.toml`` and the project
+itself in "editable" mode, so there is no separate install step.
 
 .. code-block:: bash
 
     uv sync
 
-**Step 6: Install the project**
-
-This command installs the library in "editable" mode (``-e``).
-
-.. code-block:: bash
-
-    uv pip install -e .
-
 Next Steps
 ----------
-You have now successfully installed the ``aiqclib`` library! The next step in your journey is to understand how to prepare your raw data into a format suitable for model training.
+You have now successfully installed the ``aiqclib`` library! The next step is to obtain an input file, either the example dataset or one you generate yourself.
 
-Proceed to the next tutorial: :doc:`./preparation`.
+Proceed to the next tutorial: :doc:`./input_data`.

@@ -47,17 +47,11 @@ Now, open the newly created ``~/aiqc_project/config/training_config.yaml`` file 
 
 You will need to edit the ``path_info_sets``, ``step_class_sets``, ``step_param_sets``, and ``training_sets`` sections.
 
-Before you modify the config, let's create a directory where your trained models will be saved:
-
-.. code-block:: bash
-
-   mkdir -p ~/aiqc_project/models
-
 **Update your training_config.yaml file:**
 Modify the file to align with the following structure. Remember to replace placeholder paths with your actual project setup.
 
 .. note::
-   ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them. For more details, see the dedicated :doc:`../../how-to/algorithm_selection` page.
+   ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them. For more details, see the dedicated :doc:`../how-to/algorithm_selection` page.
 
 .. code-block:: yaml
 
@@ -105,7 +99,7 @@ Modify the file to align with the following structure. Remember to replace place
         step_param_set: training_param_set_1
 
 .. note::
-   The training configuration file includes many other options for advanced model selection, hyperparameter tuning, and cross-validation strategies. For a complete reference of all available parameters, please consult the dedicated :doc:`../../configuration/training` page.
+   The training configuration file includes many other options for model selection, model parameters, and cross-validation. For a complete reference of all available parameters, please consult the dedicated :doc:`../configuration/training` page.
 
 Step 4.3: Run the Training Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,7 +124,7 @@ After the command finishes, ``aiqclib`` will have created new folders within you
 
 *   **validate**: Contains detailed results from the cross-validation process, allowing you to inspect model performance across different data folds. This includes metrics, predictions, and potentially visualizations.
 *   **build**: Holds a comprehensive report of the final model's evaluation performance on the held-out test dataset, along with aggregated metrics.
-*   **models**: Holds the final, trained model object(s) ready for classification. These are the artifacts you will use in the next step.
+*   **model**: Holds the final, trained model object(s) ready for classification, under the ``model.base_path`` you configured. These are the artifacts you will use in the next step.
 
 Next Steps
 ----------

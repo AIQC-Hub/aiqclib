@@ -48,7 +48,11 @@ The package is published to [PyPI](https://pypi.org/project/aiqclib/) automatica
 
 ### conda-forge (Automatic)
 
-The conda-forge bot automatically creates a pull request and merges it into the main branch when a new version of the package is published on PyPI.
+> **Status:** `aiqclib` is not on conda-forge yet — there is no
+> `conda-forge/aiqclib-feedstock`, so nothing below runs automatically. The
+> steps apply once the recipe is accepted via [Initial upload](#initial-upload).
+
+Once the feedstock exists, the conda-forge bot opens a version-bump pull request against it when a new version of the package is published on PyPI.
 
 ### conda-forge (Manual)
 
@@ -71,16 +75,16 @@ When runtime dependencies change, the automated PR from the conda-forge bot may 
     ```
 5. **Create a new branch** (e.g., `git checkout -b update_vX.Y.Z`).
 6. **Generate a strict recipe** (e.g., `grayskull pypi aiqclib --strict-conda-forge`).
-7. **Review `recipes/meta.yaml`** and ensure it meets `conda-forge` standards.
+7. **Review the feedstock's `recipe/meta.yaml`** against the generated recipe and ensure it meets `conda-forge` standards.
 8. **Rerender the feedstock** (e.g., `conda smithy rerender -c auto`).
-9. **Commit, push, and open a pull request** to the `staged-recipes` repository.
+9. **Commit, push, and open a pull request** to the `aiqclib-feedstock` repository.
 10. **Merge it** after passing CI.
 
 #### Initial upload
 Submitting the package on `conda-forge` involves creating a pull request to the `conda-forge/staged-recipes` repository.
 
 1.  **Fork and clone** the `staged-recipes` repository.
-2.  **Configure upstream** the `git remote add upstream https://github.com/conda-forge/aiqclib-feedstock.git`
+2.  **Configure upstream:** `git remote add upstream https://github.com/conda-forge/staged-recipes.git`
 3.  **Create a new branch** (e.g., `git checkout -b aiqclib-recipe`).
 4.  **Generate a strict recipe:** `grayskull pypi aiqclib --strict-conda-forge`.
 5.  **Review `recipes/aiqclib/meta.yaml`** and ensure it meets `conda-forge` standards.

@@ -24,14 +24,14 @@
 
 ## Installation
 
-The package is available on PyPI and conda-forge.
+The package is available on PyPI.
 
 **Using pip:**
 ```bash
 pip install aiqclib
 ```
 
-**Using conda:**
+**Using conda:** *(not published yet — the conda-forge recipe submission is still in progress; use pip or uv for now)*
 ```bash
 conda install -c conda-forge aiqclib
 ```

@@ -37,15 +37,14 @@ We recommend using **uv** for managing the development environment.
 ```
 
 3.  **Install the project and its dependencies.**
-    This command installs the library in "editable" mode (`-e`) and pulls in all dependencies from `pyproject.toml`.
+    This command pulls in all dependencies from `pyproject.toml` and installs the library itself in "editable" mode, so no separate install step is needed.
 
 ```bash
     uv sync
-    uv pip install -e .
 ```
 
 4.  **Download the test data.**
-    The test fixtures (~15 MB of parquet, joblib, and YAML files) are not stored in the repository. They live as a GitHub release asset and need to be downloaded once before tests can run:
+    The test fixtures (a 3.7 MB download, ~6 MB extracted, of parquet, joblib, and YAML files) are not stored in the repository. They live as a GitHub release asset and need to be downloaded once before tests can run:
 
 ```bash
     bash scripts/fetch_test_data.sh
