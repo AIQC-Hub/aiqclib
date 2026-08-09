@@ -10,6 +10,7 @@ from typing import Dict, Optional
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.qc_flags import flag_as_int, flag_is_in
 from aiqclib.prepare.step4_select_rows.locate_base import LocatePositionBase
 
 
@@ -65,13 +66,13 @@ class LocateDataSetAll(LocatePositionBase):
         flag_var_name = target_value["flag"]
         self.selected_rows[target_name] = (
             self.input_data.with_row_index("row_id", offset=1)
-            .filter(pl.col(flag_var_name).is_in(pos_flag_values + neg_flag_values))
+            .filter(flag_is_in(flag_var_name, pos_flag_values + neg_flag_values))
             .with_columns(
                 pl.lit(0, dtype=pl.UInt32).alias("profile_id"),
                 pl.lit("").alias("pair_id"),
-                pl.when(pl.col(flag_var_name).is_in(pos_flag_values))
+                pl.when(flag_is_in(flag_var_name, pos_flag_values))
                 .then(1)
-                .when(pl.col(flag_var_name).is_in(neg_flag_values))
+                .when(flag_is_in(flag_var_name, neg_flag_values))
                 .then(0)
                 .otherwise(None)
                 .alias("label"),
@@ -83,7 +84,7 @@ class LocateDataSetAll(LocatePositionBase):
                 pl.col("profile_no"),
                 pl.col("observation_no"),
                 pl.col("pres"),
-                pl.col(flag_var_name).alias("flag"),
+                flag_as_int(flag_var_name).alias("flag"),
                 pl.col("label"),
                 pl.col("pair_id"),
             )
