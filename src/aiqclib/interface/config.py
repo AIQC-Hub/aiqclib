@@ -23,7 +23,7 @@ from aiqclib.common.config.yaml_templates import (
 )
 from aiqclib.common.utils.config import get_config_file
 from aiqclib.common.utils.config import read_config as utils_read_config
-from aiqclib.common.utils.file import ensure_output_directory
+from aiqclib.common.utils.file import ensure_output_file
 
 
 def write_config_template(
@@ -31,6 +31,7 @@ def write_config_template(
     stage: str,
     extension: str = "",
     create_dirs: bool = False,
+    overwrite: bool = False,
 ) -> None:
     """
     Write a YAML configuration template for the specified stage
@@ -39,7 +40,8 @@ def write_config_template(
     This function:
       1. Chooses a template generator based on the combination of ``stage`` and ``extension``.
       2. Validates that the directory for ``file_name`` exists, creating it when
-         ``create_dirs`` is True.
+         ``create_dirs`` is True, and that no file would be replaced unless
+         ``overwrite`` is True.
       3. Writes the generated YAML template text to the specified file.
 
     :param file_name: The path (including filename) where the YAML file will be written.
@@ -54,15 +56,23 @@ def write_config_template(
                         Defaults to False, so a mistyped path is reported rather
                         than silently creating directories.
     :type create_dirs: bool
+    :param overwrite: If True, replace ``file_name`` when it already exists.
+                      Defaults to False, so a customized configuration is never
+                      silently reset to the template.
+    :type overwrite: bool
     :raises ValueError: If the combined stage and extension is not found in the registry.
     :raises IOError: If the directory of the specified file path does not exist
                      and ``create_dirs`` is False.
+    :raises FileExistsError: If ``file_name`` exists and ``overwrite`` is False.
 
     Example Usage:
       >>> # write_config_template("~/new/dir/prepare.yaml", "prepare")
       >>> # IOError: Directory '~/new/dir' does not exist. Create it first, or
       >>> #          pass create_dirs=True to create it automatically. ...
       >>> # write_config_template("/tmp/new/dir/prepare.yaml", "prepare", create_dirs=True)
+      >>> # write_config_template("/tmp/prepare.yaml", "prepare")   # a second time
+      >>> # FileExistsError: File '/tmp/prepare.yaml' already exists. Pass
+      >>> #                  overwrite=True to replace it, ...
     """
     function_registry = {
         "prepare_": get_config_data_set_all_template,
@@ -77,7 +87,7 @@ def write_config_template(
         raise ValueError(f"Module {stage} is not supported.")
 
     yaml_text = function_registry[f"{stage}_{extension}"]()
-    ensure_output_directory(file_name, create_dirs=create_dirs)
+    ensure_output_file(file_name, create_dirs=create_dirs, overwrite=overwrite)
 
     with open(file_name, "w", encoding="utf-8") as yaml_file:
         yaml_file.write(yaml_text)

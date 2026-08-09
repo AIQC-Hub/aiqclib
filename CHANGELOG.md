@@ -6,7 +6,11 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Added
+- `write_config_template(..., overwrite=True)` replaces an existing file
 - `run_batch` runs `prepare` / `train` / `classify` (or `all`) over a table of dataset names, returning a per-run summary; `available_modes` lists the modes. Without a table each phase runs once, letting each config select its own set
+
+### Changed
+- `write_config_template` refuses to replace an existing file, raising `FileExistsError`; pass `overwrite=True` for the previous behaviour
 
 ### Fixed
 - `read_config(file, set_name=...)` selects the named set from a file holding several sets; auto-selection ran first and rejected such a file, so `set_name` needed `auto_select=False` to work at all

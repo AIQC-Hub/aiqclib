@@ -49,6 +49,10 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
    is not expanded for you, which is why the example wraps the path in
    ``os.path.expanduser``.
 
+   An existing file is never replaced either: re-running this after you have
+   customized the config raises ``FileExistsError`` rather than resetting your
+   edits. Pass ``overwrite=True`` when a fresh template is what you want.
+
 Step 3.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Now, open the newly created ``~/aiqc_project/config/prepare_config.yaml`` in a text editor. You need to tell ``aiqclib`` where to find your input data, where to save the processed output, and define your targets and features.

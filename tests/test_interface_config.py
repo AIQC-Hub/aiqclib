@@ -60,6 +60,38 @@ class TestTemplateConfig:
         with pytest.raises(IOError):
             write_config_template("/abc/temp_dataset_template.yaml", "prepare")
 
+    def test_existing_file_is_not_replaced_by_default(self, tmp_path):
+        """A customized config must not be reset by regenerating the template."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare")
+        path.write_text("# my edited config\n")
+
+        with pytest.raises(FileExistsError, match="overwrite=True"):
+            write_config_template(str(path), "prepare")
+        assert path.read_text() == "# my edited config\n"
+
+    def test_overwrite_replaces_the_file(self, tmp_path):
+        """With the flag the template is written over the old contents."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare")
+        path.write_text("# my edited config\n")
+
+        write_config_template(str(path), "prepare", overwrite=True)
+        assert "path_info_sets" in path.read_text()
+
+    def test_overwrite_on_a_new_file_is_harmless(self, tmp_path):
+        """The flag does not require the file to already exist."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare", overwrite=True)
+        assert path.exists()
+
+    def test_create_dirs_and_overwrite_together(self, tmp_path):
+        """Both options apply to the same call."""
+        path = tmp_path / "new" / "prepare.yaml"
+        write_config_template(str(path), "prepare", create_dirs=True)
+        write_config_template(str(path), "prepare", create_dirs=True, overwrite=True)
+        assert path.exists()
+
     def test_missing_directory_message_names_the_option(self, tmp_path):
         """The refusal tells the user how to create the directory instead."""
         path = tmp_path / "not_yet" / "prepare.yaml"

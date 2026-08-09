@@ -14,6 +14,7 @@ parquet, CSV, TSV, and gzipped CSV/TSV files. Tests verify:
 
 ``ensure_output_directory`` guards the destination of a file about to be
 written: it refuses a missing directory by default and creates it on request.
+``ensure_output_file`` adds the refusal to replace an existing file.
 
 Refactored from a ``unittest.TestCase`` class with ``self.subTest`` loops
 inside two test methods. The subTest loops become ``@pytest.mark.parametrize``,
@@ -24,7 +25,11 @@ tests.
 import pytest
 import polars as pl
 
-from aiqclib.common.utils.file import ensure_output_directory, read_input_file
+from aiqclib.common.utils.file import (
+    ensure_output_directory,
+    ensure_output_file,
+    read_input_file,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -199,3 +204,46 @@ class TestEnsureOutputDirectory:
         """'~' looks right but is literal, so the message calls it out."""
         with pytest.raises(IOError, match="not expanded automatically"):
             ensure_output_directory("~/aiqclib_no_such_dir/out.yaml")
+
+
+class TestEnsureOutputFile:
+    """Refusing to replace a file that is already there."""
+
+    def test_new_file_is_allowed(self, tmp_path):
+        """Nothing to protect, so the path is returned unchanged."""
+        target = tmp_path / "out.yaml"
+        assert ensure_output_file(str(target)) == str(target)
+
+    def test_existing_file_raises_by_default(self, tmp_path):
+        """An existing file is kept, and the message names the option."""
+        target = tmp_path / "out.yaml"
+        target.write_text("customized")
+        with pytest.raises(FileExistsError, match="overwrite=True"):
+            ensure_output_file(str(target))
+        assert target.read_text() == "customized"
+
+    def test_overwrite_allows_replacing(self, tmp_path):
+        """With the flag set the caller may replace the file."""
+        target = tmp_path / "out.yaml"
+        target.write_text("customized")
+        assert ensure_output_file(str(target), overwrite=True) == str(target)
+
+    def test_directory_in_place_of_a_file(self, tmp_path):
+        """A directory where the file should be is reported for what it is."""
+        target = tmp_path / "out.yaml"
+        target.mkdir()
+        with pytest.raises(IsADirectoryError, match="is a directory"):
+            ensure_output_file(str(target), overwrite=True)
+
+    def test_directory_check_still_applies(self, tmp_path):
+        """The missing-directory refusal is not lost by the new check."""
+        with pytest.raises(IOError, match="create_dirs=True"):
+            ensure_output_file(str(tmp_path / "missing" / "out.yaml"))
+
+    def test_create_dirs_and_overwrite_combine(self, tmp_path):
+        """Both options can apply to the same call."""
+        target = tmp_path / "a" / "b" / "out.yaml"
+        ensure_output_file(str(target), create_dirs=True)
+        target.write_text("first")
+        ensure_output_file(str(target), create_dirs=True, overwrite=True)
+        assert target.parent.is_dir()
