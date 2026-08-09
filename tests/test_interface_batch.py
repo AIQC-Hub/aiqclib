@@ -267,6 +267,58 @@ class TestRowSelection:
         assert summary["name"].to_list() == ["ar_ar"]
 
 
+class TestWithoutATable:
+    """Running with no table at all, letting each config select its own set."""
+
+    def test_each_phase_runs_once_without_a_set_name(self, calls):
+        """No table means one run per phase, with no set named."""
+        run_batch(mode="all", **ALL_CONFIGS)
+        assert [call[0] for call in calls] == ["prepare", "train", "classify"]
+        assert [call[2] for call in calls] == [None, None, None]
+
+    def test_single_mode_without_a_table(self, calls):
+        """A single phase works the same way."""
+        run_batch(mode="prepare", prepare_config="prepare.yaml")
+        assert [(call[0], call[1]) for call in calls] == [("prepare", "prepare.yaml")]
+
+    def test_summary_has_no_dataset_name(self, calls):
+        """There is no name to record, so the column is null rather than invented."""
+        summary = run_batch(mode="prepare", prepare_config="prepare.yaml")
+        assert summary.height == 1
+        assert summary["name"].to_list() == [None]
+        assert summary["status"].to_list() == ["ok"]
+
+    def test_summary_records_the_set_the_config_chose(self, monkeypatch, calls):
+        """The summary says which set ran, even though the caller named none."""
+
+        class FakeConfig(dict):
+            dataset_name = "auto_selected_0001"
+
+        def fake_read_config(file_name, set_name=None, auto_select=True):
+            config = FakeConfig(config_file=file_name, set_name=set_name)
+            return config
+
+        monkeypatch.setattr(batch_module, "read_config", fake_read_config)
+        summary = run_batch(mode="prepare", prepare_config="prepare.yaml")
+        assert summary["set_name"].to_list() == ["auto_selected_0001"]
+
+    def test_missing_config_is_still_reported(self, calls):
+        """Dropping the table does not drop the config requirement."""
+        with pytest.raises(ValueError, match="prepare_config"):
+            run_batch(mode="prepare")
+
+    def test_names_without_a_table_is_rejected(self, calls):
+        """'names' selects table rows, so it cannot apply without a table."""
+        with pytest.raises(ValueError, match="no table was given"):
+            run_batch(mode="prepare", prepare_config="prepare.yaml", names=["ar_ar"])
+
+    def test_verbose_reports_the_runs(self, calls, capsys):
+        """The reporting says the config file is choosing the set."""
+        run_batch(mode="prepare", prepare_config="prepare.yaml", verbose=True)
+        out = capsys.readouterr().out
+        assert "set chosen by the config file" in out
+
+
 class TestSummary:
     """The frame describing what ran."""
 

@@ -75,6 +75,9 @@ PHASES: Tuple[Phase, ...] = (
 #: The mode selecting every phase.
 ALL_MODE: str = "all"
 
+#: Shown in place of a dataset name when the batch runs without a table.
+AUTO_LABEL: str = "(no table)"
+
 #: Column schema of the summary frame returned by :func:`run_batch`.
 SUMMARY_SCHEMA: Dict = {
     "name": pl.Utf8,
@@ -301,7 +304,7 @@ def _select_rows(
 
 
 def run_batch(
-    table: Union[str, pl.DataFrame],
+    table: Optional[Union[str, pl.DataFrame]] = None,
     mode: str = ALL_MODE,
     prepare_config: Optional[str] = None,
     training_config: Optional[str] = None,
@@ -317,10 +320,16 @@ def run_batch(
     phase's configuration file, and the corresponding entry point is called.
     A blank cell skips that phase for that dataset.
 
+    Without a table the batch runs each phase once with no set name, leaving
+    each configuration file to select its own set. That is the whole batch for
+    a project whose config files hold a single set each, and it turns
+    ``run_batch`` into a way of running the phases in order.
+
     :param table: Path to the dataset table, or an already-loaded DataFrame.
                   The first column (or one called ``name``) identifies the
                   dataset; the phase columns give the set name to select.
-    :type table: Union[str, polars.DataFrame]
+                  ``None`` runs each phase once without naming a set.
+    :type table: Optional[Union[str, polars.DataFrame]]
     :param mode: Which phases to run: a phase name from :func:`available_modes`
                  or ``"all"``. Defaults to ``"all"``.
     :type mode: str
@@ -330,7 +339,8 @@ def run_batch(
     :type training_config: Optional[str]
     :param classification_config: The configuration file for the classify phase.
     :type classification_config: Optional[str]
-    :param names: Run only these datasets, instead of every row.
+    :param names: Run only these datasets, instead of every row. Requires a
+                  table, since there are no names to choose from without one.
     :type names: Optional[Sequence[str]]
     :param verbose: Report each dataset and phase as it starts, and pass the
                     flag on to the entry points. Defaults to False.
@@ -340,8 +350,8 @@ def run_batch(
                               propagates immediately. Defaults to False.
     :type continue_on_error: bool
     :raises ValueError: If the mode is unknown, the table lacks a column or a
-                        config file needed by the mode, or a requested name is
-                        not in the table.
+                        config file needed by the mode, a requested name is not
+                        in the table, or ``names`` is given without a table.
     :return: One row per dataset and phase (see :data:`SUMMARY_SCHEMA`), with
              ``status`` one of ``"ok"``, ``"skipped"`` or ``"failed"``.
     :rtype: polars.DataFrame
@@ -370,22 +380,35 @@ def run_batch(
     }
     _resolve_config_files(phases, config_files)
 
-    frame = read_batch_table(table)
-    _validate_columns(frame, phases)
-    name_column = _name_column(frame)
-    frame = _select_rows(frame, name_column, names)
+    if table is None:
+        if names is not None:
+            raise ValueError(
+                "'names' selects rows of a batch table, but no table was given. "
+                "Pass a table, or drop 'names' to let each config select its "
+                "own set."
+            )
+        # One unnamed dataset whose set names are left to the config files.
+        records: List[Dict] = [{phase.column: None for phase in phases}]
+        name_column = None
+    else:
+        frame = read_batch_table(table)
+        _validate_columns(frame, phases)
+        name_column = _name_column(frame)
+        frame = _select_rows(frame, name_column, names)
+        records = list(frame.iter_rows(named=True))
 
     started = perf_counter()
     if verbose:
+        scope = f"{len(records)} datasets" if name_column else "the configured sets"
         print(
-            f"{PREFIX} batch: {frame.height} datasets x {len(phases)} "
+            f"{PREFIX} batch: {scope} x {len(phases)} "
             f"phase(s) [{', '.join(phase.name for phase in phases)}]",
             flush=True,
         )
 
     rows: List[Dict] = []
-    for record in frame.iter_rows(named=True):
-        dataset_name = record[name_column]
+    for record in records:
+        dataset_name = record[name_column] if name_column else None
         for phase in phases:
             rows.append(
                 _run_one(
@@ -393,6 +416,7 @@ def run_batch(
                     dataset_name=dataset_name,
                     set_name=record.get(phase.column),
                     config_file=config_files[phase.config_argument],
+                    auto_select=name_column is None,
                     verbose=verbose,
                     continue_on_error=continue_on_error,
                 )
@@ -416,9 +440,10 @@ def run_batch(
 
 def _run_one(
     phase: Phase,
-    dataset_name: str,
+    dataset_name: Optional[str],
     set_name: Optional[str],
     config_file: str,
+    auto_select: bool,
     verbose: bool,
     continue_on_error: bool,
 ) -> Dict:
@@ -427,12 +452,17 @@ def _run_one(
 
     :param phase: The phase to run.
     :type phase: Phase
-    :param dataset_name: The dataset's name in the table.
-    :type dataset_name: str
-    :param set_name: The configuration set to select, or None/blank to skip.
+    :param dataset_name: The dataset's name in the table, or None when the
+                         batch is running without one.
+    :type dataset_name: Optional[str]
+    :param set_name: The configuration set to select. Blank skips the phase,
+                     unless ``auto_select`` leaves the choice to the config.
     :type set_name: Optional[str]
     :param config_file: The phase's configuration file.
     :type config_file: str
+    :param auto_select: When True, no set is named and the configuration file
+                        selects its own; a blank ``set_name`` is then not a skip.
+    :type auto_select: bool
     :param verbose: Whether to report the run and pass the flag on.
     :type verbose: bool
     :param continue_on_error: Whether a failure is recorded instead of raised.
@@ -442,11 +472,12 @@ def _run_one(
     :return: One summary row (see :data:`SUMMARY_SCHEMA`).
     :rtype: Dict
     """
-    if not set_name:
+    label = dataset_name or AUTO_LABEL
+
+    if not set_name and not auto_select:
         if verbose:
             print(
-                f"{PREFIX} batch: {dataset_name} / {phase.name} (skipped, "
-                f"no {phase.column})",
+                f"{PREFIX} batch: {label} / {phase.name} (skipped, no {phase.column})",
                 flush=True,
             )
         return {
@@ -459,11 +490,21 @@ def _run_one(
         }
 
     if verbose:
-        print(f"{PREFIX} batch: {dataset_name} / {phase.name} ({set_name})", flush=True)
+        print(
+            f"{PREFIX} batch: {label} / {phase.name} "
+            f"({set_name or 'set chosen by the config file'})",
+            flush=True,
+        )
 
     started = perf_counter()
     try:
-        config = read_config(config_file, set_name=set_name)
+        if auto_select:
+            config = read_config(config_file)
+            # Record what the config file actually selected, so the summary
+            # says which set ran even though the caller did not name one.
+            set_name = getattr(config, "dataset_name", None)
+        else:
+            config = read_config(config_file, set_name=set_name)
         phase.runner(config, verbose=verbose)
     except Exception as error:  # noqa: BLE001 - recorded or re-raised below
         if not continue_on_error:

@@ -6,7 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Added
-- `run_batch` runs `prepare` / `train` / `classify` (or `all`) over a table of dataset names, returning a per-run summary; `available_modes` lists the modes
+- `run_batch` runs `prepare` / `train` / `classify` (or `all`) over a table of dataset names, returning a per-run summary; `available_modes` lists the modes. Without a table each phase runs once, letting each config select its own set
+
+### Fixed
+- `read_config(file, set_name=...)` selects the named set from a file holding several sets; auto-selection ran first and rejected such a file, so `set_name` needed `auto_select=False` to work at all
 
 ## [0.6.0] - 2026-08-09
 ### Added

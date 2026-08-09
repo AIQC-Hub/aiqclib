@@ -31,6 +31,32 @@ differing only in which named set each configuration selects:
        verbose=True,
    )
 
+Running Without a Table
+-----------------------
+
+The table can be omitted entirely. Each phase then runs once with no set name,
+leaving every configuration file to select its own set:
+
+.. code-block:: python
+
+   summary = aq.run_batch(
+       mode="all",
+       prepare_config="prepare_config.yaml",
+       training_config="training_config.yaml",
+       classification_config="classification_config.yaml",
+   )
+
+This is the whole batch for a project whose config files hold a single set
+each, and otherwise a compact way of running the phases in order. The summary
+records which set each file selected, so the run is still traceable; the
+``name`` column is null, because no dataset name was given.
+
+.. note::
+
+   A configuration file holding several sets cannot select one on its own, so
+   it raises. Name the set with a table, or pass ``set_name`` yourself through
+   :func:`~aiqclib.interface.config.read_config`.
+
 The Dataset Table
 -----------------
 

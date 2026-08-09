@@ -104,8 +104,11 @@ def read_config(
     :param set_name: The name (key) of the desired configuration set within the YAML's dictionary.
                      Defaults to None.
     :type set_name: Optional[str]
-    :param auto_select: If True, the first available data set name will be selected automatically
-                        if no specific ``set_name`` is provided. Defaults to True.
+    :param auto_select: If True and no ``set_name`` is given, select the file's
+                        only set automatically; a file holding several sets
+                        raises, since there is nothing to choose between them.
+                        Ignored when ``set_name`` names the set to select.
+                        Defaults to True.
     :type auto_select: bool
     :return: An instantiated configuration object (:class:`DataSetConfig`,
              :class:`TrainingConfig`, :class:`ClassificationConfig`, or
@@ -126,7 +129,12 @@ def read_config(
     if matching_key is None:
         raise ValueError("No valid 'set' name found in the provided YAML file.")
 
-    config = config_classes[matching_key](config_file_name, auto_select)
+    # Auto-selection only makes sense when the caller did not name a set: it
+    # rejects a file holding several sets, which is precisely the file a caller
+    # passing 'set_name' is selecting from.
+    config = config_classes[matching_key](
+        config_file_name, auto_select and set_name is None
+    )
 
     if set_name is not None:
         config.select(set_name)
