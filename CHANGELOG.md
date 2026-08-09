@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-09
+### Added
+- `write_config_template(..., overwrite=True)` replaces an existing file
+- `run_batch` runs `prepare` / `train` / `classify` (or `all`) over a table of dataset names, returning a per-run summary; `available_modes` lists the modes. Without a table each phase runs once, letting each config select its own set
+
+### Changed
+- `write_config_template` refuses to replace an existing file, raising `FileExistsError`; pass `overwrite=True` for the previous behaviour
+
+### Fixed
+- `read_config(file, set_name=...)` selects the named set from a file holding several sets; auto-selection ran first and rejected such a file, so `set_name` needed `auto_select=False` to work at all
+
 ## [0.6.0] - 2026-08-09
 ### Added
 - `verbose=True` on `create_training_dataset`, `train_and_evaluate`, `run_nrt_qc` and `classify_dataset` prints each main step with the elapsed time

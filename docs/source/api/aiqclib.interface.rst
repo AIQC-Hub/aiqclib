@@ -9,6 +9,14 @@ aiqclib.interface package
 Submodules
 ----------
 
+aiqclib.interface.batch module
+------------------------------
+
+.. automodule:: aiqclib.interface.batch
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.interface.classify module
 ---------------------------------
 

@@ -80,6 +80,12 @@ The following command creates a configuration template for this stage.
     config_file_prepare = os.path.join(config_path, "data_preparation_config.yaml")
     aq.write_config_template(file_name=config_file_prepare, stage="prepare")
 
+.. note::
+
+   These calls refuse to replace an existing file, so working through this
+   guide a second time raises ``FileExistsError`` rather than discarding the
+   configs you edited. Add ``overwrite=True`` to start from fresh templates.
+
 Update the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

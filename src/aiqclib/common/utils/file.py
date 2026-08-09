@@ -58,6 +58,47 @@ def ensure_output_directory(file_name: str, create_dirs: bool = False) -> str:
     return dir_path
 
 
+def ensure_output_file(
+    file_name: str, create_dirs: bool = False, overwrite: bool = False
+) -> str:
+    """
+    Prepare the destination of a file about to be written.
+
+    Checks the directory (see :func:`ensure_output_directory`) and then refuses
+    to replace an existing file unless ``overwrite`` is set. Refusing by default
+    matters for files a user edits after they are generated: silently rewriting
+    one throws away that work with nothing to undo it.
+
+    :param file_name: The path (including filename) of the file to be written.
+    :type file_name: str
+    :param create_dirs: If True, create a missing output directory rather than
+                        raising. Defaults to False.
+    :type create_dirs: bool
+    :param overwrite: If True, replace an existing file. Defaults to False.
+    :type overwrite: bool
+    :raises IOError: If the directory does not exist and ``create_dirs`` is False.
+    :raises FileExistsError: If the file exists and ``overwrite`` is False.
+    :raises IsADirectoryError: If the path names an existing directory.
+    :returns: ``file_name`` unchanged, so the call can wrap the path.
+    :rtype: str
+    """
+    ensure_output_directory(file_name, create_dirs=create_dirs)
+
+    if os.path.isdir(file_name):
+        raise IsADirectoryError(
+            f"'{file_name}' is a directory, so it cannot be written as a file."
+        )
+
+    if os.path.exists(file_name) and not overwrite:
+        raise FileExistsError(
+            f"File '{file_name}' already exists. Pass overwrite=True to replace "
+            f"it, or choose another path. Refusing by default so an edited file "
+            f"is not lost."
+        )
+
+    return file_name
+
+
 def read_input_file(
     input_file: str,
     file_type: Optional[str] = None,

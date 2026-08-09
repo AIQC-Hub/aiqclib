@@ -60,6 +60,38 @@ class TestTemplateConfig:
         with pytest.raises(IOError):
             write_config_template("/abc/temp_dataset_template.yaml", "prepare")
 
+    def test_existing_file_is_not_replaced_by_default(self, tmp_path):
+        """A customized config must not be reset by regenerating the template."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare")
+        path.write_text("# my edited config\n")
+
+        with pytest.raises(FileExistsError, match="overwrite=True"):
+            write_config_template(str(path), "prepare")
+        assert path.read_text() == "# my edited config\n"
+
+    def test_overwrite_replaces_the_file(self, tmp_path):
+        """With the flag the template is written over the old contents."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare")
+        path.write_text("# my edited config\n")
+
+        write_config_template(str(path), "prepare", overwrite=True)
+        assert "path_info_sets" in path.read_text()
+
+    def test_overwrite_on_a_new_file_is_harmless(self, tmp_path):
+        """The flag does not require the file to already exist."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare", overwrite=True)
+        assert path.exists()
+
+    def test_create_dirs_and_overwrite_together(self, tmp_path):
+        """Both options apply to the same call."""
+        path = tmp_path / "new" / "prepare.yaml"
+        write_config_template(str(path), "prepare", create_dirs=True)
+        write_config_template(str(path), "prepare", create_dirs=True, overwrite=True)
+        assert path.exists()
+
     def test_missing_directory_message_names_the_option(self, tmp_path):
         """The refusal tells the user how to create the directory instead."""
         path = tmp_path / "not_yet" / "prepare.yaml"
@@ -110,9 +142,16 @@ class TestReadConfig:
         assert isinstance(config, TrainingConfig)
 
     def test_train_config_with_multiple_entries(self, training_yaml_001):
-        """Reading a training config file returns a TrainingConfig instance."""
-        with pytest.raises(ValueError):
-            _ = read_config(training_yaml_001, "NRT_BO_001")
+        """Naming a set in a multi-set file selects it.
+
+        This used to raise: auto-selection ran first and rejected the file for
+        holding several sets, so ``set_name`` was unusable without also passing
+        ``auto_select=False``. Naming a set now switches auto-selection off,
+        since there is nothing left for it to decide.
+        """
+        config = read_config(training_yaml_001, "NRT_BO_001")
+        assert isinstance(config, TrainingConfig)
+        assert config.dataset_name == "NRT_BO_001"
 
     @pytest.mark.parametrize(
         "config_fixture_name",
@@ -132,6 +171,27 @@ class TestReadConfig:
         """
         with pytest.raises(ValueError):
             _ = read_config(config_dir / "test_dataset_invalid.yaml")
+
+    def test_set_name_selects_from_a_multi_set_file(self, training_yaml_001):
+        """Naming a set must work on a file holding several of them.
+
+        Auto-selection rejects a file with more than one set, which is exactly
+        the file a caller passing ``set_name`` is selecting from; naming a set
+        has to switch it off rather than collide with it.
+        """
+        for name in ("NRT_BO_001", "NRT_BO_002"):
+            config = read_config(training_yaml_001, set_name=name)
+            assert config.dataset_name == name
+
+    def test_auto_select_false_still_honoured(self, training_yaml_001):
+        """The explicit three-argument form keeps working."""
+        config = read_config(training_yaml_001, "NRT_BO_001", False)
+        assert config.dataset_name == "NRT_BO_001"
+
+    def test_multi_set_file_without_a_set_name_still_raises(self, training_yaml_001):
+        """With nothing named there is still nothing to choose between."""
+        with pytest.raises(ValueError, match="multiple data set names"):
+            read_config(training_yaml_001)
 
     def test_config_with_invalid_path(self, dataset_yaml_001):
         """A non-existent file path raises IOError."""
