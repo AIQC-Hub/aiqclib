@@ -117,9 +117,10 @@ from are **near-real-time (NRT) QC** flags: the automated checks applied when
 the data is first distributed. They are not delayed-mode (DMQC) flags, which
 are assigned later, with expert review and the benefit of hindsight.
 
-This holds for both routes described on this page. The example dataset carries
-NRT flags, and ``ctddump`` reads the NRT products, so its output carries the NRT
-flags and nothing else.
+Neither route described on this page provides delayed-mode flags at all: the
+example dataset ships the NRT flags only, and ``ctddump`` reads the NRT
+products, so its output carries the NRT flags and nothing else. There is no
+delayed-mode column to switch to in either file.
 
 .. important::
 
@@ -130,9 +131,10 @@ flags and nothing else.
    accordingly: agreement with the NRT flags is agreement with an automated
    system, not with ground truth.
 
-If you do have delayed-mode flags, point ``flag`` at those columns instead in
-the ``target_sets`` section of your configuration; nothing else in the workflow
-changes:
+Training on delayed-mode quality therefore requires data from a source that
+carries such flags, which you would supply yourself. Once your input file has
+them, point ``flag`` at those columns in the ``target_sets`` section of your
+configuration; nothing else in the workflow changes:
 
 .. code-block:: yaml
 
@@ -140,7 +142,7 @@ changes:
      - name: target_set_1
        variables:
          - name: temp
-           flag: temp_qc_dm        # delayed-mode flags instead of temp_qc
+           flag: temp_qc_dm        # a delayed-mode column from your own data
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 
