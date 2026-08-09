@@ -1,4 +1,5 @@
-"""Unit tests for the ``read_input_file`` utility.
+"""Unit tests for the file utilities: ``read_input_file`` and
+``ensure_output_directory``.
 
 read_input_file is the polymorphic reader the pipeline uses to load
 parquet, CSV, TSV, and gzipped CSV/TSV files. Tests verify:
@@ -11,6 +12,9 @@ parquet, CSV, TSV, and gzipped CSV/TSV files. Tests verify:
 - ``options=None`` is equivalent to ``options={}``
 - A file with an unsupported extension and no explicit type raises ValueError
 
+``ensure_output_directory`` guards the destination of a file about to be
+written: it refuses a missing directory by default and creates it on request.
+
 Refactored from a ``unittest.TestCase`` class with ``self.subTest`` loops
 inside two test methods. The subTest loops become ``@pytest.mark.parametrize``,
 sharing a module-level case list between the explicit-type and inferred-type
@@ -20,7 +24,7 @@ tests.
 import pytest
 import polars as pl
 
-from aiqclib.common.utils.file import read_input_file
+from aiqclib.common.utils.file import ensure_output_directory, read_input_file
 
 
 # ---------------------------------------------------------------------------
@@ -148,3 +152,50 @@ class TestReadInputFile:
         """
         with pytest.raises(ValueError):
             _ = read_input_file(input_dir / "empty_text_file.txt")
+
+
+class TestEnsureOutputDirectory:
+    """Guarding the destination directory of a file about to be written."""
+
+    def test_existing_directory_passes(self, tmp_path):
+        """An existing directory is returned unchanged and nothing is created."""
+        result = ensure_output_directory(str(tmp_path / "out.yaml"))
+        assert result == str(tmp_path)
+
+    def test_no_directory_part(self, tmp_path):
+        """A bare filename has no directory to check."""
+        assert ensure_output_directory("out.yaml") == ""
+
+    def test_missing_directory_raises_by_default(self, tmp_path):
+        """The default refuses to create anything, and says how to opt in."""
+        target = tmp_path / "missing" / "out.yaml"
+        with pytest.raises(IOError, match="create_dirs=True"):
+            ensure_output_directory(str(target))
+        assert not target.parent.exists()
+
+    def test_create_dirs_creates_nested_directories(self, tmp_path):
+        """Every missing parent is created, not just the last component."""
+        target = tmp_path / "a" / "b" / "c" / "out.yaml"
+        result = ensure_output_directory(str(target), create_dirs=True)
+        assert result == str(target.parent)
+        assert target.parent.is_dir()
+
+    def test_create_dirs_is_idempotent(self, tmp_path):
+        """Calling twice does not raise on the second, now-existing, directory."""
+        target = tmp_path / "a" / "out.yaml"
+        ensure_output_directory(str(target), create_dirs=True)
+        ensure_output_directory(str(target), create_dirs=True)
+        assert target.parent.is_dir()
+
+    @pytest.mark.parametrize("create_dirs", [False, True])
+    def test_path_blocked_by_a_file(self, tmp_path, create_dirs):
+        """A regular file where the directory should be is reported clearly."""
+        blocker = tmp_path / "blocker"
+        blocker.write_text("not a directory")
+        with pytest.raises(IOError, match="is not a directory"):
+            ensure_output_directory(str(blocker / "out.yaml"), create_dirs=create_dirs)
+
+    def test_tilde_path_reports_that_it_is_not_expanded(self):
+        """'~' looks right but is literal, so the message calls it out."""
+        with pytest.raises(IOError, match="not expanded automatically"):
+            ensure_output_directory("~/aiqclib_no_such_dir/out.yaml")

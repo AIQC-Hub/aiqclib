@@ -5,7 +5,6 @@ reading them as instantiated configuration objects. Supports "prepare",
 lookups.
 """
 
-import os
 from typing import Optional
 
 from aiqclib.common.base.config_base import ConfigBase
@@ -24,16 +23,23 @@ from aiqclib.common.config.yaml_templates import (
 )
 from aiqclib.common.utils.config import get_config_file
 from aiqclib.common.utils.config import read_config as utils_read_config
+from aiqclib.common.utils.file import ensure_output_directory
 
 
-def write_config_template(file_name: str, stage: str, extension: str = "") -> None:
+def write_config_template(
+    file_name: str,
+    stage: str,
+    extension: str = "",
+    create_dirs: bool = False,
+) -> None:
     """
     Write a YAML configuration template for the specified stage
     ("prepare", "train", or "classify") to a file.
 
     This function:
       1. Chooses a template generator based on the combination of ``stage`` and ``extension``.
-      2. Validates that the directory for ``file_name`` exists.
+      2. Validates that the directory for ``file_name`` exists, creating it when
+         ``create_dirs`` is True.
       3. Writes the generated YAML template text to the specified file.
 
     :param file_name: The path (including filename) where the YAML file will be written.
@@ -43,8 +49,20 @@ def write_config_template(file_name: str, stage: str, extension: str = "") -> No
     :type stage: str
     :param extension: Determines template extensions; must be one of "", "full", or "reduced".
     :type extension: str
+    :param create_dirs: If True, create the output directory (and any missing
+                        parents) instead of raising when it does not exist.
+                        Defaults to False, so a mistyped path is reported rather
+                        than silently creating directories.
+    :type create_dirs: bool
     :raises ValueError: If the combined stage and extension is not found in the registry.
-    :raises IOError: If the directory of the specified file path does not exist.
+    :raises IOError: If the directory of the specified file path does not exist
+                     and ``create_dirs`` is False.
+
+    Example Usage:
+      >>> # write_config_template("~/new/dir/prepare.yaml", "prepare")
+      >>> # IOError: Directory '~/new/dir' does not exist. Create it first, or
+      >>> #          pass create_dirs=True to create it automatically. ...
+      >>> # write_config_template("/tmp/new/dir/prepare.yaml", "prepare", create_dirs=True)
     """
     function_registry = {
         "prepare_": get_config_data_set_all_template,
@@ -59,9 +77,7 @@ def write_config_template(file_name: str, stage: str, extension: str = "") -> No
         raise ValueError(f"Module {stage} is not supported.")
 
     yaml_text = function_registry[f"{stage}_{extension}"]()
-    dir_path = os.path.dirname(file_name)
-    if not os.path.exists(dir_path) and dir_path != "":
-        raise IOError(f"Directory '{dir_path}' does not exist.")
+    ensure_output_directory(file_name, create_dirs=create_dirs)
 
     with open(file_name, "w", encoding="utf-8") as yaml_file:
         yaml_file.write(yaml_text)
