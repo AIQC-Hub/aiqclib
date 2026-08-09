@@ -9,6 +9,7 @@ As this project is still in active development, it does not yet strictly adhere 
 - QC flag columns may be integer, string or float, and `pos_flag_values` / `neg_flag_values` may be written as `4` or `"4"`; the emitted `flag` column is now always Int64
 
 ### Fixed
+- `k_fold` stays an integer column when a class holds fewer rows than `k_fold` (an empty numpy array defaulted to float64), fixing a `SchemaError` in the split step
 - Summary stats accept `profile_no` in any integer dtype (previously Int32 only), so inputs from `ctddump` (UInt32) and auto-created identifier columns (Int64) no longer raise a `SchemaError`
 
 ## [0.5.0] - 2026-07-15
