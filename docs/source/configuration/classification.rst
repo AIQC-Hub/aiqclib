@@ -135,7 +135,7 @@ This section defines summary statistics that will be used for normalization or s
 
 .. important::
 
-   As it is crucial to normalize features for non-tree based machine learning methods, such as SVM and logistic regression, you need to provide summary statistics (like min/max values) of your data in the configuration file. The ``aiqclib`` library offers convenient functions to calculate the summary statistics.  Please refer to the :doc:`../../how-to/feature_normalization` guide for details.
+   As it is crucial to normalize features for non-tree based machine learning methods, such as SVM and logistic regression, you need to provide summary statistics (like min/max values) of your data in the configuration file. The ``aiqclib`` library offers convenient functions to calculate the summary statistics.  Please refer to the :doc:`../how-to/feature_normalization` guide for details.
 
 `step_class_sets`
 ^^^^^^^^^^^^^^^^^
@@ -173,7 +173,7 @@ This section provides general parameters for the workflow processes defined in `
 *   **steps.input.filter_method_dict.keep_years**: Specifies a list of years from which data should be kept for classification. Other years will be excluded.
 *   **steps.input.rename_dict**: Dictionary for renaming columns during input processing.
 *   **steps.model.calculate_shap**: This is used to control SHAP value calculation.
-*   **steps.model.skip_evaluation**: An optional boolean to classify data without label columns. When enabled, the pipeline predicts every row but skips label creation and performance evaluation. If omitted, it is auto-detected per target from whether a QC ``flag`` is set. See the :doc:`../../how-to/classification_labels` guide for details.
+*   **steps.model.skip_evaluation**: An optional boolean to classify data without label columns. When enabled, the pipeline predicts every row but skips label creation and performance evaluation. If omitted, it is auto-detected per target from whether a QC ``flag`` is set. See the :doc:`../how-to/classification_labels` guide for details.
 *   **steps.model.model_params.n_jobs**: The number of threads used by XGBoost. It tries to use all available CPU cores if it is set to `-1`.
 *   Parameters for other steps (``summary``, ``select``, ``locate``, ``extract``, ``classify``, ``concat``) are also defined here, often left empty if default behavior is sufficient or if parameters are handled by the model itself.
 
@@ -220,7 +220,7 @@ This is the main "assembly" section that defines a complete classification job. 
        # ... other set references would follow here
 
 .. note::
-   While you can define multiple classification sets in the ``classification_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../../how-to/selecting_specific_configurations` page for instructions on how to do this.
+   While you can define multiple classification sets in the ``classification_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../how-to/selecting_specific_configurations` page for instructions on how to do this.
 
 Full Example with XGBoost
 --------------------------------

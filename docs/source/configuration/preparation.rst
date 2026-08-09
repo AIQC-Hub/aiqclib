@@ -20,7 +20,7 @@ The primary configuration sections (building blocks) are:
 
 .. note::
 
-   ``dmaclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../../how-to/down_sampling_negative` guide for details.
+   ``aiqclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../how-to/down_sampling_negative` guide for details.
 
 Detailed Configuration Sections
 -------------------------------
@@ -145,7 +145,7 @@ This section defines summary statistics that will be used for normalization or s
 
 .. important::
 
-   As it is crucial to normalize features for non-tree based machine learning methods, such as SVM and logistic regression, you need to provide summary statistics (like min/max values) of your data in the configuration file. The ``aiqclib`` library offers convenient functions to calculate the summary statistics.  Please refer to the :doc:`../../how-to/feature_normalization` guide for details.
+   As it is crucial to normalize features for non-tree based machine learning methods, such as SVM and logistic regression, you need to provide summary statistics (like min/max values) of your data in the configuration file. The ``aiqclib`` library offers convenient functions to calculate the summary statistics.  Please refer to the :doc:`../how-to/feature_normalization` guide for details.
 
 `step_class_sets`
 ^^^^^^^^^^^^^^^^^
@@ -213,7 +213,7 @@ This is the main "pipeline assembly" section. Each entry in this list defines a 
        # ... other set references would follow here
 
 .. note::
-   While you can define multiple data sets in the ``data_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../../how-to/selecting_specific_configurations` page for instructions on how to do this.
+   While you can define multiple data sets in the ``data_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../how-to/selecting_specific_configurations` page for instructions on how to do this.
 
 Full Example
 ------------

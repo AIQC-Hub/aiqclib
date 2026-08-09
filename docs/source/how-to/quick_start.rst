@@ -291,7 +291,7 @@ After this command finishes, the output directories will be generated within ``/
 
 *   **classify**: This is the final output directory for the workflow. It contains:
 
-    *   A ``.parquet`` file with the original input data augmented with new columns for the model's predictions (e.g., ``temp_prediction``) and prediction probabilities (e.g., ``temp_probability``).
+    *   A ``.parquet`` file with the original input data augmented with new columns per target: the predicted label (e.g. ``temp_predicted``) and the model score (e.g. ``temp_score``).
     *   A summary report detailing the classification results.
 
 Other intermediate folders (``summary``, ``select``, ``locate``, ``extract``) are also created, mirroring the process used during data preparation to ensure consistency.

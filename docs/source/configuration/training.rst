@@ -46,7 +46,7 @@ Similar to the ``prepare`` workflow, this section specifies the target variables
 This powerful section allows you to define the core components of your training pipeline by specifying the Python classes to use for each major step. This is where you choose your machine learning model, the cross-validation method, and other pipeline components.
 
 *   **steps.input**: The class responsible for ingesting the prepared training, validation, and test datasets.
-*   **steps.validate**: The class defining the cross-validation strategy (e.g., ``KFoldValidation``, ``TimeSeriesValidation``).
+*   **steps.validate**: The class defining the cross-validation strategy (``KFoldValidation``, or ``KFoldValidationSuite`` to validate several algorithms at once).
 *   **steps.model**: The class for the machine learning algorithm to be trained (e.g., ``XGBoost``, ``RandomForest``).
 *   **steps.build**: The class that handles the final model training on the full training set and saving the model artifacts.
 
@@ -61,7 +61,7 @@ This powerful section allows you to define the core components of your training 
          build: BuildModel
 
 .. note::
-   ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them by setting the ``model`` key. For more details, see the dedicated :doc:`../../how-to/algorithm_selection` page.
+   ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them by setting the ``model`` key. For more details, see the dedicated :doc:`../how-to/algorithm_selection` page.
 
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^
@@ -87,10 +87,10 @@ This section provides detailed parameters for the classes defined in your chosen
          build: { }
 
 .. note::
-   SHAP values can be automatically calculated during the test phase. For more details, see the dedicated :doc:`../../how-to/shap_values` page.
+   SHAP values can be automatically calculated during the test phase. For more details, see the dedicated :doc:`../how-to/shap_values` page.
 
 .. note::
-   Model parameters specified by ``model_params`` differ across ML algorithms. Please consult the dedicated :doc:`../../how-to/algorithm_selection` page.
+   Model parameters specified by ``model_params`` differ across ML algorithms. Please consult the dedicated :doc:`../how-to/algorithm_selection` page.
 
 `training_sets`
 ^^^^^^^^^^^^^^^^^
@@ -113,7 +113,7 @@ This is the main "assembly" section that defines a complete training and evaluat
        step_param_set: training_param_set_1
 
 .. note::
-   While you can define multiple training sets in the ``training_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../../how-to/selecting_specific_configurations` page for instructions on how to do this.
+   While you can define multiple training sets in the ``training_sets`` section, a specific one must be selected for subsequent processes. Please consult the dedicated :doc:`../how-to/selecting_specific_configurations` page for instructions on how to do this.
 
 Full Example with XGBoost
 ---------------------------
