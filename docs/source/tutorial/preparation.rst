@@ -47,7 +47,10 @@ Now, open the newly created ``~/aiqc_project/config/prepare_config.yaml`` in a t
 You will primarily focus on updating the following sections:
 
 *   **path_info_sets**: Define your input and output directories.
-*   **target_sets**: Specify your prediction targets and their quality control flags.
+*   **target_sets**: Specify your prediction targets and their quality control
+    flags. The template labels from ``temp_qc`` / ``psal_qc`` / ``pres_qc``,
+    which are near-real-time QC flags rather than delayed-mode ones — see
+    :ref:`which-qc-flags` for what that means for your model.
 *   **summary_stats_sets**: Provide settings for summary statistics.
 *   **feature_sets & feature_param_sets**: List the feature engineering methods and their parameters.
 *   **feature_stats_sets**: Provide statistics for feature normalization.
