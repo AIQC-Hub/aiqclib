@@ -8,6 +8,10 @@ Refactored from a single ``unittest.TestCase`` class. Uses
 ``build_prepare_pipeline(dataset_config_005, ..., stop_after="extract")``
 to get the upstream pipeline output, then exercises SplitDataSetAll on top.
 Per-target triplication collapses to ``for tgt in TARGETS:`` loops.
+
+``TestAddKFold`` drives ``add_k_fold`` directly with hand-built training sets,
+which is the only way to reach the class sizes (fewer rows than k_fold, or
+none at all) that a real fixture does not produce.
 """
 
 import os
@@ -109,3 +113,64 @@ class TestSplitDataSetAll:
         for tgt in TARGETS:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
+
+
+class TestAddKFold:
+    """Fold assignment for class sizes a real fixture does not reach."""
+
+    @staticmethod
+    def _training_set(n_pos: int, n_neg: int) -> pl.DataFrame:
+        """A minimal training set with the columns add_k_fold reorders."""
+        labels = [1] * n_pos + [0] * n_neg
+        size = len(labels)
+        return pl.DataFrame(
+            {
+                "row_id": list(range(1, size + 1)),
+                "platform_code": ["PLAT"] * size,
+                "profile_no": [1] * size,
+                "observation_no": list(range(1, size + 1)),
+                "label": labels,
+                "feature": [0.5] * size,
+            }
+        )
+
+    @pytest.mark.parametrize(
+        "n_pos, n_neg",
+        [
+            (2, 40),  # fewer positives than folds: the common low-signal case
+            (40, 2),  # and the mirror image
+            (0, 40),  # no positives at all
+            (40, 0),  # no negatives at all
+            (0, 0),  # nothing to fold
+        ],
+        ids=["few_pos", "few_neg", "no_pos", "no_neg", "empty"],
+    )
+    def test_small_classes_keep_an_integer_k_fold(
+        self, dataset_config_005, n_pos, n_neg
+    ):
+        """A class smaller than k_fold must not turn 'k_fold' into a float column.
+
+        numpy gives an empty array float64, so the fold numbers for the smaller
+        class used to come out as Float64 while the other class stayed Int64,
+        and stacking the two raised a SchemaError.
+        """
+        ds = SplitDataSetAll(dataset_config_005)
+        ds.training_sets = {"temp": self._training_set(n_pos, n_neg)}
+
+        ds.add_k_fold("temp")
+
+        result = ds.training_sets["temp"]
+        assert result.schema["k_fold"].is_integer()
+        assert result.height == n_pos + n_neg
+
+    def test_fold_numbers_stay_in_range(self, dataset_config_005):
+        """Every row gets a fold between 1 and k_fold."""
+        ds = SplitDataSetAll(dataset_config_005)
+        ds.training_sets = {"temp": self._training_set(3, 37)}
+
+        ds.add_k_fold("temp")
+
+        k_fold = ds.get_k_fold()
+        folds = ds.training_sets["temp"]["k_fold"].to_list()
+        assert folds
+        assert all(1 <= fold <= k_fold for fold in folds)

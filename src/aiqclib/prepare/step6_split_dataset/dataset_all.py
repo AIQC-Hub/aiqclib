@@ -127,21 +127,27 @@ class SplitDataSetAll(SplitDataSetBase):
 
         pos_n_per_value = df_pos_size // k_fold
         neg_n_per_value = df_neg_size // k_fold
+        # The dtype is explicit because these comprehensions are empty whenever a
+        # class holds fewer rows than k_fold, and numpy defaults an empty array
+        # to float64. That made 'k_fold' a Float64 column on one side of the
+        # vstack below and an Int64 column on the other.
         pos_k_values = np.array(
-            [i for i in range(1, k_fold + 1) for _ in range(pos_n_per_value)]
+            [i for i in range(1, k_fold + 1) for _ in range(pos_n_per_value)],
+            dtype=np.int64,
         )
         neg_k_values = np.array(
-            [i for i in range(1, k_fold + 1) for _ in range(neg_n_per_value)]
+            [i for i in range(1, k_fold + 1) for _ in range(neg_n_per_value)],
+            dtype=np.int64,
         )
 
         pos_remaining = df_pos_size % k_fold
         neg_remaining = df_neg_size % k_fold
         pos_k_values = np.concatenate(
             [pos_k_values, np.random.choice(range(1, k_fold + 1), pos_remaining)]
-        )
+        ).astype(np.int64)
         neg_k_values = np.concatenate(
             [neg_k_values, np.random.choice(range(1, k_fold + 1), neg_remaining)]
-        )
+        ).astype(np.int64)
 
         np.random.shuffle(pos_k_values)
         np.random.shuffle(neg_k_values)
