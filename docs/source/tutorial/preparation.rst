@@ -96,7 +96,7 @@ Update your ``prepare_config.yaml`` to match the following for the ``path_info_s
 
 .. note::
 
-   ``dmaclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../how-to/down_sampling_negative` guide for details.
+   ``aiqclib`` provides methods to down-sample the negative data set. Please refer to the :doc:`../how-to/down_sampling_negative` guide for details.
 
 Step 3.3: Run the Preparation Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -19,7 +19,7 @@ Basic Usage: The Three-Stage Workflow
        aq.create_training_dataset(prepare_config)
 
 2.  **Training & Evaluation:**
-    In this stage, a machine learning model is trained and rigorously evaluated using the prepared dataset. This typically includes cross-validation and hyperparameter tuning to find the best performing model.
+    In this stage, a machine learning model is trained and rigorously evaluated using the prepared dataset with cross-validation. Model hyperparameters are set in the configuration file rather than searched for automatically.
 
     .. code-block:: python
 

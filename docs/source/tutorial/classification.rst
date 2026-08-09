@@ -7,7 +7,7 @@ This is the culmination of the ``aiqclib`` pipeline, transforming your machine l
 
 .. admonition:: Prerequisites
 
-   This tutorial assumes you have successfully completed :doc:``./training``. To proceed with classification, you will need:
+   This tutorial assumes you have successfully completed :doc:`./training`. To proceed with classification, you will need:
 
    *   The trained model file(s) saved in the directory you specified in the training configuration (e.g., ``~/aiqc_project/models/``).
    *   The original raw data file (``nrt_cora_bo_4.parquet``) that you wish to classify. This file should be in your ``~/aiqc_project/input/`` directory.
@@ -99,11 +99,12 @@ Update your ``classification_config.yaml`` file to match the following. Remember
         summary_stats_set: summary_stats_set_1
         feature_set: feature_set_1
         feature_param_set: feature_set_1_param_set_1
+        feature_stats_set: feature_set_1_stats_set_1
         step_class_set: data_set_step_set_1
         step_param_set: data_set_param_set_1
 
 .. note::
-   The classification configuration file is comprehensive and has many options similar to both preparation and training configurations. For a complete reference of all available parameters, please consult the dedicated :doc:`../../configuration/classification` page.
+   The classification configuration file is comprehensive and has many options similar to both preparation and training configurations. For a complete reference of all available parameters, please consult the dedicated :doc:`../configuration/classification` page.
 
 Step 5.3: Run the Classification Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

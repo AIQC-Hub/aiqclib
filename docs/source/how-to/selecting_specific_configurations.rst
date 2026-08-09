@@ -1,7 +1,7 @@
 Selecting Specific Configurations
 =====================================
 
-This guide demonstrates how to select a specific configuration (e.g., for a dataset, training set, or classification set) when multiple options are defined within a single configuration file. The ``read_config`` function in ``aiqclib`` allows you to easily specify which named configuration to load using the ``set_name`` parameter. This parameter is applicable for selecting ``dataset_name`` in the *Dataset Preparation* stage, ``training_set`` in the *Training & Evaluation* stage, and ``classification_set`` in the *Classification* stage.
+This guide demonstrates how to select a specific configuration (e.g., for a dataset, training set, or classification set) when multiple options are defined within a single configuration file. The ``read_config`` function in ``aiqclib`` allows you to easily specify which named configuration to load using the ``set_name`` parameter. This parameter selects an entry from ``data_sets`` in the *Dataset Preparation* stage, ``training_sets`` in the *Training & Evaluation* stage, or ``classification_sets`` in the *Classification* stage.
 
 Example: Selecting a Data Set
 -------------------------------
@@ -41,4 +41,4 @@ This ``config`` object will now contain the parameters for ``dataset_0002``, rea
 Generalizing to Other Configuration Types and Stages
 ------------------------------------------------------
 
-This same approach applies to selecting specific configurations for other stages of your machine learning workflow. If your configuration file defines multiple named entries within sections like ``dataset_names`` (for the *Dataset Preparation* stage), ``training_sets`` (for the *Training & Evaluation* stage), or ``classification_sets`` (for the *Classification* stage), you can use the ``set_name`` parameter with ``read_config`` to load the desired one. The ``set_name`` parameter will expect the specific ``name`` property of the entry you wish to select from the respective section in your configuration file.
+This same approach applies to selecting specific configurations for other stages of your machine learning workflow. If your configuration file defines multiple named entries within sections like ``data_sets`` (for the *Dataset Preparation* stage), ``training_sets`` (for the *Training & Evaluation* stage), or ``classification_sets`` (for the *Classification* stage), you can use the ``set_name`` parameter with ``read_config`` to load the desired one. The ``set_name`` parameter will expect the specific ``name`` property of the entry you wish to select from the respective section in your configuration file.

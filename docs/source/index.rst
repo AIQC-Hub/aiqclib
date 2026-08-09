@@ -1,12 +1,12 @@
-Welcome to the `aiqclib` documentation!
-=======================================
+Welcome to the ``aiqclib`` documentation!
+=========================================
 
 ``aiqclib`` is a Python library that provides a configuration-driven workflow for machine learning, simplifying dataset preparation, model training, and data classification. It is a core component of the AIQC project.
 
 .. note::
    To unlock the full potential of your model building processes, comprehensive configuration is key. For a streamlined initial test or to explore the library with base settings, see the :doc:`how-to/quick_start` guide.
 
-Workflow of `aiqclib`
+Workflow of ``aiqclib``
 ---------------------------------------------
 
 The library is designed around a three-stage machine learning workflow:
@@ -17,9 +17,9 @@ The library is designed around a three-stage machine learning workflow:
 
 In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable — see the :doc:`how-to/nrt_qc` guide.
 
-Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
+Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease. To run these workflows over several datasets in one call, see the :doc:`how-to/batch_processing` guide.
 
-Algorithms supported by `aiqclib`
+Algorithms supported by ``aiqclib``
 ---------------------------------------------
 
 ================================ ================================= ============ ======================
