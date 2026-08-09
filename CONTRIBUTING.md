@@ -37,11 +37,10 @@ We recommend using **uv** for managing the development environment.
 ```
 
 3.  **Install the project and its dependencies.**
-    This command installs the library in "editable" mode (`-e`) and pulls in all dependencies from `pyproject.toml`.
+    This command pulls in all dependencies from `pyproject.toml` and installs the library itself in "editable" mode, so no separate install step is needed.
 
 ```bash
     uv sync
-    uv pip install -e .
 ```
 
 4.  **Download the test data.**
