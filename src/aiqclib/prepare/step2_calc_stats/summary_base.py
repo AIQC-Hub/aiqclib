@@ -126,6 +126,11 @@ class SummaryStatsBase(DataSetBase):
 
         These statistics are calculated across the entire dataset.
 
+        The placeholder identifier columns are cast to the input's own dtypes so
+        the resulting row stacks onto the per-profile stats regardless of which
+        integer type ``profile_no`` uses (Int32 from some sources, UInt32 from
+        others).
+
         :param val_col_name: Name of the column for which to calculate global
                              statistics.
         :type val_col_name: str
@@ -133,11 +138,12 @@ class SummaryStatsBase(DataSetBase):
                   structured to be compatible with per-profile stats.
         :rtype: polars.DataFrame
         """
+        schema = self.input_data.schema
         return (
             self.input_data.select(self.get_stats_expression(val_col_name))
             .with_columns(
-                pl.lit("all").alias("platform_code"),
-                pl.lit(0).alias("profile_no"),
+                pl.lit("all").cast(schema["platform_code"]).alias("platform_code"),
+                pl.lit(0).cast(schema["profile_no"]).alias("profile_no"),
                 pl.lit(val_col_name).alias("variable"),
             )
             .select(self.stats_col_names)

@@ -12,6 +12,7 @@ from typing import Dict, Optional
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.qc_flags import flag_as_int, flag_is_in
 from aiqclib.prepare.step4_select_rows.locate_base import LocatePositionBase
 
 
@@ -82,13 +83,13 @@ class LocateDataSetA(LocatePositionBase):
             .join(
                 (
                     self.input_data.filter(
-                        pl.col(target_value["flag"]).is_in(pos_flag_values)
+                        flag_is_in(target_value["flag"], pos_flag_values)
                     ).select(
                         pl.col("platform_code"),
                         pl.col("profile_no"),
                         pl.col("observation_no"),
                         pl.col("pres"),
-                        pl.col(target_value["flag"]).alias("flag"),
+                        flag_as_int(target_value["flag"]).alias("flag"),
                     )
                 ),
                 on=["platform_code", "profile_no"],
@@ -167,13 +168,13 @@ class LocateDataSetA(LocatePositionBase):
             )
             .join(
                 self.input_data.filter(
-                    pl.col(target_value["flag"]).is_in(neg_flag_values)
+                    flag_is_in(target_value["flag"], neg_flag_values)
                 ).select(
                     pl.col("platform_code"),
                     pl.col("profile_no"),
                     pl.col("observation_no"),
                     pl.col("pres"),
-                    pl.col(target_value["flag"]).alias("flag"),
+                    flag_as_int(target_value["flag"]).alias("flag"),
                 ),
                 how="inner",
                 on=["platform_code", "profile_no"],
@@ -253,13 +254,13 @@ class LocateDataSetA(LocatePositionBase):
             )
             .join(
                 self.input_data.filter(
-                    pl.col(target_value["flag"]).is_in(neg_flag_values)
+                    flag_is_in(target_value["flag"], neg_flag_values)
                 ).select(
                     pl.col("platform_code"),
                     pl.col("profile_no"),
                     pl.col("observation_no"),
                     pl.col("pres"),
-                    pl.col(target_value["flag"]).alias("flag"),
+                    flag_as_int(target_value["flag"]).alias("flag"),
                 ),
                 how="inner",
                 on=["platform_code", "profile_no", "observation_no"],
