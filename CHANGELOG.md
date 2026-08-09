@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-08-09
+### Fixed
+- Documentation corrections: the tutorial chain skipped the input-data page, a broken cross-reference in the classification tutorial, a `classification_sets` example missing the required `feature_stats_set`, a non-existent `TimeSeriesValidation` class, wrong prediction column names and model output folder, and claims of hyperparameter tuning the library does not do
+- Setup instructions: `uv sync` already installs the project, so the extra `uv pip install -e .` is gone; conda-forge install is marked as not yet published; the conda-forge version-bump steps in `RELEASING.md` targeted the wrong repository
+
 ## [0.7.0] - 2026-08-09
 ### Added
 - `write_config_template(..., overwrite=True)` replaces an existing file
