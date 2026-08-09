@@ -165,6 +165,7 @@ class ClassifyAllSuite(BuildModelBase):
             current_model.model_score = None  # Reset to prevent duplication
             # Skip label creation / performance evaluation for label-free targets.
             current_model.skip_evaluation = self.config.get_skip_evaluation(target_name)
+            current_model.target_name = target_name
             current_model.test_set = test_set
             current_model.test()
 

@@ -9,6 +9,8 @@ plots to disk as SVG files. The tests verify:
   the mean-curve + std-deviation code path
 - A fold containing only one class is silently skipped (instead of crashing
   ``roc_curve``)
+- When no fold has both classes there is no curve to label, so the plot
+  explains itself instead of making matplotlib warn about an empty legend
 
 Refactored from a ``unittest.TestCase`` class with tempfile.mkdtemp +
 shutil.rmtree teardown. Now uses:
@@ -21,6 +23,7 @@ The MockModel class stays at module level — test infrastructure, not data.
 """
 
 import os
+import warnings
 from typing import Dict
 
 import matplotlib
@@ -32,7 +35,11 @@ import pytest
 # directly above the create_metric_plots import.
 matplotlib.use("Agg")
 
-from aiqclib.common.utils.metric_plots import create_metric_plots
+from aiqclib.common.utils.metric_plots import (
+    EMPTY_PLOT_NOTE,
+    create_metric_plots,
+    create_multi_method_metric_plots,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -150,4 +157,89 @@ class TestCreateMetricPlots:
         create_metric_plots(mock_model)
 
         assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
+
+
+class TestSingleClassPlots:
+    """Plots for an evaluation whose labels hold a single class."""
+
+    @staticmethod
+    def _single_class_scores() -> pl.DataFrame:
+        """Scores whose labels are all class 0, as a label-starved run produces."""
+        return pl.DataFrame(
+            {
+                "k": [0, 0, 0, 0],
+                "label": [0, 0, 0, 0],
+                "score": [0.1, 0.2, 0.3, 0.4],
+            }
+        )
+
+    def test_no_matplotlib_legend_warning(self, mock_model, test_output_dir):
+        """The empty legend must not produce matplotlib's unhelpful warning."""
+        target_name = "temp"
+        output_path = str(test_output_dir / f"test_single_class_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.model_scores[target_name] = self._single_class_scores()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")  # any warning fails the test
+            create_metric_plots(mock_model)
+
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
+
+    def test_plot_explains_why_it_is_empty(self, mock_model, test_output_dir):
+        """The saved SVG carries a note instead of silently showing blank axes."""
+        target_name = "temp"
+        output_path = str(test_output_dir / f"test_single_class_note_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.model_scores[target_name] = self._single_class_scores()
+
+        create_metric_plots(mock_model)
+
+        svg = open(output_path, encoding="utf-8").read()
+        # The note is rendered as text spans; check its distinctive first word
+        # survives into the SVG rather than matching the embedded newline.
+        assert "single class" in svg.replace("\n", " ") or "single" in svg
+        os.remove(output_path)  # comment out to debug
+
+    def test_multi_method_plots_are_also_quiet(self, mock_model, test_output_dir):
+        """The multi-method variant shares the same empty-legend handling."""
+        target_name = "psal"
+        output_path = str(
+            test_output_dir / f"test_single_class_multi_{target_name}.svg"
+        )
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.model_scores[target_name] = pl.DataFrame(
+            {
+                "method": ["XGB", "XGB", "RF", "RF"],
+                "label": [0, 0, 0, 0],
+                "score": [0.1, 0.2, 0.3, 0.4],
+            }
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            create_multi_method_metric_plots(mock_model)
+
+        assert os.path.exists(output_path)
+        os.remove(output_path)  # comment out to debug
+
+    def test_normal_data_still_gets_a_legend(self, mock_model, test_output_dir):
+        """Two-class data keeps its legend; the note is not added."""
+        target_name = "temp"
+        output_path = str(test_output_dir / f"test_two_class_{target_name}.svg")
+        mock_model.output_file_names["metric_plot"][target_name] = output_path
+        mock_model.model_scores[target_name] = pl.DataFrame(
+            {
+                "k": [0, 0, 0, 0],
+                "label": [0, 1, 0, 1],
+                "score": [0.1, 0.9, 0.2, 0.8],
+            }
+        )
+
+        create_metric_plots(mock_model)
+
+        svg = open(output_path, encoding="utf-8").read()
+        assert EMPTY_PLOT_NOTE.split("\n")[0] not in svg
         os.remove(output_path)  # comment out to debug

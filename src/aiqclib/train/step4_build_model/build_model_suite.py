@@ -198,6 +198,7 @@ class BuildModelSuite(BuildModelBase):
 
             current_model = self.models[comp_key]
             current_model.model_score = None  # Reset to prevent duplication
+            current_model.target_name = target_name
             current_model.test_set = test_set
             current_model.test()
 

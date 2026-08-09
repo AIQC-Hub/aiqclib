@@ -155,6 +155,7 @@ class BuildModel(BuildModelBase):
         # Reset model-scores table to avoid duplication if test is run multiple times
         self.base_model.model_score = None
 
+        self.base_model.target_name = target_name
         self.base_model.test_set = self.test_sets[target_name].drop(self.drop_cols)
         self.base_model.test()
         self.reports[target_name] = self.base_model.report

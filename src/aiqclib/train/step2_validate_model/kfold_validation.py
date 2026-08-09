@@ -106,6 +106,7 @@ class KFoldValidation(ValidationBase):
             current_fold_model.build()
             self.models[target_name].append(current_fold_model)
 
+            current_fold_model.target_name = target_name
             current_fold_model.test_set = (
                 self.training_sets[target_name]
                 .filter(pl.col("k_fold") == (k + 1))
