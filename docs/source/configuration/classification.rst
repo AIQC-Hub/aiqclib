@@ -54,6 +54,11 @@ While the classification workflow is applying a pre-trained model, this section 
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 
+.. note::
+   The flag column may hold integers, strings or floats, and the values may be
+   written as ``4`` or as ``"4"``; both sides are read as whole numbers. See
+   :ref:`qc-flag-columns` for the full table.
+
 `summary_stats_sets`
 ^^^^^^^^^^^^^^^^^^^^
 This section defines summary statistics that will be used for feature values or feature normalization.

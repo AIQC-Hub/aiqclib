@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-08-09
+### Added
+- `verbose=True` on `create_training_dataset`, `train_and_evaluate`, `run_nrt_qc` and `classify_dataset` prints each main step with the elapsed time
+- `write_config_template(..., create_dirs=True)` creates a missing output directory; by default the refusal message names the option (and flags an unexpanded `~`)
+
+### Changed
+- Single-class evaluations now warn that their 1.0 scores are degenerate and name the target, replacing matplotlib's "No artists with labels found to put in legend"; the empty metric plot says why it is empty
+- QC flag columns may be integer, string or float, and `pos_flag_values` / `neg_flag_values` may be written as `4` or `"4"`; the emitted `flag` column is now always Int64
+
+### Fixed
+- `k_fold` stays an integer column when a class holds fewer rows than `k_fold` (an empty numpy array defaulted to float64), fixing a `SchemaError` in the split step
+- Summary stats accept `profile_no` in any integer dtype (previously Int32 only), so inputs from `ctddump` (UInt32) and auto-created identifier columns (Int64) no longer raise a `SchemaError`
 
 ## [0.5.0] - 2026-07-15
 ### Added

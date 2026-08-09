@@ -1,4 +1,4 @@
-Step 4: Classification
+Step 5: Classification
 ======================
 
 You have successfully prepared a dataset and trained a machine learning model. The final step in the ``aiqclib`` workflow is to put that model to work by classifying a new, unseen dataset. This workflow applies your pre-trained model to every observation in an input file, adding model predictions and probability scores as new columns.
@@ -17,7 +17,7 @@ The Classification Workflow
 
 The classification process follows the familiar ``aiqclib`` pattern: you will generate a configuration template, customize it to point to your input data, the trained model, and the desired output location, and then execute the classification script.
 
-Step 4.1: Generate the Configuration Template
+Step 5.1: Generate the Configuration Template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First, use ``aiqclib`` to generate the boilerplate configuration template specifically for the ``classify`` workflow.
@@ -33,7 +33,7 @@ First, use ``aiqclib`` to generate the boilerplate configuration template specif
        stage="classify"
    )
 
-Step 4.2: Customize the Configuration File
+Step 5.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Open the newly created ``~/aiqc_project/config/classification_config.yaml`` file in your text editor. You need to configure the paths for the raw input data, the location of your trained model, and where the final classified output should be saved.
@@ -98,7 +98,7 @@ Update your ``classification_config.yaml`` file to match the following. Remember
 .. note::
    The classification configuration file is comprehensive and has many options similar to both preparation and training configurations. For a complete reference of all available parameters, please consult the dedicated :doc:`../../configuration/classification` page.
 
-Step 4.3: Run the Classification Process
+Step 5.3: Run the Classification Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once you have customized your ``classification_config.yaml`` with the correct paths, input file, and inherited configuration references, you can execute the classification workflow.

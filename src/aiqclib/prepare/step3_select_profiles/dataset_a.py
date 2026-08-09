@@ -13,6 +13,7 @@ from typing import Optional, List
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.qc_flags import flag_is_in
 from aiqclib.prepare.step3_select_profiles.select_base import ProfileSelectionBase
 
 
@@ -86,7 +87,7 @@ class SelectDataSetA(ProfileSelectionBase):
         conditions = reduce(
             operator.or_,
             [
-                pl.col(param["flag"]).is_in(param.get("pos_flag_values", [4]))
+                flag_is_in(param["flag"], param.get("pos_flag_values", [4]))
                 for param in self.config.get_target_dict().values()
             ],
         )
@@ -117,8 +118,8 @@ class SelectDataSetA(ProfileSelectionBase):
         exprs = reduce(
             operator.and_,
             [
-                (~pl.col(param["flag"]).is_in(param.get("pos_flag_values", [4])).any())
-                & (pl.col(param["flag"]).is_in(param.get("neg_flag_values", [1])).any())
+                (~flag_is_in(param["flag"], param.get("pos_flag_values", [4])).any())
+                & (flag_is_in(param["flag"], param.get("neg_flag_values", [1])).any())
                 for param in self.config.get_target_dict().values()
             ],
         )

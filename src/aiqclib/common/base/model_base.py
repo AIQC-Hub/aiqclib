@@ -81,6 +81,11 @@ class ModelBase(ABC):
         # via ``config.get_skip_evaluation`` for label-free datasets.
         self.skip_evaluation: bool = False
 
+        # The target this model instance is being run for. Set by the step
+        # classes, which own the per-target loop, so diagnostic messages can
+        # name the target. None when the caller did not set it.
+        self.target_name: Optional[str] = None
+
         # Check config to see if SHAP should be calculated
         self.enable_shap: bool = self.config.get_step_params("model").get(
             "calculate_shap", False

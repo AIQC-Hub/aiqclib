@@ -8,6 +8,7 @@ based on the parameters defined in a provided configuration object.
 """
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.progress import report_progress
 
 from aiqclib.common.loader.classify_loader import (
     load_classify_step1_input_dataset,
@@ -20,7 +21,7 @@ from aiqclib.common.loader.classify_loader import (
 )
 
 
-def classify_dataset(config: ConfigBase) -> None:
+def classify_dataset(config: ConfigBase, verbose: bool = False) -> None:
     """
     Execute a series of steps to classify all observations in the given data set, as defined
     by the provided configuration object.
@@ -37,51 +38,67 @@ def classify_dataset(config: ConfigBase) -> None:
     :param config: A configuration object specifying the classes and parameters
                    for each step in the dataset preparation and classification process.
     :type config: ConfigBase
+    :param verbose: When True, print each main step to stdout as it starts,
+                    with the elapsed time of the run. Defaults to False.
+    :type verbose: bool
     :return: None. The function performs I/O operations and modifies datasets based
              on the configuration but does not return a value.
     :rtype: None
     """
-    ds_input = load_classify_step1_input_dataset(config)
-    ds_input.read_input_data()
+    with report_progress(
+        stage="classify",
+        total_steps=7,
+        enabled=verbose,
+        label=getattr(config, "dataset_name", None),
+    ) as progress:
+        progress.step("Reading input data")
+        ds_input = load_classify_step1_input_dataset(config)
+        ds_input.read_input_data()
 
-    ds_summary = load_classify_step2_summary_dataset(config, ds_input.input_data)
-    ds_summary.calculate_stats()
-    ds_summary.write_summary_stats()
+        progress.step("Calculating summary statistics")
+        ds_summary = load_classify_step2_summary_dataset(config, ds_input.input_data)
+        ds_summary.calculate_stats()
+        ds_summary.write_summary_stats()
 
-    ds_select = load_classify_step3_select_dataset(config, ds_input.input_data)
-    ds_select.label_profiles()
-    ds_select.write_selected_profiles()
+        progress.step("Selecting profiles")
+        ds_select = load_classify_step3_select_dataset(config, ds_input.input_data)
+        ds_select.label_profiles()
+        ds_select.write_selected_profiles()
 
-    ds_locate = load_classify_step4_locate_dataset(
-        config, ds_input.input_data, ds_select.selected_profiles
-    )
-    ds_locate.process_targets()
-    ds_locate.write_selected_rows()
+        progress.step("Locating target rows")
+        ds_locate = load_classify_step4_locate_dataset(
+            config, ds_input.input_data, ds_select.selected_profiles
+        )
+        ds_locate.process_targets()
+        ds_locate.write_selected_rows()
 
-    ds_extract = load_classify_step5_extract_dataset(
-        config,
-        ds_input.input_data,
-        ds_select.selected_profiles,
-        ds_locate.selected_rows,
-        ds_summary.summary_stats,
-    )
-    ds_extract.process_targets()
-    ds_extract.write_target_features()
+        progress.step("Extracting features")
+        ds_extract = load_classify_step5_extract_dataset(
+            config,
+            ds_input.input_data,
+            ds_select.selected_profiles,
+            ds_locate.selected_rows,
+            ds_summary.summary_stats,
+        )
+        ds_extract.process_targets()
+        ds_extract.write_target_features()
 
-    ds_classify = load_classify_step6_classify_dataset(
-        config, ds_extract.target_features
-    )
-    ds_classify.read_models()
-    ds_classify.test_targets()
-    ds_classify.write_predictions()
-    ds_classify.write_reports()
-    ds_classify.write_model_scores()
-    if ds_classify.base_model.enable_shap:
-        ds_classify.write_shap_values()
-    ds_classify.create_metric_plots()
+        progress.step("Classifying observations")
+        ds_classify = load_classify_step6_classify_dataset(
+            config, ds_extract.target_features
+        )
+        ds_classify.read_models()
+        ds_classify.test_targets()
+        ds_classify.write_predictions()
+        ds_classify.write_reports()
+        ds_classify.write_model_scores()
+        if ds_classify.base_model.enable_shap:
+            ds_classify.write_shap_values()
+        ds_classify.create_metric_plots()
 
-    ds_concat = load_classify_step7_concat_dataset(
-        config, ds_input.input_data, ds_classify.predictions
-    )
-    ds_concat.merge_predictions()
-    ds_concat.write_merged_predictions()
+        progress.step("Merging predictions with input data")
+        ds_concat = load_classify_step7_concat_dataset(
+            config, ds_input.input_data, ds_classify.predictions
+        )
+        ds_concat.merge_predictions()
+        ds_concat.write_merged_predictions()

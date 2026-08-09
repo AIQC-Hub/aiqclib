@@ -69,6 +69,14 @@ per-item breakdown showing which items drive the disagreements. Variables
 without a ``flag`` are skipped; omit all flags to skip the comparison step
 entirely.
 
+The existing flag column may hold integers, strings or floats, and the
+configured values may be written as ``4`` or as ``"4"`` (see
+:ref:`qc-flag-columns`). Existing flags that are missing or unreadable get
+their own row in the contingency table, so they stay visible instead of being
+folded into a real flag value; the agreement metrics count only the values
+listed in ``pos_flag_values`` / ``neg_flag_values``. The input's flag columns
+are written to the output unchanged, whatever type they use.
+
 Using QC items as training features
 -----------------------------------
 

@@ -9,6 +9,7 @@ training and validation datasets.
 """
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.progress import report_progress
 from aiqclib.common.loader.dataset_loader import (
     load_step1_input_dataset,
     load_step2_summary_dataset,
@@ -19,7 +20,7 @@ from aiqclib.common.loader.dataset_loader import (
 )
 
 
-def create_training_dataset(config: ConfigBase) -> None:
+def create_training_dataset(config: ConfigBase, verbose: bool = False) -> None:
     """
     Execute a series of steps to produce a training dataset.
 
@@ -40,6 +41,9 @@ def create_training_dataset(config: ConfigBase) -> None:
     :param config: A configuration object specifying the classes and parameters
                    for each step in the dataset preparation process.
     :type config: aiqclib.common.base.config_base.ConfigBase
+    :param verbose: When True, print each main step to stdout as it starts,
+                    with the elapsed time of the run. Defaults to False.
+    :type verbose: bool
     :return: None. This function performs I/O operations and does not return a value.
     :rtype: None
 
@@ -50,40 +54,53 @@ def create_training_dataset(config: ConfigBase) -> None:
         from aiqclib.common.base.config_base import ConfigBase
         cfg = ConfigBase(...)
         create_training_dataset(cfg)
+        create_training_dataset(cfg, verbose=True)  # report progress
     """
-    # Step 1: Load and read raw input
-    ds_input = load_step1_input_dataset(config)
-    ds_input.read_input_data()
+    with report_progress(
+        stage="prepare",
+        total_steps=6,
+        enabled=verbose,
+        label=getattr(config, "dataset_name", None),
+    ) as progress:
+        # Step 1: Load and read raw input
+        progress.step("Reading input data")
+        ds_input = load_step1_input_dataset(config)
+        ds_input.read_input_data()
 
-    # Step 2: Calculate and save summary statistics
-    ds_summary = load_step2_summary_dataset(config, ds_input.input_data)
-    ds_summary.calculate_stats()
-    ds_summary.write_summary_stats()
+        # Step 2: Calculate and save summary statistics
+        progress.step("Calculating summary statistics")
+        ds_summary = load_step2_summary_dataset(config, ds_input.input_data)
+        ds_summary.calculate_stats()
+        ds_summary.write_summary_stats()
 
-    # Step 3: Label and save selected profiles
-    ds_select = load_step3_select_dataset(config, ds_input.input_data)
-    ds_select.label_profiles()
-    ds_select.write_selected_profiles()
+        # Step 3: Label and save selected profiles
+        progress.step("Selecting profiles")
+        ds_select = load_step3_select_dataset(config, ds_input.input_data)
+        ds_select.label_profiles()
+        ds_select.write_selected_profiles()
 
-    # Step 4: Locate and save target rows
-    ds_locate = load_step4_locate_dataset(
-        config, ds_input.input_data, ds_select.selected_profiles
-    )
-    ds_locate.process_targets()
-    ds_locate.write_selected_rows()
+        # Step 4: Locate and save target rows
+        progress.step("Locating target rows")
+        ds_locate = load_step4_locate_dataset(
+            config, ds_input.input_data, ds_select.selected_profiles
+        )
+        ds_locate.process_targets()
+        ds_locate.write_selected_rows()
 
-    # Step 5: Extract and save features
-    ds_extract = load_step5_extract_dataset(
-        config,
-        ds_input.input_data,
-        ds_select.selected_profiles,
-        ds_locate.selected_rows,
-        ds_summary.summary_stats,
-    )
-    ds_extract.process_targets()
-    ds_extract.write_target_features()
+        # Step 5: Extract and save features
+        progress.step("Extracting features")
+        ds_extract = load_step5_extract_dataset(
+            config,
+            ds_input.input_data,
+            ds_select.selected_profiles,
+            ds_locate.selected_rows,
+            ds_summary.summary_stats,
+        )
+        ds_extract.process_targets()
+        ds_extract.write_target_features()
 
-    # Step 6: Split and save final datasets
-    ds_split = load_step6_split_dataset(config, ds_extract.target_features)
-    ds_split.process_targets()
-    ds_split.write_data_sets()
+        # Step 6: Split and save final datasets
+        progress.step("Splitting training, validation and test sets")
+        ds_split = load_step6_split_dataset(config, ds_extract.target_features)
+        ds_split.process_targets()
+        ds_split.write_data_sets()

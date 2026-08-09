@@ -141,6 +141,7 @@ class ClassifyAll(BuildModelBase):
         # Skip label creation / performance evaluation for label-free targets.
         self.base_model.skip_evaluation = self.config.get_skip_evaluation(target_name)
 
+        self.base_model.target_name = target_name
         self.base_model.test_set = self.test_sets[target_name].drop(self.drop_cols)
         self.base_model.test()
 

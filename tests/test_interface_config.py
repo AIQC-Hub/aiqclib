@@ -60,6 +60,36 @@ class TestTemplateConfig:
         with pytest.raises(IOError):
             write_config_template("/abc/temp_dataset_template.yaml", "prepare")
 
+    def test_missing_directory_message_names_the_option(self, tmp_path):
+        """The refusal tells the user how to create the directory instead."""
+        path = tmp_path / "not_yet" / "prepare.yaml"
+        with pytest.raises(IOError, match="create_dirs=True"):
+            write_config_template(str(path), "prepare")
+        assert not path.parent.exists()
+
+    def test_create_dirs_creates_missing_directories(self, tmp_path):
+        """With create_dirs=True the whole missing path is created."""
+        path = tmp_path / "a" / "b" / "c" / "prepare.yaml"
+        write_config_template(str(path), "prepare", create_dirs=True)
+        assert path.exists()
+
+    def test_create_dirs_accepts_an_existing_directory(self, tmp_path):
+        """create_dirs=True is a no-op when the directory is already there."""
+        path = tmp_path / "prepare.yaml"
+        write_config_template(str(path), "prepare", create_dirs=True)
+        assert path.exists()
+
+    def test_bare_filename_needs_no_directory(self, tmp_path, monkeypatch):
+        """A filename with no directory part is written to the working directory."""
+        monkeypatch.chdir(tmp_path)
+        write_config_template("prepare.yaml", "prepare")
+        assert (tmp_path / "prepare.yaml").exists()
+
+    def test_tilde_path_is_not_expanded(self, tmp_path):
+        """A '~' path is not expanded, and the message says so."""
+        with pytest.raises(IOError, match="not expanded automatically"):
+            write_config_template("~/aiqclib_no_such_dir/prepare.yaml", "prepare")
+
 
 class TestReadConfig:
     """Tests for ``read_config``."""

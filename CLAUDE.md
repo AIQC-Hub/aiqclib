@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-`aiqclib` — config-driven ML library for anomaly detection in CTD ocean data. See `README.md` for the full workflow and public API. Dev setup is in `CONTRIBUTING.md`; the release process in `RELEASING.md`. Source in `src/aiqclib/` (`prepare/`, `train/`, `classify/`, `common/`, `interface/`).
+`aiqclib` — config-driven ML library for anomaly detection in CTD ocean data. See `README.md` for the full workflow and public API. Dev setup is in `CONTRIBUTING.md`; the release process in `RELEASING.md`. Source in `src/aiqclib/` (`prepare/`, `train/`, `classify/`, `common/`, `interface/`). Internal design/planning docs (outside the Sphinx build) live in `docs/design/` — see its `README.md`.
 
 ## Environment & dependencies
 

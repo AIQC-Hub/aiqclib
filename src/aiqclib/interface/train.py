@@ -7,6 +7,7 @@ on a centralized configuration.
 """
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.progress import report_progress
 from aiqclib.common.loader.training_loader import (
     load_step1_input_training_set,
     load_step2_model_validation_class,
@@ -14,7 +15,7 @@ from aiqclib.common.loader.training_loader import (
 )
 
 
-def train_and_evaluate(config: ConfigBase) -> None:
+def train_and_evaluate(config: ConfigBase, verbose: bool = False) -> None:
     """
     Perform a training and evaluation process based on the specified configuration.
 
@@ -28,30 +29,46 @@ def train_and_evaluate(config: ConfigBase) -> None:
 
     :param config: A training configuration object specifying classes and parameters.
     :type config: ConfigBase
+    :param verbose: When True, print each main step to stdout as it starts,
+                    with the elapsed time of the run. Defaults to False.
+    :type verbose: bool
     :return: None. The function performs I/O operations and does not return a value.
     :rtype: None
     """
-    # Step 1: Input Loading
-    ds_input = load_step1_input_training_set(config)
-    ds_input.process_targets()
+    with report_progress(
+        stage="train",
+        total_steps=5,
+        enabled=verbose,
+        label=getattr(config, "dataset_name", None),
+    ) as progress:
+        # Step 1: Input Loading
+        progress.step("Reading training sets")
+        ds_input = load_step1_input_training_set(config)
+        ds_input.process_targets()
 
-    # Step 2: Model Validation
-    ds_valid = load_step2_model_validation_class(config, ds_input.training_sets)
-    ds_valid.process_targets()
-    ds_valid.write_reports()
-    ds_valid.write_model_scores()
-    ds_valid.create_metric_plots()
+        # Step 2: Model Validation
+        progress.step("Validating models (cross-validation)")
+        ds_valid = load_step2_model_validation_class(config, ds_input.training_sets)
+        ds_valid.process_targets()
 
-    # Step 4: Build and Test Model
-    ds_build = load_step4_build_model_class(
-        config, ds_input.training_sets, ds_input.test_sets
-    )
-    ds_build.build_targets()
-    ds_build.test_targets()
-    ds_build.write_reports()
-    ds_build.write_model_scores()
-    ds_build.create_metric_plots()
-    if ds_build.base_model.enable_shap:
-        ds_build.write_shap_values()
-    ds_build.build_final_model_targets()
-    ds_build.write_models()
+        progress.step("Writing validation reports and plots")
+        ds_valid.write_reports()
+        ds_valid.write_model_scores()
+        ds_valid.create_metric_plots()
+
+        # Step 4: Build and Test Model
+        progress.step("Building and testing the model")
+        ds_build = load_step4_build_model_class(
+            config, ds_input.training_sets, ds_input.test_sets
+        )
+        ds_build.build_targets()
+        ds_build.test_targets()
+        ds_build.write_reports()
+        ds_build.write_model_scores()
+        ds_build.create_metric_plots()
+        if ds_build.base_model.enable_shap:
+            ds_build.write_shap_values()
+
+        progress.step("Building and writing the final model")
+        ds_build.build_final_model_targets()
+        ds_build.write_models()

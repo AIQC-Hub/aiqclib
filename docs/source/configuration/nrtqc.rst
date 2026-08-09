@@ -57,6 +57,11 @@ agreement metrics (same convention as the other modules).
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 
+.. note::
+   The flag column may hold integers, strings or floats, and the values may be
+   written as ``4`` or as ``"4"``; both sides are read as whole numbers. See
+   :ref:`qc-flag-columns` for the full table.
+
 `qc_item_sets`
 ^^^^^^^^^^^^^^
 The QC items to apply. An item runs only if listed; ``params`` overrides the

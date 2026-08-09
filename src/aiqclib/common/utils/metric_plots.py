@@ -12,6 +12,42 @@ import numpy as np
 import polars as pl
 from sklearn.metrics import auc, precision_recall_curve, roc_curve
 
+#: Shown in place of the legend when no curve could be computed.
+EMPTY_PLOT_NOTE: str = "No curve: the labels\ncontain a single class"
+
+
+def _finish_axes(ax, loc: str) -> None:
+    """
+    Add the legend, or explain the empty plot when there is nothing to label.
+
+    A curve is only drawn for data with both classes present, so an evaluation
+    labelled with a single class leaves the axes empty. Calling ``legend()``
+    there makes matplotlib warn about artists it cannot find, which says
+    nothing about the actual problem; the note left on the figure does.
+
+    :param ax: The axes to finish.
+    :type ax: matplotlib.axes.Axes
+    :param loc: Legend location, passed through to ``ax.legend``.
+    :type loc: str
+    :return: None
+    :rtype: None
+    """
+    handles, _ = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(loc=loc, fontsize="small")
+        return
+
+    ax.text(
+        0.5,
+        0.5,
+        EMPTY_PLOT_NOTE,
+        transform=ax.transAxes,
+        ha="center",
+        va="center",
+        fontsize="small",
+        color="grey",
+    )
+
 
 def create_metric_plots(model) -> None:
     """
@@ -138,7 +174,7 @@ def create_metric_plots(model) -> None:
         ax_roc.set_xlabel("False Positive Rate")
         ax_roc.set_ylabel("True Positive Rate")
         ax_roc.set_title(f"ROC Curve - {target_name}")
-        ax_roc.legend(loc="lower right", fontsize="small")
+        _finish_axes(ax_roc, "lower right")
         ax_roc.grid(True, alpha=0.3)
 
         # --- Plot Mean PR ---
@@ -180,7 +216,7 @@ def create_metric_plots(model) -> None:
         ax_pr.set_xlabel("Recall")
         ax_pr.set_ylabel("Precision")
         ax_pr.set_title(f"Precision-Recall Curve - {target_name}")
-        ax_pr.legend(loc="lower left", fontsize="small")
+        _finish_axes(ax_pr, "lower left")
         ax_pr.grid(True, alpha=0.3)
 
         plt.tight_layout()
@@ -265,7 +301,7 @@ def create_multi_method_metric_plots(model) -> None:
         ax_roc.set_xlabel("False Positive Rate")
         ax_roc.set_ylabel("True Positive Rate")
         ax_roc.set_title(f"ROC Curve - {target_name}")
-        ax_roc.legend(loc="lower right", fontsize="small")
+        _finish_axes(ax_roc, "lower right")
         ax_roc.grid(True, alpha=0.3)
 
         # PR Formatting
@@ -274,7 +310,7 @@ def create_multi_method_metric_plots(model) -> None:
         ax_pr.set_xlabel("Recall")
         ax_pr.set_ylabel("Precision")
         ax_pr.set_title(f"Precision-Recall Curve - {target_name}")
-        ax_pr.legend(loc="lower left", fontsize="small")
+        _finish_axes(ax_pr, "lower left")
         ax_pr.grid(True, alpha=0.3)
 
         plt.tight_layout()

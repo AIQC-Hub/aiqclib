@@ -45,6 +45,8 @@ target_sets:
     variables:
       - name: temp
         flag: temp_qc
+        # Flag values may be written as 4 or as "4"; the flag column itself may
+        # be integer or string. Both sides are read as whole numbers.
         pos_flag_values: [ 4, 6, 7 ]
         neg_flag_values: [ 1 ]
       - name: psal
@@ -517,6 +519,8 @@ target_sets:
     variables:
       - name: temp
         flag: temp_qc
+        # Flag values may be written as 4 or as "4"; the flag column itself may
+        # be integer or string. Both sides are read as whole numbers.
         pos_flag_values: [ 4, 6, 7 ]
         neg_flag_values: [ 1 ]
       - name: psal
@@ -784,6 +788,8 @@ qc_variable_sets:
     variables:
       - name: temp
         flag: temp_qc # Optional: existing NRT QC flag column for comparison
+        # Values may be written as 4 or as "4"; the flag column itself may be
+        # integer or string. Both sides are read as whole numbers.
         pos_flag_values: [ 4, 6, 7 ] # Optional: for agreement metrics
         neg_flag_values: [ 1 ]
       - name: psal

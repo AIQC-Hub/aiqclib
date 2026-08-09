@@ -31,7 +31,11 @@ from polars.exceptions import ColumnNotFoundError
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
-from aiqclib.common.utils.qc_flags import FLAG_GOOD
+from aiqclib.common.utils.qc_flags import (
+    FLAG_GOOD,
+    flag_as_int,
+    normalize_flag_values,
+)
 
 #: Column schema of the comparison report (long format, one section column).
 REPORT_SCHEMA: Dict = {
@@ -124,10 +128,11 @@ class CompareFlagsBase(DataSetBase):
                     f"cannot compare flags for variable '{target_name}'."
                 )
 
-        # Existing flags may be strings in some inputs; unparseable values
-        # become null and appear as their own contingency row.
+        # Existing flags may be strings, integers or floats depending on the
+        # input source; unparseable values become null and appear as their own
+        # contingency row.
         work = self.merged_data.with_columns(
-            pl.col(flag_column).cast(pl.Int64, strict=False).alias("_existing"),
+            flag_as_int(flag_column).alias("_existing"),
             pl.col(new_column).cast(pl.Int64).alias("_new"),
         )
 
@@ -185,6 +190,9 @@ class CompareFlagsBase(DataSetBase):
         neg_values = target_value.get("neg_flag_values")
         if not pos_values or not neg_values:
             return []
+
+        pos_values = normalize_flag_values(pos_values)
+        neg_values = normalize_flag_values(neg_values)
 
         subset = work.filter(pl.col("_existing").is_in(pos_values + neg_values))
         actual = pl.col("_existing").is_in(pos_values)

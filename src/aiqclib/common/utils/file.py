@@ -1,5 +1,6 @@
 """
-This module provides utility functions for reading various file formats into Polars DataFrames.
+This module provides file utilities: reading various file formats into Polars
+DataFrames, and preparing the destination of a file that is about to be written.
 
 It supports common data formats like Parquet, TSV (tab-separated values), and CSV
 (comma-separated values), including their gzipped versions, and allows for automatic
@@ -10,6 +11,51 @@ import os
 from typing import Dict, Any, Optional
 
 import polars as pl
+
+
+def ensure_output_directory(file_name: str, create_dirs: bool = False) -> str:
+    """
+    Check that the directory of a file about to be written exists.
+
+    Writing into a directory that does not exist is refused by default, so a
+    mistyped path fails immediately instead of scattering files across new
+    directories. Pass ``create_dirs=True`` to create the missing directories
+    instead; the raised message names the option, so a caller who meant to
+    create them does not have to look it up.
+
+    :param file_name: The path (including filename) of the file to be written.
+    :type file_name: str
+    :param create_dirs: If True, create the directory (and any missing parents)
+                        rather than raising. Defaults to False.
+    :type create_dirs: bool
+    :raises IOError: If the directory does not exist and ``create_dirs`` is
+                     False, or if the path exists but is not a directory.
+    :returns: The directory part of ``file_name``, empty when it has none.
+    :rtype: str
+    """
+    dir_path = os.path.dirname(file_name)
+    if dir_path == "" or os.path.isdir(dir_path):
+        return dir_path
+
+    if os.path.exists(dir_path):
+        raise IOError(f"'{dir_path}' exists but is not a directory.")
+
+    if not create_dirs:
+        # A leading '~' is not expanded anywhere in the library, so a path that
+        # looks correct to the user can still be missing. Say so explicitly.
+        hint = ""
+        if file_name.startswith("~"):
+            hint = (
+                " Note that '~' is not expanded automatically; pass an absolute "
+                "path, e.g. os.path.expanduser(...)."
+            )
+        raise IOError(
+            f"Directory '{dir_path}' does not exist. Create it first, or pass "
+            f"create_dirs=True to create it automatically.{hint}"
+        )
+
+    os.makedirs(dir_path, exist_ok=True)
+    return dir_path
 
 
 def read_input_file(
