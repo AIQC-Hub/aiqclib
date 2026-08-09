@@ -185,3 +185,37 @@ class TestSummaryDataSetA:
         )
         with pytest.raises(ValueError):
             ds.create_summary_stats_profile()
+
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            pl.Int8,
+            pl.Int16,
+            pl.Int32,
+            pl.Int64,
+            pl.UInt8,
+            pl.UInt16,
+            pl.UInt32,
+            pl.UInt64,
+        ],
+    )
+    def test_summary_stats_any_integer_profile_no(self, dtype, dataset_input_001):
+        """calculate_stats accepts profile_no in any integer dtype.
+
+        Input sources disagree on the integer type: Int32 from the R-generated
+        Parquet files, UInt32 from ctddump, Int64 from the auto-created
+        identifier columns. The global placeholder row must take the input's own
+        dtype, or the vstack onto the per-profile stats raises a SchemaError.
+        """
+        # Dense-rank first so the values fit even in the 8-bit types; ranking is
+        # a bijection, so the profile grouping (and the row count) is unchanged.
+        input_data = dataset_input_001.input_data.with_columns(
+            pl.col("profile_no").rank("dense").cast(dtype)
+        )
+        ds = SummaryDataSetA(dataset_input_001.config, input_data=input_data)
+
+        ds.calculate_stats()
+
+        assert ds.summary_stats.schema["profile_no"] == dtype
+        assert ds.summary_stats.shape[0] == 65
+        assert ds.summary_stats.shape[1] == 12
