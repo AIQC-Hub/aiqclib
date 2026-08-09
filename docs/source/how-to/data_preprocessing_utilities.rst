@@ -41,7 +41,8 @@ Required Input Data Columns
      - Pressure for each observation.
 
 Other columns (targets such as ``temp``, QC flags, etc.) are passed through
-untouched.
+untouched. QC flag columns need no preparation whatever type they use — see
+`QC Flag Columns`_ below.
 
 What ``aiqclib`` does for you
 -----------------------------
@@ -103,6 +104,58 @@ Configure all three in the ``input`` step:
    ``validate_columns`` is enabled by default. ``create_columns`` is **off** by
    default, so inputs that already provide these identifiers are never
    overwritten. Set ``columns: [ observation_no ]`` to create only one of them.
+
+.. _qc-flag-columns:
+
+QC Flag Columns
+---------------
+
+QC flag columns (``temp_qc``, ``psal_qc``, …) are not required columns, so the
+validation above does not touch them. They are instead read leniently wherever
+a configuration compares them against ``pos_flag_values`` / ``neg_flag_values``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 46 54
+
+   * - Stored in the input as
+     - Read as
+   * - an integer ``4`` (any width, signed or unsigned)
+     - ``4``
+   * - a string ``"4"`` or ``"4.0"``
+     - ``4``
+   * - a float ``4.0``
+     - ``4``
+   * - ``""``, ``NaN``, ``null``, or a non-numeric code
+     - nothing: matches neither the positive nor the negative list
+
+The configured values are read the same way, so ``[ 4, 6, 7 ]`` and
+``[ "4", "6", "7" ]`` select identically:
+
+.. code-block:: yaml
+
+   target_sets:
+     - name: target_set_1
+       variables:
+         - name: temp
+           flag: temp_qc
+           pos_flag_values: [ 4, 6, 7 ]     # or [ "4", "6", "7" ]
+           neg_flag_values: [ 1 ]           # or [ "1" ]
+
+One configuration therefore serves inputs from different sources: a file whose
+flags are integers and one whose flags are single-character strings (as
+produced by ``ctddump``) both work, unchanged and with the same result.
+
+.. note::
+   The flag columns keep their original type in every output that carries input
+   columns through, so a comparison report still shows the values your source
+   wrote. Only the ``flag`` column that ``aiqclib`` *derives* in the
+   row-selection step is normalized, to a 64-bit integer, so that datasets from
+   different sources can be concatenated downstream.
+
+A configured value that is not a whole number (``"bad"``, ``4.5``) raises a
+``ValueError`` naming the offending value, rather than silently matching
+nothing.
 
 Converting a numeric timestamp
 ------------------------------
