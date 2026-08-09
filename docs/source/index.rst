@@ -68,6 +68,7 @@ This section provides practical examples and solutions for common tasks related 
 
    how-to/quick_start
    how-to/data_preprocessing_utilities
+   how-to/batch_processing
    how-to/algorithm_selection
    how-to/prediction_threshold
    how-to/classification_labels

@@ -143,6 +143,26 @@ aq.classify_dataset(config)
 This workflow processes a dataset using a trained model and generates:
 - **classify**: The final classification results and a summary report.
 
+### Running several datasets at once
+
+`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`) or `"all"` of
+them over a table of dataset names, returning a summary of every run:
+
+```python
+import aiqclib as aq
+
+summary = aq.run_batch(
+    "datasets.txt",                                  # table of set names per dataset
+    mode="all",
+    prepare_config="prepare_config.yaml",
+    training_config="training_config.yaml",
+    classification_config="classification_config.yaml",
+    verbose=True,
+)
+```
+
+See the batch guide in the documentation for the table format and options.
+
 ### 4. Near-Real Time Quality Control (NRT QC)
 
 This workflow applies automated real-time QC tests to a dataset without needing a trained model.

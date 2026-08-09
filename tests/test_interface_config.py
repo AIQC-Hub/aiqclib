@@ -110,9 +110,16 @@ class TestReadConfig:
         assert isinstance(config, TrainingConfig)
 
     def test_train_config_with_multiple_entries(self, training_yaml_001):
-        """Reading a training config file returns a TrainingConfig instance."""
-        with pytest.raises(ValueError):
-            _ = read_config(training_yaml_001, "NRT_BO_001")
+        """Naming a set in a multi-set file selects it.
+
+        This used to raise: auto-selection ran first and rejected the file for
+        holding several sets, so ``set_name`` was unusable without also passing
+        ``auto_select=False``. Naming a set now switches auto-selection off,
+        since there is nothing left for it to decide.
+        """
+        config = read_config(training_yaml_001, "NRT_BO_001")
+        assert isinstance(config, TrainingConfig)
+        assert config.dataset_name == "NRT_BO_001"
 
     @pytest.mark.parametrize(
         "config_fixture_name",
@@ -132,6 +139,27 @@ class TestReadConfig:
         """
         with pytest.raises(ValueError):
             _ = read_config(config_dir / "test_dataset_invalid.yaml")
+
+    def test_set_name_selects_from_a_multi_set_file(self, training_yaml_001):
+        """Naming a set must work on a file holding several of them.
+
+        Auto-selection rejects a file with more than one set, which is exactly
+        the file a caller passing ``set_name`` is selecting from; naming a set
+        has to switch it off rather than collide with it.
+        """
+        for name in ("NRT_BO_001", "NRT_BO_002"):
+            config = read_config(training_yaml_001, set_name=name)
+            assert config.dataset_name == name
+
+    def test_auto_select_false_still_honoured(self, training_yaml_001):
+        """The explicit three-argument form keeps working."""
+        config = read_config(training_yaml_001, "NRT_BO_001", False)
+        assert config.dataset_name == "NRT_BO_001"
+
+    def test_multi_set_file_without_a_set_name_still_raises(self, training_yaml_001):
+        """With nothing named there is still nothing to choose between."""
+        with pytest.raises(ValueError, match="multiple data set names"):
+            read_config(training_yaml_001)
 
     def test_config_with_invalid_path(self, dataset_yaml_001):
         """A non-existent file path raises IOError."""
