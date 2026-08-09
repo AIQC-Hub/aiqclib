@@ -17,6 +17,7 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
+from aiqclib.interface.batch import available_modes, run_batch
 from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
 from aiqclib.interface.config import write_config_template
@@ -28,6 +29,7 @@ from aiqclib.interface.stats import get_summary_stats
 from aiqclib.interface.train import train_and_evaluate
 
 __all__ = [
+    "available_modes",
     "classify_dataset",
     "read_config",
     "write_config_template",
@@ -35,6 +37,7 @@ __all__ = [
     "format_summary_stats",
     "get_summary_stats",
     "read_shap_scores",
+    "run_batch",
     "run_nrt_qc",
     "train_and_evaluate",
 ]
