@@ -202,4 +202,4 @@ Write the result to Parquet and point ``input_file_name`` in your
 Next Steps
 ----------
 
-Return to the tutorial: :doc:`../tutorial/preparation`.
+Return to the tutorial: :doc:`../tutorial/input_data`.

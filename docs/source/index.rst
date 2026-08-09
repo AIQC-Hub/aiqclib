@@ -53,6 +53,7 @@ These tutorials provide a step-by-step guide to the core workflows of the librar
 
    tutorial/overview
    tutorial/installation
+   tutorial/input_data
    tutorial/preparation
    tutorial/training
    tutorial/classification

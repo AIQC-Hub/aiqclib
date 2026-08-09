@@ -1,4 +1,4 @@
-Step 3: Training & Evaluation
+Step 4: Training & Evaluation
 =============================
 
 With a properly prepared dataset (from :doc:`./preparation`), you are now ready to train and evaluate a machine learning model. This workflow leverages the training, validation, and test sets created in the previous step to build a model, rigorously assess its performance using cross-validation, and generate final evaluation metrics on a held-out test set.
@@ -14,7 +14,7 @@ The Training Workflow
 
 The training workflow follows a similar pattern to the preparation step: you will generate a new configuration template, customize it to define your model and validation strategy, point to your input data, and specify where the trained models should be saved.
 
-Step 3.1: Generate the Configuration Template
+Step 4.1: Generate the Configuration Template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First, use ``aiqclib`` to generate a boilerplate configuration template specifically for the training workflow.
@@ -30,7 +30,7 @@ First, use ``aiqclib`` to generate a boilerplate configuration template specific
        stage="train"
    )
 
-Step 3.2: Customize the Configuration File
+Step 4.2: Customize the Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now, open the newly created ``~/aiqc_project/config/training_config.yaml`` file in your text editor. Your primary goals are to define:
@@ -100,7 +100,7 @@ Modify the file to align with the following structure. Remember to replace place
 .. note::
    The training configuration file includes many other options for advanced model selection, hyperparameter tuning, and cross-validation strategies. For a complete reference of all available parameters, please consult the dedicated :doc:`../../configuration/training` page.
 
-Step 3.3: Run the Training Process
+Step 4.3: Run the Training Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once you have customized your ``training_config.yaml`` with the correct paths and model/validation configurations, you can execute the training and evaluation workflow.
