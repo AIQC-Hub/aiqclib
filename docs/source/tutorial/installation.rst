@@ -20,7 +20,16 @@ You can install ``aiqclib`` directly from PyPI using ``pip``.
 
 Using conda or mamba
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``aiqclib`` package is available on the `conda-forge` channel, which is the recommended community-maintained channel for Conda packages. You can use either ``conda`` or ``mamba`` to install it.
+``conda-forge`` is the recommended community-maintained channel for Conda
+packages, and either ``conda`` or ``mamba`` can install from it.
+
+.. note::
+
+   ``aiqclib`` is **not on conda-forge yet** — the recipe submission is still in
+   progress, so the commands below will not find the package. Install with
+   ``pip`` or ``uv`` for now.
+
+Once it is published, either of these will work:
 
 .. code-block:: bash
 
