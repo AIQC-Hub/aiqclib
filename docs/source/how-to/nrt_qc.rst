@@ -24,8 +24,82 @@ Quick start
    config = aq.read_config("/path/to/nrt_qc_config.yaml")
    aq.run_nrt_qc(config)
 
-The available QC items, their default thresholds, and all configuration
-sections are described in :doc:`../configuration/nrtqc`.
+The QC items
+------------
+
+``aiqclib`` provides eleven QC items. Ten implement the Argo/CTD real-time
+tests (RTQC2 to RTQC14); ``temp_to_psal`` is the propagation rule from the
+NRT QC recommendation document rather than a numbered test. An item runs
+only when it is listed in the ``qc_item_sets`` section of the configuration
+file.
+
+Profile-level tests produce one result for the whole profile, applied to
+every observation in it:
+
+``impossible_date`` (RTQC2)
+   The profile timestamp must be present, later than ``min_year`` (1950 by
+   default), and not in the future at processing time.
+
+``impossible_location`` (RTQC3)
+   Latitude must lie within [-90, 90] and longitude within [-180, 180]. A
+   missing position fails.
+
+``stuck_value`` (RTQC13)
+   All non-null measurements of a variable being identical indicates a stuck
+   sensor, so the variable is flagged throughout the profile. Profiles with
+   fewer than ``min_observations`` (2 by default) measurements are exempt, as
+   are variables that were not measured.
+
+Observation-level tests produce one result per measurement:
+
+``global_range`` (RTQC6)
+   A gross filter wide enough to accommodate all expected ocean extremes:
+   temperature within [-2.5, 40.0] °C and salinity within [2.0, 41.0] by
+   default. Null values pass, since a missing measurement cannot be
+   range-checked.
+
+``regional_range`` (RTQC7)
+   The same check against the tighter ranges of the configuration file's
+   region. There are **no built-in defaults** — supply your region's bounds
+   or the item raises an error rather than silently passing everything.
+
+``pressure_increasing`` (RTQC8)
+   Pressures must increase down the profile. Within a run of constant
+   pressure all but the first observation are flagged; where pressure
+   reverses, every observation below the running maximum is flagged. Pressure
+   is shared by all variables, so this test yields a single column.
+
+``spike`` (RTQC9)
+   A measurement that differs sharply from both vertical neighbours in size
+   and gradient, scored as ``|V2 - (V3 + V1)/2| - |(V3 - V1)/2|``. Thresholds
+   are depth-dependent (temperature 6.0/2.0 °C and salinity 0.9/0.3 either
+   side of 500 db by default). Observations at a profile boundary always pass.
+
+``gradient`` (RTQC11)
+   Too steep a difference from the vertical neighbours, scored as
+   ``|V2 - (V3 + V1)/2|`` against depth-dependent thresholds (temperature
+   9.0/3.0 °C and salinity 1.5/0.5 by default).
+
+``digit_rollover`` (RTQC12)
+   Sensors store values in a limited bit range and wrap around to the low end
+   when it is exceeded. An uncompensated rollover shows up as a jump from the
+   previous observation beyond the threshold (10.0 °C for temperature, 5.0
+   for salinity by default).
+
+``density_inversion`` (RTQC14)
+   The potential density anomaly sigma-0 (UNESCO 1983) must not decrease with
+   depth by more than ``threshold`` (0.03 kg/m³ by default). Consecutive
+   levels are compared in both directions, so both members of an inverted
+   pair are flagged. Density combines temperature and salinity, so the two
+   variables are flagged jointly.
+
+``temp_to_psal``
+   Not a test but a propagation rule: where the aggregated temperature flag
+   is 3 or 4, salinity inherits it at the same severity. See
+   `Temperature-to-salinity propagation`_ below.
+
+For the output column names, the full default parameters, and the YAML
+syntax for overriding them, see :doc:`../configuration/nrtqc`.
 
 One configuration file per region
 ---------------------------------
