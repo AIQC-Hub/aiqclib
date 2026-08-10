@@ -1,6 +1,6 @@
 [project]
 name = "aiqclib"
-version = "0.9.0"
+version = "0.9.1"
 description = "This package aims to offer helper functions that simplify model building and evaluation"
 readme = "README.md"
 license = "MIT"
@@ -13,6 +13,13 @@ dependencies = [
     "joblib>=1.4.2",
     "jsonschema>=4.23.0",
     "matplotlib>=3.10.8",
+    # Not imported here: numba arrives via shap, and every numba that supports
+    # numpy 2.x caps it below the current numpy. Without a floor the resolver
+    # walks back to numba 0.53.1, which ships no wheel for our Python versions
+    # and fails to build (llvmlite 0.36.0). The floor keeps numba modern and
+    # lets numpy rise on its own once numba supports it, rather than capping
+    # numpy here and having to lift the cap by hand later.
+    "numba>=0.62",
     "numpy>=2.2",
     "pandas>=2.2",
     "polars>=1.30.0",
