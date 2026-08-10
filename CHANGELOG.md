@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
+
 ## [0.8.0] - 2026-08-10
 ### Fixed
 - A leading `~` in a path is now expanded to the home directory, in `base_path` values read from a config file and in paths passed to `write_config_template`, `read_config`, `read_input_file`, `get_summary_stats` and `run_batch`. Previously `base_path: ~/aiqc_project/data` silently wrote every output into a literal `~` folder under the working directory
