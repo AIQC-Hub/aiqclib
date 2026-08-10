@@ -16,7 +16,7 @@ import pytest
 
 from aiqclib.interface.prepare import create_training_dataset
 
-from tests.conftest import TARGETS
+from tests.conftest import TARGETS_NONEMPTY
 
 
 # ---------------------------------------------------------------------------
@@ -57,11 +57,27 @@ def _assert_prepare_outputs(output_folder, *, split_dir_name="split"):
 
     assert (dir_summary / "summary_stats.tsv").exists()
     assert (dir_select / "selected_profiles.parquet").exists()
-    for tgt in TARGETS:
+    for tgt in TARGETS_NONEMPTY:
         assert (dir_locate / f"selected_rows_{tgt}.parquet").exists()
         assert (dir_extract / f"extracted_features_{tgt}.parquet").exists()
         assert (dir_split / f"train_set_{tgt}.parquet").exists()
         assert (dir_split / f"test_set_{tgt}.parquet").exists()
+
+
+def _drop_empty_target(config):
+    """Restrict the config to targets the fixtures have test rows for.
+
+    The reduced fixtures contain no ``pres_qc == 4`` rows, so ``pres`` splits
+    to an empty test set, which the split step now refuses to write. Dropping
+    it keeps these end-to-end tests about the pipeline producing its outputs;
+    the refusal itself is covered by
+    :func:`TestCreateTrainingDataSetEmptyTarget.test_empty_target_aborts_the_run`.
+    """
+    config.data["target_set"]["variables"] = [
+        v
+        for v in config.data["target_set"]["variables"]
+        if v["name"] in TARGETS_NONEMPTY
+    ]
 
 
 def _cleanup_output_folder(config, test_output_dir):
@@ -98,6 +114,7 @@ class TestCreateTrainingDataSet:
         self.test_output_dir = test_output_dir
         for c in self.configs:
             _wire_path_info(c, test_output_dir, input_dir)
+            _drop_empty_target(c)
 
         yield
 
@@ -113,6 +130,38 @@ class TestCreateTrainingDataSet:
             self.test_output_dir / self.configs[idx].data["dataset_folder_name"]
         )
         _assert_prepare_outputs(output_folder)
+
+
+# ---------------------------------------------------------------------------
+# Empty-target refusal (the full three-target config, pres included)
+# ---------------------------------------------------------------------------
+
+
+class TestCreateTrainingDataSetEmptyTarget:
+    """The run stops when a target splits to no test rows.
+
+    Kept apart from the classes above because those drop ``pres`` to exercise
+    the successful path; here the full three-target set is what is under test.
+    """
+
+    def test_empty_target_aborts_the_run(
+        self, dataset_config_001, test_output_dir, input_dir
+    ):
+        """A target with no test rows stops the run and names itself.
+
+        ``pres`` has no ``pres_qc == 4`` rows in the fixtures. Before this
+        check the empty split was written out and the run only failed later,
+        at classification, as a feature-name mismatch listing 30 absent
+        columns.
+        """
+        _wire_path_info(dataset_config_001, test_output_dir, input_dir)
+        try:
+            with pytest.raises(
+                ValueError, match="test set for target 'pres' has no rows"
+            ):
+                create_training_dataset(dataset_config_001)
+        finally:
+            _cleanup_output_folder(dataset_config_001, test_output_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +188,7 @@ class TestCreateTrainingDataSetNegX5:
             input_dir,
             extra={"split": {"step_folder_name": "training"}},
         )
+        _drop_empty_target(self.config)
 
         yield
 

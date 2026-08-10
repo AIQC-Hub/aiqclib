@@ -19,6 +19,7 @@ from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
 from aiqclib.common.base.model_base import ModelBase
 from aiqclib.common.loader.model_loader import load_model_class
+from aiqclib.common.utils.diagnostics import check_dataset_not_empty
 from aiqclib.common.utils.metric_plots import create_metric_plots
 
 
@@ -139,12 +140,22 @@ class BuildModelBase(DataSetBase):
         calling :meth:`test`.
 
         :raises ValueError: If a target has no corresponding entry in
-                            :attr:`models`.
+                            :attr:`models`, or if its dataset has no rows.
         """
+        # "classify" applies the model to new data; every other step is scoring
+        # a held-out split. Name whichever it is, so the message points at the
+        # configuration the user was actually editing.
+        dataset_name = (
+            "classification input" if self.step_name == "classify" else "test set"
+        )
         for target_name in self.config.get_target_names():
             if target_name not in self.models:
                 raise ValueError(
                     f"No valid model found for the variable '{target_name}'."
+                )
+            if self.test_sets is not None and target_name in self.test_sets:
+                check_dataset_not_empty(
+                    self.test_sets[target_name], dataset_name, target_name
                 )
             self.test(target_name)
 
