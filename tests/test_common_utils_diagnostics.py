@@ -12,7 +12,11 @@ import warnings
 import polars as pl
 import pytest
 
-from aiqclib.common.utils.diagnostics import warn_single_class_labels
+from aiqclib.common.utils.diagnostics import (
+    check_dataset_not_empty,
+    check_labels_not_single_class,
+    warn_single_class_labels,
+)
 
 
 class TestWarnSingleClassLabels:
@@ -76,3 +80,97 @@ class TestWarnSingleClassLabels:
         labels = pl.Series("label", [0, 0])
         with pytest.warns(UserWarning, match="this target"):
             warn_single_class_labels(labels)
+
+
+class TestCheckDatasetNotEmpty:
+    """Refusing a dataset that has no rows to work with."""
+
+    def test_a_dataset_with_rows_passes(self):
+        """The common case returns quietly."""
+        frame = pl.DataFrame({"temp": [1.0, 2.0]})
+        assert check_dataset_not_empty(frame, "training set", "temp") is None
+
+    def test_an_empty_dataset_raises(self):
+        """No rows means nothing downstream can work, so this is an error."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="training set for target 'temp'"):
+            check_dataset_not_empty(frame, "training set", "temp")
+
+    def test_message_names_the_likely_cause(self):
+        """The message points at the filters, which is what usually empties it."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError) as excinfo:
+            check_dataset_not_empty(frame, "classification input", "temp")
+
+        message = str(excinfo.value)
+        assert "classification input" in message
+        assert "keep_years" in message
+
+    def test_fold_number_is_included(self):
+        """A fold is identified by number so the failing fold is obvious."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="fold 3"):
+            check_dataset_not_empty(frame, "validation fold", "psal", k=3)
+
+    def test_target_name_is_optional(self):
+        """Callers without a target name still get a usable message."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="this target"):
+            check_dataset_not_empty(frame, "test set")
+
+    def test_a_frame_with_no_columns_but_rows_passes(self):
+        """Emptiness is about rows; column count is a separate concern."""
+        frame = pl.DataFrame({"a": [1]}).select()
+        assert frame.height == 0  # polars drops rows with no columns
+        with pytest.raises(ValueError):
+            check_dataset_not_empty(frame, "test set", "temp")
+
+
+class TestCheckLabelsNotSingleClass:
+    """Refusing to fit a model on labels that hold only one class."""
+
+    def test_two_classes_pass(self):
+        """The normal case returns quietly."""
+        labels = pl.Series("label", [0, 1, 0, 1])
+        assert check_labels_not_single_class(labels, "temp") is None
+
+    def test_a_single_class_raises(self):
+        """One class means the model could only ever predict that class."""
+        labels = pl.Series("label", [0] * 100)
+        with pytest.raises(ValueError, match="Training data for target 'pres'"):
+            check_labels_not_single_class(labels, "pres")
+
+    def test_message_reports_the_class_and_row_count(self):
+        """The message carries the evidence, as the warning version does."""
+        labels = pl.Series("label", [0] * 53719)
+        with pytest.raises(ValueError) as excinfo:
+            check_labels_not_single_class(labels, "pres", k=1)
+
+        message = str(excinfo.value)
+        assert "all label=0" in message
+        assert "53719 rows" in message
+        assert "fold 1" in message
+
+    def test_all_positive_is_refused_too(self):
+        """A dataset of only positives is as unusable as one of only negatives."""
+        labels = pl.Series("label", [1, 1, 1])
+        with pytest.raises(ValueError, match="all label=1"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_no_labelled_rows_at_all(self):
+        """All-null labels are reported as such rather than as a class."""
+        labels = pl.Series("label", [None, None], dtype=pl.Int64)
+        with pytest.raises(ValueError, match="no labelled rows at all"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_nulls_do_not_count_as_a_second_class(self):
+        """A null is missing, not a class of its own."""
+        labels = pl.Series("label", [0, 0, None], dtype=pl.Int64)
+        with pytest.raises(ValueError, match="all label=0"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_message_suggests_dropping_the_target(self):
+        """The actionable fix for a genuinely unflagged variable is named."""
+        labels = pl.Series("label", [0, 0])
+        with pytest.raises(ValueError, match="drop it from the 'target_set'"):
+            check_labels_not_single_class(labels, "pres")

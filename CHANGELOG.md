@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-08-10
+### Added
+- The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
+- New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls — circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
+
+### Changed
+- A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output
+- Fitting a model on single-class labels now raises an error naming the target; such a model predicts one class at one constant score that no `prediction_threshold` can separate. Evaluating against single-class labels stays a warning, and label-free classification is unaffected
+- `pres` is no longer a target in the config templates or documentation examples: `pres_qc` rarely carries bad flags, so it trained a model that could flag nothing. Pressure remains an input feature and profile ordering column
+
+### Fixed
+- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round — the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
+
 ## [0.8.0] - 2026-08-10
 ### Fixed
 - A leading `~` in a path is now expanded to the home directory, in `base_path` values read from a config file and in paths passed to `write_config_template`, `read_config`, `read_input_file`, `get_summary_stats` and `run_batch`. Previously `base_path: ~/aiqc_project/data` silently wrote every output into a literal `~` folder under the working directory

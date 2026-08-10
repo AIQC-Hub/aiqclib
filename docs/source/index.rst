@@ -73,6 +73,7 @@ This section provides practical examples and solutions for common tasks related 
    how-to/prediction_threshold
    how-to/classification_labels
    how-to/nrt_qc
+   how-to/qc_items_as_features
    how-to/performance_evaluation
    how-to/shap_values
    how-to/down_sampling_negative
