@@ -72,6 +72,10 @@ The QC items to apply. An item runs only if listed; ``params`` overrides the
 built-in defaults per key, and the optional ``fail_flag`` (3 or 4, default 4)
 softens a failing test to "probably bad".
 
+For what each item checks, rather than how it is configured, see
+:ref:`nrt-qc-items` in the how-to guide. The same items can be used as model
+input features — see :doc:`../how-to/qc_items_as_features`.
+
 ================================ ======= ============ =========================================
 Item                             RTQC    Level        Output column(s)
 ================================ ======= ============ =========================================

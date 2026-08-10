@@ -7,6 +7,7 @@ As this project is still in active development, it does not yet strictly adhere 
 ## [Unreleased]
 ### Added
 - The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
+- New how-to page on using the QC items as model input features, covering the `params` / `col_names` / `fail_flag` settings and the two items that need extra care
 
 ### Changed
 - A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output

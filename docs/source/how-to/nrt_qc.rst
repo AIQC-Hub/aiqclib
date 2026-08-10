@@ -24,6 +24,8 @@ Quick start
    config = aq.read_config("/path/to/nrt_qc_config.yaml")
    aq.run_nrt_qc(config)
 
+.. _nrt-qc-items:
+
 The QC items
 ------------
 
@@ -156,5 +158,6 @@ Using QC items as training features
 
 Every QC item is an ordinary feature class registered under a
 ``qc_``-prefixed name (``qc_spike``, ``qc_global_range``, …), so the flag
-columns can also be produced inside the Dataset Preparation pipeline by
-adding the names to a ``feature_set``.
+columns can also be produced inside the Dataset Preparation pipeline and used
+as model inputs. See :doc:`qc_items_as_features` for how to configure that,
+and for the two items that need extra care there.
