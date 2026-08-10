@@ -117,10 +117,26 @@ class TestTemplateConfig:
         write_config_template("prepare.yaml", "prepare")
         assert (tmp_path / "prepare.yaml").exists()
 
-    def test_tilde_path_is_not_expanded(self, tmp_path):
-        """A '~' path is not expanded, and the message says so."""
-        with pytest.raises(IOError, match="not expanded automatically"):
-            write_config_template("~/aiqclib_no_such_dir/prepare.yaml", "prepare")
+    def test_tilde_path_is_expanded(self, tmp_path, monkeypatch):
+        """A '~' path writes to the home directory, not a literal '~' folder."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.chdir(tmp_path)
+
+        write_config_template("~/config/prepare.yaml", "prepare", create_dirs=True)
+
+        assert (tmp_path / "config" / "prepare.yaml").exists()
+        assert not (tmp_path / "~").exists()
+
+    def test_missing_tilde_directory_reports_the_expanded_path(
+        self, tmp_path, monkeypatch
+    ):
+        """The refusal names the real directory, so it can be created as shown."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        with pytest.raises(IOError) as excinfo:
+            write_config_template("~/no_such_dir/prepare.yaml", "prepare")
+
+        assert str(tmp_path / "no_such_dir") in str(excinfo.value)
 
 
 class TestReadConfig:

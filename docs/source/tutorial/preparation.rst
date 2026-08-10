@@ -32,9 +32,8 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/prepare_config.yaml")
+   config_path = "~/aiqc_project/config/prepare_config.yaml"
    aq.write_config_template(
        file_name=config_path,
        stage="prepare"
@@ -45,9 +44,9 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
    The output directory must already exist — writing into a missing directory
    is refused so that a mistyped path is reported instead of silently creating
    folders. If you skipped the directory setup in :doc:`./input_data`, pass
-   ``create_dirs=True`` to create it as part of the call. Note also that ``~``
-   is not expanded for you, which is why the example wraps the path in
-   ``os.path.expanduser``.
+   ``create_dirs=True`` to create it as part of the call. A leading ``~`` is
+   expanded to your home directory, both here and in the ``base_path`` values
+   inside the configuration file.
 
    An existing file is never replaced either: re-running this after you have
    customized the config raises ``FileExistsError`` rather than resetting your
@@ -107,9 +106,8 @@ Load the configuration file and then call the ``create_training_dataset`` functi
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/prepare_config.yaml")
+   config_path = "~/aiqc_project/config/prepare_config.yaml"
    config = aq.read_config(config_path)
    aq.create_training_dataset(config)
 

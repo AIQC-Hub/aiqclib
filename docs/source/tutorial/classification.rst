@@ -25,9 +25,8 @@ First, use ``aiqclib`` to generate the boilerplate configuration template specif
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/classification_config.yaml")
+   config_path = "~/aiqc_project/config/classification_config.yaml"
    aq.write_config_template(
        file_name=config_path,
        stage="classify"
@@ -116,9 +115,8 @@ Load the configuration file and then call the ``classify_dataset`` function:
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/classification_config.yaml")
+   config_path = "~/aiqc_project/config/classification_config.yaml"
    config = aq.read_config(config_path)
    aq.classify_dataset(config)
 

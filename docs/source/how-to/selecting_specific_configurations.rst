@@ -31,9 +31,8 @@ For example, to select ``dataset_0002``, you would use:
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/prepare_config.yaml")
+   config_path = "~/aiqc_project/config/prepare_config.yaml"
    config = aq.read_config(config_path, set_name="dataset_0002")
 
 This ``config`` object will now contain the parameters for ``dataset_0002``, ready for further processes.

@@ -22,12 +22,15 @@ sharing a module-level case list between the explicit-type and inferred-type
 tests.
 """
 
+import os
+
 import pytest
 import polars as pl
 
 from aiqclib.common.utils.file import (
     ensure_output_directory,
     ensure_output_file,
+    expand_path,
     read_input_file,
 )
 
@@ -158,6 +161,15 @@ class TestReadInputFile:
         with pytest.raises(ValueError):
             _ = read_input_file(input_dir / "empty_text_file.txt")
 
+    def test_tilde_path_is_expanded(self, tmp_path, monkeypatch):
+        """An input path written as '~/file.csv' reads from the home directory."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        (tmp_path / "data.csv").write_text("a,b\n1,2\n")
+
+        df = read_input_file("~/data.csv")
+
+        assert df.shape == (1, 2)
+
 
 class TestEnsureOutputDirectory:
     """Guarding the destination directory of a file about to be written."""
@@ -200,10 +212,26 @@ class TestEnsureOutputDirectory:
         with pytest.raises(IOError, match="is not a directory"):
             ensure_output_directory(str(blocker / "out.yaml"), create_dirs=create_dirs)
 
-    def test_tilde_path_reports_that_it_is_not_expanded(self):
-        """'~' looks right but is literal, so the message calls it out."""
-        with pytest.raises(IOError, match="not expanded automatically"):
+    def test_tilde_is_expanded_before_the_directory_is_checked(self):
+        """'~' means the home directory, so the message names the real path."""
+        with pytest.raises(IOError) as excinfo:
             ensure_output_directory("~/aiqclib_no_such_dir/out.yaml")
+
+        message = str(excinfo.value)
+        assert os.path.expanduser("~/aiqclib_no_such_dir") in message
+        assert "~" not in message
+
+    def test_tilde_directory_is_created_under_home(self, tmp_path, monkeypatch):
+        """create_dirs=True creates the directory under home, not under the CWD."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.chdir(tmp_path / "..")
+
+        result = ensure_output_directory("~/made/here/out.yaml", create_dirs=True)
+
+        assert result == str(tmp_path / "made" / "here")
+        assert (tmp_path / "made" / "here").is_dir()
+        # The bug this guards against: a literal '~' folder in the working directory.
+        assert not (tmp_path / ".." / "~").exists()
 
 
 class TestEnsureOutputFile:
@@ -247,3 +275,52 @@ class TestEnsureOutputFile:
         target.write_text("first")
         ensure_output_file(str(target), create_dirs=True, overwrite=True)
         assert target.parent.is_dir()
+
+    def test_returns_the_expanded_path(self, tmp_path, monkeypatch):
+        """The caller writes to the path that was checked, not the raw one."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        result = ensure_output_file("~/out.yaml")
+
+        assert result == str(tmp_path / "out.yaml")
+
+    def test_existing_file_is_detected_through_a_tilde(self, tmp_path, monkeypatch):
+        """The overwrite guard sees the real file, not an unexpanded name."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        (tmp_path / "out.yaml").write_text("customized")
+
+        with pytest.raises(FileExistsError, match="overwrite=True"):
+            ensure_output_file("~/out.yaml")
+
+
+class TestExpandPath:
+    """Turning a user-written '~' into the directory they meant."""
+
+    def test_leading_tilde_becomes_the_home_directory(self, tmp_path, monkeypatch):
+        """The common case: '~/x' is the home directory, not a folder named '~'."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        assert expand_path("~/aiqc_project/data") == str(tmp_path / "aiqc_project/data")
+
+    def test_expanded_path_is_absolute(self, tmp_path, monkeypatch):
+        """An unexpanded '~' path is relative, which is the underlying bug."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        assert os.path.isabs(expand_path("~/aiqc_project"))
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/absolute/path/data.parquet",
+            "relative/path/data.parquet",
+            "data.parquet",
+            "",
+        ],
+    )
+    def test_paths_without_a_tilde_are_untouched(self, path):
+        """Expansion only applies to '~'; everything else passes through."""
+        assert expand_path(path) == path
+
+    def test_tilde_not_at_the_start_is_untouched(self):
+        """A '~' inside a filename is an ordinary character."""
+        assert (
+            expand_path("/data/backup~1/file.parquet") == "/data/backup~1/file.parquet"
+        )
