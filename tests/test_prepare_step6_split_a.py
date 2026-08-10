@@ -17,7 +17,7 @@ import pytest
 
 from aiqclib.prepare.step6_split_dataset.dataset_a import SplitDataSetA
 
-from tests.conftest import TARGETS, build_prepare_pipeline
+from tests.conftest import TARGETS, TARGETS_NONEMPTY, build_prepare_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -130,24 +130,56 @@ class TestSplitDataSetA:
             ds.write_training_sets()
 
     def test_write_test_sets(self, pipeline, test_output_dir):
-        """write_test_sets produces a parquet per target."""
+        """write_test_sets produces a parquet per target with rows.
+
+        ``pres`` is dropped first: the reduced fixtures have no ``pres_qc == 4``
+        rows, so its test split is empty and writing it now raises (see
+        :func:`test_write_test_sets_rejects_an_empty_target`).
+        """
         ds = SplitDataSetA(
             pipeline.config, target_features=pipeline.extract.target_features
         )
         ds.process_targets()
+        ds.test_sets = {t: ds.test_sets[t] for t in TARGETS_NONEMPTY}
 
         output_paths = {
             tgt: str(test_output_dir / f"test_test_set_{tgt}.parquet")
-            for tgt in TARGETS
+            for tgt in TARGETS_NONEMPTY
         }
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             ds.output_file_names["test"][tgt] = output_paths[tgt]
 
         ds.write_test_sets()
 
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert os.path.exists(output_paths[tgt])
             os.remove(output_paths[tgt])  # comment out to debug
+
+    def test_write_test_sets_rejects_an_empty_target(self, pipeline, test_output_dir):
+        """A target with no test rows is refused, and nothing is written.
+
+        The fixtures have no ``pres_qc == 4`` rows, so ``pres`` splits to an
+        empty test set — the situation that used to reach the model and fail
+        there with a feature-name mismatch.
+        """
+        ds = SplitDataSetA(
+            pipeline.config, target_features=pipeline.extract.target_features
+        )
+        ds.process_targets()
+        assert ds.test_sets["pres"].height == 0
+
+        output_paths = {
+            tgt: str(test_output_dir / f"test_reject_{tgt}.parquet") for tgt in TARGETS
+        }
+        for tgt in TARGETS:
+            ds.output_file_names["test"][tgt] = output_paths[tgt]
+
+        with pytest.raises(ValueError, match="test set for target 'pres' has no rows"):
+            ds.write_test_sets()
+
+        # Checked before writing, so the non-empty targets are not left behind.
+        for path in output_paths.values():
+            assert not os.path.exists(path)
 
     def test_write_empty_test_sets(self, pipeline):
         """write_test_sets with test_sets=None raises ValueError."""
@@ -160,25 +192,32 @@ class TestSplitDataSetA:
             ds.write_test_sets()
 
     def test_write_data_sets(self, pipeline, test_output_dir):
-        """write_data_sets produces both train and test parquets per target."""
+        """write_data_sets produces both train and test parquets per target.
+
+        Restricted to targets with rows; see
+        :func:`test_write_test_sets_rejects_an_empty_target` for the ``pres``
+        case.
+        """
         ds = SplitDataSetA(
             pipeline.config, target_features=pipeline.extract.target_features
         )
         ds.process_targets()
+        ds.training_sets = {t: ds.training_sets[t] for t in TARGETS_NONEMPTY}
+        ds.test_sets = {t: ds.test_sets[t] for t in TARGETS_NONEMPTY}
 
         output_paths = {}
         for kind in ("train", "test"):
             output_paths[kind] = {
                 tgt: str(test_output_dir / f"test_{kind}_set_combined_{tgt}.parquet")
-                for tgt in TARGETS
+                for tgt in TARGETS_NONEMPTY
             }
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 ds.output_file_names[kind][tgt] = output_paths[kind][tgt]
 
         ds.write_data_sets()
 
         for kind in ("train", "test"):
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 assert os.path.exists(output_paths[kind][tgt])
                 os.remove(output_paths[kind][tgt])  # comment out to debug
 
@@ -239,24 +278,30 @@ class TestSplitDataSetANegX5:
             )
 
     def test_write_data_sets(self, pipeline, test_output_dir):
-        """write_data_sets (NegX5 variant) produces both train and test parquets."""
+        """write_data_sets (NegX5 variant) produces both train and test parquets.
+
+        Restricted to targets with rows: multiplying the negatives does not give
+        ``pres`` any positive rows, so its test split is still empty.
+        """
         ds = SplitDataSetA(
             pipeline.config, target_features=pipeline.extract.target_features
         )
         ds.process_targets()
+        ds.training_sets = {t: ds.training_sets[t] for t in TARGETS_NONEMPTY}
+        ds.test_sets = {t: ds.test_sets[t] for t in TARGETS_NONEMPTY}
 
         output_paths = {}
         for kind in ("train", "test"):
             output_paths[kind] = {
                 tgt: str(test_output_dir / f"test_{kind}_set_negx5_{tgt}.parquet")
-                for tgt in TARGETS
+                for tgt in TARGETS_NONEMPTY
             }
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 ds.output_file_names[kind][tgt] = output_paths[kind][tgt]
 
         ds.write_data_sets()
 
         for kind in ("train", "test"):
-            for tgt in TARGETS:
+            for tgt in TARGETS_NONEMPTY:
                 assert os.path.exists(output_paths[kind][tgt])
                 os.remove(output_paths[kind][tgt])  # comment out to debug

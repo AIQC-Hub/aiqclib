@@ -16,6 +16,7 @@ import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.dataset_base import DataSetBase
+from aiqclib.common.utils.diagnostics import check_dataset_not_empty
 
 
 class SplitDataSetBase(DataSetBase):
@@ -165,11 +166,16 @@ class SplitDataSetBase(DataSetBase):
         """
         Write the training splits to Parquet files.
 
-        :raises ValueError: If :attr:`training_sets` is empty (i.e.,
-                            no splits have been created).
+        :raises ValueError: If :attr:`training_sets` is empty (i.e., no splits
+                            have been created), or if any split has no rows.
         """
         if not self.training_sets:
             raise ValueError("Member variable 'training_sets' must not be empty.")
+
+        # Check every target before writing any, so a later empty target does
+        # not leave a directory of half-written splits behind.
+        for target_name, df in self.training_sets.items():
+            check_dataset_not_empty(df, "training set", target_name)
 
         for target_name, df in self.training_sets.items():
             output_path = self.output_file_names["train"][target_name]
@@ -180,11 +186,16 @@ class SplitDataSetBase(DataSetBase):
         """
         Write the test splits to Parquet files.
 
-        :raises ValueError: If :attr:`test_sets` is empty (i.e.,
-                            no splits have been created).
+        :raises ValueError: If :attr:`test_sets` is empty (i.e., no splits have
+                            been created), or if any split has no rows.
         """
         if not self.test_sets:
             raise ValueError("Member variable 'test_sets' must not be empty.")
+
+        # Check every target before writing any, so a later empty target does
+        # not leave a directory of half-written splits behind.
+        for target_name, df in self.test_sets.items():
+            check_dataset_not_empty(df, "test set", target_name)
 
         for target_name, df in self.test_sets.items():
             output_path = self.output_file_names["test"][target_name]

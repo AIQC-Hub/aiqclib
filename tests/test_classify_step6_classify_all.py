@@ -251,6 +251,26 @@ class TestClassifyAll:
         with pytest.raises(ValueError):
             ds.test_targets()
 
+    def test_empty_classification_input_is_refused(
+        self, classify_pipeline_all, default_model_files
+    ):
+        """An input filtered down to nothing is named as such, not left to XGBoost.
+
+        This is the failure a year filter matching no data produces: the
+        pivot-built flanking features emit no columns for an empty frame, and
+        the model then reports 30 missing feature names instead of the empty
+        input behind them.
+        """
+        extracts = classify_pipeline_all.extracts[0].target_features
+        emptied = {tgt: frame.clear() for tgt, frame in extracts.items()}
+
+        ds = ClassifyAll(classify_pipeline_all.configs[0], test_sets=emptied)
+        ds.model_file_names = default_model_files
+        ds.read_models()
+
+        with pytest.raises(ValueError, match="classification input for target"):
+            ds.test_targets()
+
     @pytest.mark.parametrize("idx", range(3))
     def test_write_reports(
         self, idx, classify_pipeline_all, default_model_files, test_output_dir

@@ -31,7 +31,7 @@ import aiqclib as aq
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.training_config import TrainingConfig
 
-from tests.conftest import TARGETS, TARGETS_NONEMPTY
+from tests.conftest import TARGETS_NONEMPTY
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +102,16 @@ class TestDMQCLibCreateTrainingDataSet:
             "input": {"base_path": str(input_dir), "step_folder_name": ""},
         }
 
+        # pres has no positive rows in the fixtures, so its test split comes
+        # out empty and the split step now refuses to write it. Restrict the
+        # run to the targets that have data; the refusal itself is covered by
+        # test_interface_prepare.TestCreateTrainingDataSetEmptyTarget.
+        config.data["target_set"]["variables"] = [
+            v
+            for v in config.data["target_set"]["variables"]
+            if v["name"] in TARGETS_NONEMPTY
+        ]
+
         aq.create_training_dataset(config)
 
         output_folder = test_output_dir / config.data["dataset_folder_name"]
@@ -111,10 +121,7 @@ class TestDMQCLibCreateTrainingDataSet:
         assert (output_folder / "select" / "selected_profiles.parquet").exists()
 
         # Per-target outputs across locate / extract / split.
-        # The prepare pipeline uses the dataset config's target set, which
-        # has all 3 targets — pres has non-empty data here (it's only the
-        # train test split that drops pres rows).
-        for tgt in TARGETS:
+        for tgt in TARGETS_NONEMPTY:
             assert (output_folder / "locate" / f"selected_rows_{tgt}.parquet").exists()
             assert (
                 output_folder / "extract" / f"extracted_features_{tgt}.parquet"

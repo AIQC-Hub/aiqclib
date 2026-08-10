@@ -8,6 +8,9 @@ As this project is still in active development, it does not yet strictly adhere 
 ### Added
 - The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
 
+### Changed
+- A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output
+
 ## [0.8.0] - 2026-08-10
 ### Fixed
 - A leading `~` in a path is now expanded to the home directory, in `base_path` values read from a config file and in paths passed to `write_config_template`, `read_config`, `read_input_file`, `get_summary_stats` and `run_batch`. Previously `base_path: ~/aiqc_project/data` silently wrote every output into a literal `~` folder under the working directory

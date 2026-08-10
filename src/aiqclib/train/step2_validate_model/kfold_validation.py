@@ -10,6 +10,7 @@ import copy
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.diagnostics import check_dataset_not_empty
 from aiqclib.train.step2_validate_model.validate_base import ValidationBase
 
 
@@ -103,6 +104,9 @@ class KFoldValidation(ValidationBase):
                 .filter(pl.col("k_fold") != (k + 1))
                 .drop(self.drop_cols)
             )
+            check_dataset_not_empty(
+                current_fold_model.training_set, "training fold", target_name, k + 1
+            )
             current_fold_model.build()
             self.models[target_name].append(current_fold_model)
 
@@ -111,6 +115,9 @@ class KFoldValidation(ValidationBase):
                 self.training_sets[target_name]
                 .filter(pl.col("k_fold") == (k + 1))
                 .drop(self.drop_cols)
+            )
+            check_dataset_not_empty(
+                current_fold_model.test_set, "validation fold", target_name, k + 1
             )
             current_fold_model.test()
             reports.append(current_fold_model.report)

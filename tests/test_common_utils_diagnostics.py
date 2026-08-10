@@ -12,7 +12,10 @@ import warnings
 import polars as pl
 import pytest
 
-from aiqclib.common.utils.diagnostics import warn_single_class_labels
+from aiqclib.common.utils.diagnostics import (
+    check_dataset_not_empty,
+    warn_single_class_labels,
+)
 
 
 class TestWarnSingleClassLabels:
@@ -76,3 +79,47 @@ class TestWarnSingleClassLabels:
         labels = pl.Series("label", [0, 0])
         with pytest.warns(UserWarning, match="this target"):
             warn_single_class_labels(labels)
+
+
+class TestCheckDatasetNotEmpty:
+    """Refusing a dataset that has no rows to work with."""
+
+    def test_a_dataset_with_rows_passes(self):
+        """The common case returns quietly."""
+        frame = pl.DataFrame({"temp": [1.0, 2.0]})
+        assert check_dataset_not_empty(frame, "training set", "temp") is None
+
+    def test_an_empty_dataset_raises(self):
+        """No rows means nothing downstream can work, so this is an error."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="training set for target 'temp'"):
+            check_dataset_not_empty(frame, "training set", "temp")
+
+    def test_message_names_the_likely_cause(self):
+        """The message points at the filters, which is what usually empties it."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError) as excinfo:
+            check_dataset_not_empty(frame, "classification input", "temp")
+
+        message = str(excinfo.value)
+        assert "classification input" in message
+        assert "keep_years" in message
+
+    def test_fold_number_is_included(self):
+        """A fold is identified by number so the failing fold is obvious."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="fold 3"):
+            check_dataset_not_empty(frame, "validation fold", "psal", k=3)
+
+    def test_target_name_is_optional(self):
+        """Callers without a target name still get a usable message."""
+        frame = pl.DataFrame({"temp": []}, schema={"temp": pl.Float64})
+        with pytest.raises(ValueError, match="this target"):
+            check_dataset_not_empty(frame, "test set")
+
+    def test_a_frame_with_no_columns_but_rows_passes(self):
+        """Emptiness is about rows; column count is a separate concern."""
+        frame = pl.DataFrame({"a": [1]}).select()
+        assert frame.height == 0  # polars drops rows with no columns
+        with pytest.raises(ValueError):
+            check_dataset_not_empty(frame, "test set", "temp")

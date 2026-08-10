@@ -82,10 +82,17 @@ TARGETS: tuple[str, ...] = ("temp", "psal", "pres")
 # either of those configurations must use this constant instead of TARGETS,
 # because the per-target dict won't have a ``pres`` key.
 #
-# WHEN TO REMOVE: once the library handles zero-row test data gracefully
-# (raising a clear error or skipping the empty target), the test fixtures
-# are regenerated to include pres test rows, and tests are migrated back
-# to a single 3-target config. At that point:
+# The library half of this is now done: zero-row splits raise a clear error
+# naming the target (``check_dataset_not_empty``), instead of being written
+# out and failing later at the model as a feature-name mismatch. That makes
+# this constant load-bearing rather than a workaround — tests wanting the
+# successful path must restrict themselves to targets that have rows, and
+# the refusal is covered directly by
+# ``test_interface_prepare.TestCreateTrainingDataSetEmptyTarget``.
+#
+# WHEN TO REMOVE: once the test fixtures are regenerated to include pres
+# rows with ``pres_qc == 4``, so all three targets split to non-empty sets.
+# At that point:
 #   grep -rn "TARGETS_NONEMPTY" tests/    # gives the migration list
 #   sed -i 's/TARGETS_NONEMPTY/TARGETS/g' tests/*.py
 # then delete this constant.
