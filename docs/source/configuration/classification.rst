@@ -40,6 +40,10 @@ This section defines all the necessary file system locations for the classificat
        concat:
          step_folder_name: classify
 
+.. note::
+   A leading ``~`` in any ``base_path`` is expanded to your home directory, so
+   ``~/aiqc_project/data`` means the same directory it would in a shell.
+
 `target_sets`
 ^^^^^^^^^^^^^
 While the classification workflow is applying a pre-trained model, this section is still important for consistency. It specifies the target variables and their associated quality control (QC) flags. This ensures that any initial data filtering or subsequent evaluation/post-processing steps properly recognize the columns that the model was trained to predict. The definitions here should align with those used during the model's training.
@@ -171,6 +175,14 @@ This section provides general parameters for the workflow processes defined in `
 
 *   **steps.input.sub_steps.filter_rows**: A boolean flag to enable or disable row filtering based on ``filter_method_dict``.
 *   **steps.input.filter_method_dict.keep_years**: Specifies a list of years from which data should be kept for classification. Other years will be excluded.
+
+    .. warning::
+       If ``keep_years`` names years the input does not cover, every row is
+       filtered out and the run stops with an error naming the target and the
+       empty dataset. Check the years present in the input before setting it —
+       a product whose data ends in 2021 classifies nothing under
+       ``keep_years: [2023]``.
+
 *   **steps.input.rename_dict**: Dictionary for renaming columns during input processing.
 *   **steps.model.calculate_shap**: This is used to control SHAP value calculation.
 *   **steps.model.skip_evaluation**: An optional boolean to classify data without label columns. When enabled, the pipeline predicts every row but skips label creation and performance evaluation. If omitted, it is auto-detected per target from whether a QC ``flag`` is set. See the :doc:`../how-to/classification_labels` guide for details.
@@ -254,10 +266,6 @@ Here is a complete example of a ``classification_config.yaml`` file, showing how
            neg_flag_values: [ 1 ]
          - name: psal
            flag: psal_qc
-           pos_flag_values: [ 4, 6, 7 ]
-           neg_flag_values: [ 1 ]
-         - name: pres
-           flag: pres_qc
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 

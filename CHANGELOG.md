@@ -10,6 +10,11 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ### Changed
 - A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output
+- Fitting a model on single-class labels now raises an error naming the target; such a model predicts one class at one constant score that no `prediction_threshold` can separate. Evaluating against single-class labels stays a warning, and label-free classification is unaffected
+- `pres` is no longer a target in the config templates or documentation examples: `pres_qc` rarely carries bad flags, so it trained a model that could flag nothing. Pressure remains an input feature and profile ordering column
+
+### Fixed
+- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round — the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
 
 ## [0.8.0] - 2026-08-10
 ### Fixed

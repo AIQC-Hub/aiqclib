@@ -53,10 +53,6 @@ target_sets:
         flag: psal_qc
         pos_flag_values: [ 4, 6, 7 ]
         neg_flag_values: [ 1 ]
-      - name: pres
-        flag: pres_qc
-        pos_flag_values: [ 4, 6, 7 ]
-        neg_flag_values: [ 1 ]
         
 """
 
@@ -525,10 +521,6 @@ target_sets:
         neg_flag_values: [ 1 ]
       - name: psal
         flag: psal_qc
-        pos_flag_values: [ 4, 6, 7 ]
-        neg_flag_values: [ 1 ]
-      - name: pres
-        flag: pres_qc
         pos_flag_values: [ 4, 6, 7 ]
         neg_flag_values: [ 1 ]
 

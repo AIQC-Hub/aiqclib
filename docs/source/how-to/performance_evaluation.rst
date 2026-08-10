@@ -34,7 +34,7 @@ Schema
      - float
      - Model probability for the positive class, in ``[0, 1]``.
 
-The target variable (``temp``, ``psal``, ``pres``) is encoded in the *file
+The target variable (``temp``, ``psal``) is encoded in the *file
 name*, not in a column — each file holds a single target.
 
 .. note::

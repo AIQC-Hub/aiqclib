@@ -96,8 +96,10 @@ The required columns are:
 *   **pres**: Pressure values for each observation.
 
 Alongside these, you need the measurement columns you intend to model
-(``temp``, ``psal``, ``pres``) and their QC flag columns (``temp_qc``,
-``psal_qc``, ``pres_qc``), which supply the labels.
+(``temp``, ``psal``) and their QC flag columns (``temp_qc``, ``psal_qc``),
+which supply the labels. ``pres`` is needed too, as an input feature and to
+order observations within a profile, but it is not modelled — see
+:ref:`choosing-targets`.
 
 .. important::
 
@@ -112,8 +114,8 @@ Alongside these, you need the measurement columns you intend to model
 Which QC Flags Provide the Labels
 ----------------------------------
 
-The ``temp_qc`` / ``psal_qc`` / ``pres_qc`` columns that these tutorials label
-from are **near-real-time (NRT) QC** flags: the automated checks applied when
+The ``temp_qc`` / ``psal_qc`` columns that these tutorials label from are
+**near-real-time (NRT) QC** flags: the automated checks applied when
 the data is first distributed. They are not delayed-mode (DMQC) flags, which
 are assigned later, with expert review and the benefit of hindsight.
 

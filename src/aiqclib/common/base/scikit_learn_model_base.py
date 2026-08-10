@@ -17,7 +17,10 @@ from sklearn.impute import SimpleImputer
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
-from aiqclib.common.utils.diagnostics import warn_single_class_labels
+from aiqclib.common.utils.diagnostics import (
+    check_labels_not_single_class,
+    warn_single_class_labels,
+)
 
 
 class SklearnModelBase(ModelBase):
@@ -75,10 +78,18 @@ class SklearnModelBase(ModelBase):
              with :attr:`model_params`.
           4. Fit the model.
 
-        :raises ValueError: If :attr:`training_set` is ``None`` or empty.
+        :raises ValueError: If :attr:`training_set` is ``None`` or empty, or if
+                            its labels hold fewer than two classes.
         """
         if self.training_set is None:
             raise ValueError("Member variable 'training_set' must not be empty.")
+
+        # Refused here rather than at evaluation: fitting on one class succeeds
+        # and yields a model that flags nothing, which is not visible in the
+        # model file afterwards.
+        check_labels_not_single_class(
+            self.training_set["label"], self.target_name, self.k or 0
+        )
 
         x_train = self.training_set.select(pl.exclude("label")).to_pandas()
         if not self.allow_na:

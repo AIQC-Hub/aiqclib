@@ -14,10 +14,16 @@ produces no such columns, and the failure surfaces much later as a mismatch
 between the model's feature names and the input's. That message describes a
 symptom several steps removed from the cause.
 
-Both are reported here at the point they are detected, naming the target and
-what to check — the emptiness as an error, since nothing downstream can
-recover from it, and the degenerate labels as a warning, since the run does
-produce output.
+Each is reported here at the point it is detected, naming the target and what
+to check. Whether it is an error or a warning depends on what survives it:
+
+* No rows at all is an error — nothing downstream can recover from it.
+* Single-class labels are an error when a model is about to be *fitted* on
+  them, because the resulting model predicts one class at one constant score
+  and the model file gives no sign of it afterwards.
+* Single-class labels are a warning when a model is merely being *evaluated*
+  against them: the metrics are degenerate but the model is not, and applying
+  a model to data that happens to be entirely good is a legitimate QC run.
 """
 
 import warnings
@@ -80,6 +86,49 @@ def check_dataset_not_empty(
         f"years the input actually covers — or that no profile matched the "
         f"selection criteria. Left unchecked this surfaces much later as a "
         f"mismatch between the model's feature names and the input's."
+    )
+
+
+def check_labels_not_single_class(
+    labels: pl.Series,
+    target_name: Optional[str] = None,
+    k: int = 0,
+) -> None:
+    """
+    Raise when the labels a model is about to be fitted on hold one class.
+
+    Fitting succeeds on single-class labels and produces a model that predicts
+    that class for every row, with a positive-class score that has exactly one
+    distinct value — so no ``prediction_threshold`` can recover it. The model
+    is written out and used at classification time looking like any other,
+    which makes this worth refusing rather than warning about.
+
+    Evaluating on single-class labels is a lesser problem — the scores are
+    degenerate but the model is not — and stays a warning; see
+    :func:`warn_single_class_labels`.
+
+    :param labels: The labels the model is about to be trained on.
+    :type labels: polars.Series
+    :param target_name: The target being trained, used in the message.
+    :type target_name: Optional[str]
+    :param k: The fold number; 0 means a single, unfolded fit.
+    :type k: int
+    :raises ValueError: If fewer than two classes are present.
+    """
+    present = labels.drop_nulls().unique().sort().to_list()
+    if len(present) > 1:
+        return
+
+    where = _context(target_name, k)
+    found = f"all label={present[0]}" if present else "no labelled rows at all"
+    raise ValueError(
+        f"Training data for {where} has {found} ({labels.len()} rows), so a "
+        f"model fitted on it would predict that one class for everything, at a "
+        f"single constant score that no 'prediction_threshold' can separate. "
+        f"Check 'pos_flag_values' / 'neg_flag_values' against the flag values "
+        f"actually present in the input; if this variable genuinely has no "
+        f"flagged observations, drop it from the 'target_set' rather than "
+        f"training a model that cannot flag anything."
     )
 
 
