@@ -32,6 +32,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.file import expand_path
 from aiqclib.common.utils.progress import PREFIX
 from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
@@ -137,6 +138,7 @@ def read_batch_table(table: Union[str, pl.DataFrame]) -> pl.DataFrame:
     if isinstance(table, pl.DataFrame):
         frame = table.select(pl.all().cast(pl.Utf8))
     else:
+        table = expand_path(table)
         if not os.path.exists(table):
             raise FileNotFoundError(f"Batch table '{table}' does not exist.")
 

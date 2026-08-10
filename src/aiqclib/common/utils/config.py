@@ -10,10 +10,13 @@ from typing import Dict, Any, Optional  # Added Optional
 
 import yaml
 
+from aiqclib.common.utils.file import expand_path
+
 
 def get_config_file(config_file: Optional[str]) -> str:
     """Determine the absolute path for a configuration file.
 
+    A leading ``~`` is expanded before the file is looked up.
     If the provided path does not exist, a ``FileNotFoundError`` is raised.
     If `config_file` is ``None``, a `ValueError` is raised.
 
@@ -26,6 +29,7 @@ def get_config_file(config_file: Optional[str]) -> str:
     """
     if config_file is None:
         raise ValueError("Configuration file path cannot be None.")
+    config_file = expand_path(config_file)
     if not os.path.exists(config_file):
         raise FileNotFoundError(f"File '{config_file}' does not exist.")
 

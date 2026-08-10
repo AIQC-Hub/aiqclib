@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-08-10
+### Fixed
+- A leading `~` in a path is now expanded to the home directory, in `base_path` values read from a config file and in paths passed to `write_config_template`, `read_config`, `read_input_file`, `get_summary_stats` and `run_batch`. Previously `base_path: ~/aiqc_project/data` silently wrote every output into a literal `~` folder under the working directory
+
 ## [0.7.1] - 2026-08-09
 ### Fixed
 - Documentation corrections: the tutorial chain skipped the input-data page, a broken cross-reference in the classification tutorial, a `classification_sets` example missing the required `feature_stats_set`, a non-existent `TimeSeriesValidation` class, wrong prediction column names and model output folder, and claims of hyperparameter tuning the library does not do

@@ -30,6 +30,7 @@ from aiqclib.common.config.yaml_templates import (
 )
 from aiqclib.common.utils.config import get_config_item
 from aiqclib.common.utils.config import read_config
+from aiqclib.common.utils.file import expand_path
 
 
 class ConfigBase(ABC):
@@ -182,9 +183,13 @@ class ConfigBase(ABC):
         """
         Retrieve the base path for a given processing step.
 
+        A leading ``~`` is expanded here, so ``base_path: ~/aiqc_project/data``
+        in a configuration file means the same directory it would mean in a
+        shell rather than a literal ``~`` folder under the working directory.
+
         :param step_name: The name of the step (e.g., "preprocess").
         :type step_name: str
-        :return: The configured base path.
+        :return: The configured base path, with ``~`` expanded.
         :rtype: str
         :raises ValueError: If no base path is found.
         """
@@ -200,7 +205,7 @@ class ConfigBase(ABC):
                 f"'base_path' for '{step_name}' not found or set to None in the config file"
             )
 
-        return base_path
+        return expand_path(base_path)
 
     def get_summary_stats(self, stats_name: str, stats_type: str = "min_max") -> Dict:
         """

@@ -44,7 +44,9 @@ def write_config_template(
          ``overwrite`` is True.
       3. Writes the generated YAML template text to the specified file.
 
-    :param file_name: The path (including filename) where the YAML file will be written.
+    :param file_name: The path (including filename) where the YAML file will be
+                      written. A leading ``~`` is expanded to the user's home
+                      directory.
     :type file_name: str
     :param stage: Determines which template to write; must be one of "prepare",
                   "train", "classify", or "nrt_qc".
@@ -67,8 +69,8 @@ def write_config_template(
 
     Example Usage:
       >>> # write_config_template("~/new/dir/prepare.yaml", "prepare")
-      >>> # IOError: Directory '~/new/dir' does not exist. Create it first, or
-      >>> #          pass create_dirs=True to create it automatically. ...
+      >>> # IOError: Directory '/home/you/new/dir' does not exist. Create it
+      >>> #          first, or pass create_dirs=True to create it automatically.
       >>> # write_config_template("/tmp/new/dir/prepare.yaml", "prepare", create_dirs=True)
       >>> # write_config_template("/tmp/prepare.yaml", "prepare")   # a second time
       >>> # FileExistsError: File '/tmp/prepare.yaml' already exists. Pass
@@ -87,7 +89,9 @@ def write_config_template(
         raise ValueError(f"Module {stage} is not supported.")
 
     yaml_text = function_registry[f"{stage}_{extension}"]()
-    ensure_output_file(file_name, create_dirs=create_dirs, overwrite=overwrite)
+    file_name = ensure_output_file(
+        file_name, create_dirs=create_dirs, overwrite=overwrite
+    )
 
     with open(file_name, "w", encoding="utf-8") as yaml_file:
         yaml_file.write(yaml_text)

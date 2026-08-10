@@ -194,9 +194,7 @@ Write the result to Parquet and point ``input_file_name`` in your
 
 .. code-block:: python
 
-   import os
-
-   output_file = os.path.expanduser("~/aiqc_project/input/nrt_cora_bo_preprocessed.parquet")
+   output_file = "~/aiqc_project/input/nrt_cora_bo_preprocessed.parquet"
    df.write_parquet(output_file)
 
 Next Steps

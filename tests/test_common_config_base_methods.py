@@ -21,6 +21,8 @@ same setUp boilerplate. All four classes now use ``dataset_config_001`` or
 ``dataset_config_002`` from conftest; setUp methods are gone.
 """
 
+import os
+
 import pytest
 
 
@@ -50,6 +52,34 @@ class TestBaseConfigPathMethods:
         Uses config 002 because that's where 'locate' has no dedicated base_path.
         """
         assert dataset_config_002.get_base_path("locate") == "/path/to/data_1"
+
+    def test_tilde_base_path_is_expanded(
+        self, dataset_config_001, tmp_path, monkeypatch
+    ):
+        """A '~' base_path in the YAML means the home directory.
+
+        Without expansion this stays relative, so every output step writes into
+        a literal '~' folder under whatever the working directory happens to be.
+        """
+        monkeypatch.setenv("HOME", str(tmp_path))
+        dataset_config_001.data["path_info"]["common"]["base_path"] = "~/aiqc/data"
+
+        result = dataset_config_001.get_base_path("common")
+
+        assert result == str(tmp_path / "aiqc" / "data")
+        assert os.path.isabs(result)
+
+    def test_tilde_base_path_reaches_the_resolved_file_path(
+        self, dataset_config_001, tmp_path, monkeypatch
+    ):
+        """The expansion survives into the joined output path, not just the base."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        dataset_config_001.data["path_info"]["select"]["base_path"] = "~/aiqc/data"
+
+        path = dataset_config_001.get_full_file_name("select", "out.parquet")
+
+        assert path.startswith(str(tmp_path))
+        assert "~" not in path
 
     def test_input_step_folder_name(self, dataset_config_001):
         """get_step_folder_name('input') returns the configured folder name."""

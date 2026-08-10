@@ -19,9 +19,8 @@ The generation of negative data is controlled by a configuration file. The follo
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/prepare_config.yaml")
+   config_path = "~/aiqc_project/config/prepare_config.yaml"
    aq.write_config_template(
        file_name=config_path,
        stage="prepare",
