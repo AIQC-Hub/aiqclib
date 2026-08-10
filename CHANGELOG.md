@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - 2026-08-10
 ### Added
 - The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
 - New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls — circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
