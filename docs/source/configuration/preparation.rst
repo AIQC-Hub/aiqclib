@@ -45,6 +45,10 @@ This section defines the critical file system locations for both your raw input 
        split:
          step_folder_name: training
 
+.. note::
+   A leading ``~`` in any ``base_path`` is expanded to your home directory, so
+   ``~/aiqc_project/data`` means the same directory it would in a shell.
+
 `target_sets`
 ^^^^^^^^^^^^^
 This section specifies the target variables that your machine learning model will predict. For each target variable, you must also define its corresponding quality control (QC) flag column, and which of that column's values mark each class.
@@ -201,6 +205,13 @@ This section provides general parameters that control the behavior of the variou
 *   **steps.input.sub_steps.filter_rows**: A boolean flag to enable/disable row filtering based on ``filter_method_dict``.
 *   **steps.input.filter_method_dict.remove_years**: Specifies a list of years to be excluded from the dataset.
 *   **steps.input.filter_method_dict.keep_years**: Specifies a list of years to be kept for training.
+
+    .. warning::
+       Filters that leave no rows are an error, not a silently empty run: if a
+       target's training or test split ends up with no rows, the pipeline stops
+       and names it. The splits are all checked before any is written, so a
+       failure leaves no partial output behind.
+
 *   **steps.split.test_set_fraction**: Defines the proportion of data to allocate to the test set.
 *   **steps.split.k_fold**: Defines the `k` of k-fold cross validation
 

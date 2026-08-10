@@ -35,6 +35,10 @@ Defines the location of the input data and the output directories.
        concat:
          step_folder_name: nrt_qc
 
+.. note::
+   A leading ``~`` in any ``base_path`` is expanded to your home directory, so
+   ``~/aiqc_project/data`` means the same directory it would in a shell.
+
 `qc_variable_sets`
 ^^^^^^^^^^^^^^^^^^
 The variables to run the QC items on. Only ``name`` is required. The

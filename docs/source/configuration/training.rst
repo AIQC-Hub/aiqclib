@@ -27,6 +27,10 @@ This section is crucial for linking the training workflow to the prepared datase
        input:
          step_folder_name: training
 
+.. note::
+   A leading ``~`` in any ``base_path`` is expanded to your home directory, so
+   ``~/aiqc_project/data`` means the same directory it would in a shell.
+
 `target_sets`
 ^^^^^^^^^^^^^
 Similar to the ``prepare`` workflow, this section specifies the target variables for your machine learning model. It ensures that the training process correctly identifies which column represents the prediction target and understands its associated quality control (QC) flags, which are often used to filter or weight data during training.
