@@ -22,9 +22,8 @@ First, use ``aiqclib`` to generate a boilerplate configuration template specific
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/training_config.yaml")
+   config_path = "~/aiqc_project/config/training_config.yaml"
    aq.write_config_template(
        file_name=config_path,
        stage="train"
@@ -111,9 +110,8 @@ Load the configuration file and then call the ``train_and_evaluate`` function:
 .. code-block:: python
 
    import aiqclib as aq
-   import os
 
-   config_path = os.path.expanduser("~/aiqc_project/config/training_config.yaml")
+   config_path = "~/aiqc_project/config/training_config.yaml"
    config = aq.read_config(config_path)
    aq.train_and_evaluate(config)
 

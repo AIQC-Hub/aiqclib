@@ -13,6 +13,30 @@ from typing import Dict, Any, Optional
 import polars as pl
 
 
+def expand_path(file_name: str) -> str:
+    """
+    Expand a leading ``~`` (or ``~user``) in a path.
+
+    Paths reach the library from two directions: arguments passed to the public
+    functions, and ``base_path`` values read out of a YAML configuration. A user
+    writing either one reasonably expects ``~/aiqc_project`` to mean their home
+    directory, but nothing expands it on their behalf — YAML is not a shell, and
+    ``os.path.join`` treats ``~`` as an ordinary directory name. Left alone, a
+    path like that resolves relative to the current working directory, so output
+    lands in a literal ``~`` folder wherever the interpreter happened to start.
+
+    Applying this at the points where paths enter the library keeps that
+    expectation true without every call site having to remember it.
+
+    :param file_name: A path that may begin with ``~``.
+    :type file_name: str
+    :returns: The path with a leading ``~`` replaced by the user's home
+              directory, unchanged when there is nothing to expand.
+    :rtype: str
+    """
+    return os.path.expanduser(file_name)
+
+
 def ensure_output_directory(file_name: str, create_dirs: bool = False) -> str:
     """
     Check that the directory of a file about to be written exists.
@@ -30,10 +54,11 @@ def ensure_output_directory(file_name: str, create_dirs: bool = False) -> str:
     :type create_dirs: bool
     :raises IOError: If the directory does not exist and ``create_dirs`` is
                      False, or if the path exists but is not a directory.
-    :returns: The directory part of ``file_name``, empty when it has none.
+    :returns: The directory part of ``file_name`` after ``~`` expansion, empty
+              when it has none.
     :rtype: str
     """
-    dir_path = os.path.dirname(file_name)
+    dir_path = os.path.dirname(expand_path(file_name))
     if dir_path == "" or os.path.isdir(dir_path):
         return dir_path
 
@@ -41,17 +66,9 @@ def ensure_output_directory(file_name: str, create_dirs: bool = False) -> str:
         raise IOError(f"'{dir_path}' exists but is not a directory.")
 
     if not create_dirs:
-        # A leading '~' is not expanded anywhere in the library, so a path that
-        # looks correct to the user can still be missing. Say so explicitly.
-        hint = ""
-        if file_name.startswith("~"):
-            hint = (
-                " Note that '~' is not expanded automatically; pass an absolute "
-                "path, e.g. os.path.expanduser(...)."
-            )
         raise IOError(
             f"Directory '{dir_path}' does not exist. Create it first, or pass "
-            f"create_dirs=True to create it automatically.{hint}"
+            f"create_dirs=True to create it automatically."
         )
 
     os.makedirs(dir_path, exist_ok=True)
@@ -79,10 +96,12 @@ def ensure_output_file(
     :raises IOError: If the directory does not exist and ``create_dirs`` is False.
     :raises FileExistsError: If the file exists and ``overwrite`` is False.
     :raises IsADirectoryError: If the path names an existing directory.
-    :returns: ``file_name`` unchanged, so the call can wrap the path.
+    :returns: ``file_name`` with ``~`` expanded, so the caller writes to the
+              same path that was checked here.
     :rtype: str
     """
     ensure_output_directory(file_name, create_dirs=create_dirs)
+    file_name = expand_path(file_name)
 
     if os.path.isdir(file_name):
         raise IsADirectoryError(
@@ -135,6 +154,7 @@ def read_input_file(
       >>> # df = read_input_file("data.parquet")
       >>> # df2 = read_input_file("data.tsv.gz", file_type="tsv.gz", options={"has_header": True})
     """
+    input_file = expand_path(input_file)
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"File '{input_file}' does not exist.")
 

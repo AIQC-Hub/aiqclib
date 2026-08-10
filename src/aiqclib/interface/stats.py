@@ -16,6 +16,7 @@ import polars as pl
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.loader.dataset_loader import load_step1_input_dataset
 from aiqclib.common.loader.dataset_loader import load_step2_summary_dataset
+from aiqclib.common.utils.file import expand_path
 
 
 def get_summary_stats(input_file: str, summary_type: str) -> pl.DataFrame:
@@ -37,6 +38,7 @@ def get_summary_stats(input_file: str, summary_type: str) -> pl.DataFrame:
     :rtype: polars.DataFrame
     """
     config = DataSetConfig("template:data_sets")
+    input_file = expand_path(input_file)
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"File '{input_file}' does not exist.")
     config.select("dataset_0001")
