@@ -210,6 +210,31 @@ class TestBuildModel:
         for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.models[tgt], XGBoost)
 
+    def test_single_class_training_data_is_refused(
+        self, training_config_001_bo002, training_input_001_bo002
+    ):
+        """Fitting on one class is refused instead of producing a dead model.
+
+        XGBoost fits single-class labels happily and then predicts that class
+        for every row at one constant score, so nothing downstream — not even
+        a prediction_threshold — can tell the model is useless. The refusal
+        names the target.
+        """
+        training_sets = dict(training_input_001_bo002.training_sets)
+        target = TARGETS_NONEMPTY[0]
+        training_sets[target] = training_sets[target].with_columns(
+            pl.lit(0, dtype=pl.Int64).alias("label")
+        )
+
+        ds = BuildModel(
+            training_config_001_bo002,
+            training_sets=training_sets,
+            test_sets=training_input_001_bo002.test_sets,
+        )
+
+        with pytest.raises(ValueError, match=f"Training data for target '{target}'"):
+            ds.build_targets()
+
     def test_train_final_model_with_xgboost(
         self, training_config_001_bo002, training_input_001_bo002
     ):

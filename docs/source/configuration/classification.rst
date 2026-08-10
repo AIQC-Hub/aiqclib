@@ -256,10 +256,6 @@ Here is a complete example of a ``classification_config.yaml`` file, showing how
            flag: psal_qc
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
-         - name: pres
-           flag: pres_qc
-           pos_flag_values: [ 4, 6, 7 ]
-           neg_flag_values: [ 1 ]
 
    summary_stats_sets:
      - name: summary_stats_set_1

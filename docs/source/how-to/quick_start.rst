@@ -9,7 +9,7 @@ This guide demonstrates how to run the entire machine learning process with mini
 Objectives
 -----------------------------
 
-You will learn how to run all three stages of ``aiqclib`` by creating stage-specific configuration files. This guide lets you create three classifiers for ``temp`` (temperature), ``psal`` (salinity), and ``pres`` (pressure) to predict QC labels for the corresponding variables.
+You will learn how to run all three stages of ``aiqclib`` by creating stage-specific configuration files. This guide lets you create two classifiers, for ``temp`` (temperature) and ``psal`` (salinity), to predict QC labels for the corresponding variables. Pressure is used as an input feature rather than modelled — see :ref:`choosing-targets`.
 
 Installation
 -----------------------------

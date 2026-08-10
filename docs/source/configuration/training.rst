@@ -143,10 +143,6 @@ Below is a complete example of a ``training_config.yaml`` file. The lines you wi
            flag: psal_qc
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
-         - name: pres
-           flag: pres_qc
-           pos_flag_values: [ 4, 6, 7 ]
-           neg_flag_values: [ 1 ]
 
    step_class_sets:
      - name: training_step_set_1

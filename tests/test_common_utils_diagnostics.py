@@ -14,6 +14,7 @@ import pytest
 
 from aiqclib.common.utils.diagnostics import (
     check_dataset_not_empty,
+    check_labels_not_single_class,
     warn_single_class_labels,
 )
 
@@ -123,3 +124,53 @@ class TestCheckDatasetNotEmpty:
         assert frame.height == 0  # polars drops rows with no columns
         with pytest.raises(ValueError):
             check_dataset_not_empty(frame, "test set", "temp")
+
+
+class TestCheckLabelsNotSingleClass:
+    """Refusing to fit a model on labels that hold only one class."""
+
+    def test_two_classes_pass(self):
+        """The normal case returns quietly."""
+        labels = pl.Series("label", [0, 1, 0, 1])
+        assert check_labels_not_single_class(labels, "temp") is None
+
+    def test_a_single_class_raises(self):
+        """One class means the model could only ever predict that class."""
+        labels = pl.Series("label", [0] * 100)
+        with pytest.raises(ValueError, match="Training data for target 'pres'"):
+            check_labels_not_single_class(labels, "pres")
+
+    def test_message_reports_the_class_and_row_count(self):
+        """The message carries the evidence, as the warning version does."""
+        labels = pl.Series("label", [0] * 53719)
+        with pytest.raises(ValueError) as excinfo:
+            check_labels_not_single_class(labels, "pres", k=1)
+
+        message = str(excinfo.value)
+        assert "all label=0" in message
+        assert "53719 rows" in message
+        assert "fold 1" in message
+
+    def test_all_positive_is_refused_too(self):
+        """A dataset of only positives is as unusable as one of only negatives."""
+        labels = pl.Series("label", [1, 1, 1])
+        with pytest.raises(ValueError, match="all label=1"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_no_labelled_rows_at_all(self):
+        """All-null labels are reported as such rather than as a class."""
+        labels = pl.Series("label", [None, None], dtype=pl.Int64)
+        with pytest.raises(ValueError, match="no labelled rows at all"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_nulls_do_not_count_as_a_second_class(self):
+        """A null is missing, not a class of its own."""
+        labels = pl.Series("label", [0, 0, None], dtype=pl.Int64)
+        with pytest.raises(ValueError, match="all label=0"):
+            check_labels_not_single_class(labels, "temp")
+
+    def test_message_suggests_dropping_the_target(self):
+        """The actionable fix for a genuinely unflagged variable is named."""
+        labels = pl.Series("label", [0, 0])
+        with pytest.raises(ValueError, match="drop it from the 'target_set'"):
+            check_labels_not_single_class(labels, "pres")

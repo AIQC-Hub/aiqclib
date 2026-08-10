@@ -91,6 +91,8 @@ class BuildModel(BuildModelBase):
         self.base_model.training_set = self.training_sets[target_name].drop(
             ["k_fold"] + self.drop_cols
         )
+        # Set before build() so a failure there can name the target.
+        self.base_model.target_name = target_name
         self.base_model.build()
         self.models[target_name] = self.base_model
 
@@ -125,6 +127,8 @@ class BuildModel(BuildModelBase):
         test_set = self.test_sets[target_name].drop(self.drop_cols)
         self.base_model.training_set = training_set.vstack(test_set)
 
+        # Set before build() so a failure there can name the target.
+        self.base_model.target_name = target_name
         self.base_model.build()
         self.final_models[target_name] = self.base_model
 

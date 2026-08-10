@@ -99,6 +99,8 @@ class KFoldValidation(ValidationBase):
             current_fold_model = copy.deepcopy(self.base_model)
 
             current_fold_model.k = k + 1
+            # Set before build() so a failure there can name the target.
+            current_fold_model.target_name = target_name
             current_fold_model.training_set = (
                 self.training_sets[target_name]
                 .filter(pl.col("k_fold") != (k + 1))

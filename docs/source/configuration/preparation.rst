@@ -47,7 +47,13 @@ This section defines the critical file system locations for both your raw input 
 
 `target_sets`
 ^^^^^^^^^^^^^
-This section specifies the target variables that your machine learning model will predict. For each target variable, you must also define its corresponding quality control (QC) flag column. These flags are crucial for identifying good versus bad data points, allowing the pipeline to filter or weight data appropriately. You define both positive (good) and negative (bad) flag values.
+This section specifies the target variables that your machine learning model will predict. For each target variable, you must also define its corresponding quality control (QC) flag column, and which of that column's values mark each class.
+
+``pos_flag_values`` lists the flags of the **positive class**, which is the one
+the model is being trained to detect — the bad observations, flagged 4, 6 or 7
+by default. ``neg_flag_values`` lists the flags of the negative class, the good
+observations, flagged 1 by default. Rows whose flag is in neither list are left
+out of the dataset entirely.
 
 .. code-block:: yaml
 
@@ -63,6 +69,30 @@ This section specifies the target variables that your machine learning model wil
    The flag column may hold integers, strings or floats, and the values may be
    written as ``4`` or as ``"4"``; both sides are read as whole numbers. See
    :ref:`qc-flag-columns` for the full table.
+
+.. _choosing-targets:
+
+Choosing which variables to model
+"""""""""""""""""""""""""""""""""
+
+A variable is worth modelling only when its QC flag column actually contains
+**both** classes. If no observation carries a value from ``pos_flag_values``,
+there is nothing for the model to learn to detect: it would be fitted on a
+single class, predict that class for every row, and return one constant score
+that no ``prediction_threshold`` can separate. ``aiqclib`` refuses to build
+such a model, raising an error that names the target.
+
+Pressure is the usual example. ``pres_qc`` rarely carries bad flags in practice,
+so ``pres`` is **not** included as a target in the templates or these examples.
+It remains an input feature — it appears in ``col_names`` in the feature sets
+and orders observations within a profile — it is simply not something a
+classifier is trained for.
+
+Before adding a target, check that its flags include the positive class:
+
+.. code-block:: python
+
+   df.group_by("temp_qc").len().sort("temp_qc")
 
 `summary_stats_sets`
 ^^^^^^^^^^^^^^^^^^^^
@@ -244,10 +274,6 @@ Below is a complete example of a ``prepare_config.yaml`` file, demonstrating how
            neg_flag_values: [ 1 ]
          - name: psal
            flag: psal_qc
-           pos_flag_values: [ 4, 6, 7 ]
-           neg_flag_values: [ 1 ]
-         - name: pres
-           flag: pres_qc
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 
