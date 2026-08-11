@@ -1,4 +1,5 @@
-"""Unit tests for the public config interface: ``read_config`` and ``write_config_template``.
+"""Unit tests for the public config interface: ``read_config``,
+``read_config_template`` and ``write_config_template``.
 
 Coverage:
 - write_config_template produces a file at the requested path for each
@@ -6,6 +7,8 @@ Coverage:
 - read_config returns the appropriate config class (DataSetConfig,
   TrainingConfig, ClassificationConfig) based on the file's contents;
   invalid module/path inputs raise.
+- read_config_template returns the same template as its writing counterpart,
+  as a resolved config object of the matching class.
 
 Refactored from two pytest classes (already pytest, not unittest) into the
 same structure with conftest fixtures for paths. The template-list data is
@@ -16,11 +19,17 @@ the parametrized ``idx``.
 import os
 
 import pytest
+import yaml
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
+from aiqclib.common.config.nrtqc_config import NRTQCConfig
 from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.interface.config import read_config, write_config_template
+from aiqclib.interface.config import (
+    read_config,
+    read_config_template,
+    write_config_template,
+)
 
 
 # (module, variant, filename) triples for the write_config_template parametrize.
@@ -137,6 +146,91 @@ class TestTemplateConfig:
             write_config_template("~/no_such_dir/prepare.yaml", "prepare")
 
         assert str(tmp_path / "no_such_dir") in str(excinfo.value)
+
+
+#: (stage, extension, expected class) for every template the interface offers.
+STAGE_SPECS = [
+    ("prepare", "", DataSetConfig),
+    ("prepare", "full", DataSetConfig),
+    ("prepare", "reduced", DataSetConfig),
+    ("train", "", TrainingConfig),
+    ("classify", "", ClassificationConfig),
+    ("classify", "full", ClassificationConfig),
+    ("nrt_qc", "", NRTQCConfig),
+]
+
+
+class TestReadConfigTemplate:
+    """Tests for ``read_config_template``."""
+
+    @pytest.mark.parametrize(
+        "stage, extension, expected_class",
+        STAGE_SPECS,
+        ids=[f"{stage}_{extension}" for stage, extension, _ in STAGE_SPECS],
+    )
+    def test_returns_a_resolved_config(self, stage, extension, expected_class):
+        """Each stage returns its config class with the entry already selected."""
+        config = read_config_template(stage, extension)
+
+        assert isinstance(config, expected_class)
+        assert config.data is not None
+        assert config.dataset_name is not None
+
+    @pytest.mark.parametrize(
+        "stage, extension, _expected_class",
+        STAGE_SPECS,
+        ids=[f"{stage}_{extension}" for stage, extension, _ in STAGE_SPECS],
+    )
+    def test_matches_the_written_template(
+        self, stage, extension, _expected_class, tmp_path
+    ):
+        """The object is built from the same YAML the file would contain.
+
+        The two functions take the same arguments, so they must resolve the
+        same template — they share one registry precisely so a stage cannot
+        be added to one and forgotten in the other.
+
+        Compared before selection: ``select()`` resolves the ``min_max``
+        feature statistics into the configuration, so a selected object no
+        longer matches the YAML it came from.
+        """
+        path = tmp_path / "template.yaml"
+        write_config_template(str(path), stage, extension)
+
+        written = yaml.safe_load(path.read_text())
+        from_template = read_config_template(stage, extension, auto_select=False)
+        assert from_template.full_config == written
+
+    def test_without_auto_select(self):
+        """Auto-selection can be switched off, leaving nothing resolved."""
+        config = read_config_template("prepare", auto_select=False)
+
+        assert config.data is None
+        assert config.dataset_name is None
+        assert config.full_config is not None
+
+    def test_invalid_stage(self):
+        """An unknown stage raises, as it does when writing."""
+        with pytest.raises(ValueError):
+            read_config_template("prepare2")
+
+    def test_invalid_extension(self):
+        """A known stage with an unknown variant raises too."""
+        with pytest.raises(ValueError):
+            read_config_template("train", "full")
+
+    def test_returns_an_independent_object(self):
+        """Each call builds a fresh object, so edits do not leak between them.
+
+        The templates are module-level functions returning text; if they ever
+        returned a shared structure instead, customizing one configuration
+        would silently alter the next.
+        """
+        first = read_config_template("prepare")
+        first.data["path_info"]["common"]["base_path"] = "/somewhere/else"
+
+        second = read_config_template("prepare")
+        assert second.data["path_info"]["common"]["base_path"] == "/path/to/data"
 
 
 class TestReadConfig:

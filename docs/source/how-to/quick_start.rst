@@ -144,6 +144,14 @@ Once the configuration file is updated, run the following command to generate th
     config_prepare = aq.read_config(os.path.join(config_path, "data_preparation_config.yaml"))
     aq.create_training_dataset(config_prepare)
 
+.. tip::
+
+    ``print(config_prepare)`` summarizes what the configuration resolved to —
+    its targets, features, row filters, and the directory each step writes to.
+    Checking it before a long run is quicker than tracking down where the
+    output went afterwards. See
+    :doc:`selecting_specific_configurations`.
+
 Understanding the Output
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 After the command finishes, your main output directory (e.g., ``/path/to/your/data``) will contain a new folder named ``dataset_0001``. Inside this folder, you will find several subdirectories, each representing a stage of the data preparation pipeline:

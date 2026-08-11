@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- `read_config_template(stage, extension)` returns a built-in template as a configuration object, taking the same arguments as `write_config_template` but skipping the file. Useful for inspecting a stage's defaults (`print(aq.read_config_template("prepare"))`) and for building a configuration in code without one on disk
+- `print(config)` now summarizes the configuration: source file, schema status, targets and their flag values, features (or NRT QC items), input file, active row filters, and the class and output directory of every step. Before an entry is selected it lists the available entry names. Also available as a string from `config.summary()`
+- `ConfigBase.check_schema()` reports schema validity without setting `valid_yaml`, so reporting code does not change state under a caller
+
+### Changed
+- `repr(config)` now names the concrete config class and the selected entry, instead of always reporting `ConfigBase` and the section alone
+- The built-in templates live in one registry shared by the config classes and the interface, so the default `prepare` template is now reachable as `template:data_sets_all` — previously it was the one variant `write_config_template` could write but no config class could load
+
 ## [0.9.1] - 2026-08-10
 ### Fixed
 - Fresh installs failed while building `llvmlite 0.36.0`. `shap` requires `numba`, every `numba` supporting numpy 2.x caps numpy below the current release, so the resolver walked back to a `numba` with no wheel for supported Python versions. A `numba>=0.62` floor keeps resolution on wheels; this also fixes `uv sync` on Intel macOS, whose lockfile entry carried the same pin

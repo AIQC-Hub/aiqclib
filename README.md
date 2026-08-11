@@ -195,6 +195,12 @@ This generates:
 
 Configuration is managed via YAML files. The `write_config_template` function provides a starting point that you must customize for each module.
 
+To inspect a stage's defaults without writing a file, `read_config_template` takes the same arguments and returns the configuration object instead:
+
+```python
+print(aq.read_config_template(stage="prepare"))
+```
+
 ### 1. Dataset Preparation (`stage="prepare"`)
 
 The preparation config requires you to modify two key sections:
