@@ -2,7 +2,14 @@
 Module providing YAML templates for both dataset preparation
 and training configurations. These templates can be customized
 to fit various data pipeline requirements.
+
+Each template is also registered under a ``template:`` identifier — see
+:func:`get_template_names` and :func:`get_template_text` at the end of this
+module — so a template can be named wherever a configuration file path is
+expected.
 """
+
+from typing import List
 
 
 def _get_dataset_path_info_sets() -> str:
@@ -934,3 +941,47 @@ def get_config_nrtqc_template() -> str:
         + _get_nrtqc_step_param_sets()
         + _get_nrtqc_sets()
     )
+
+
+#: The built-in templates, keyed by the ``template:`` identifier that selects
+#: one in place of a file path. This is the single registry: the config
+#: classes read it to resolve a ``template:`` name, and
+#: :mod:`aiqclib.interface.config` reads it to write a template out or to
+#: build a configuration object from one.
+_TEMPLATES = {
+    "template:data_sets": get_config_data_set_template,
+    "template:data_sets_all": get_config_data_set_all_template,
+    "template:data_sets_full": get_config_data_set_full_template,
+    "template:training_sets": get_config_train_set_template,
+    "template:classification_sets": get_config_classify_set_template,
+    "template:classification_sets_full": get_config_classify_set_full_template,
+    "template:nrt_qc_sets": get_config_nrtqc_template,
+}
+
+
+def get_template_names() -> List[str]:
+    """
+    List the identifiers of every built-in template.
+
+    :return: The ``template:``-prefixed names accepted wherever a
+             configuration file path is expected.
+    :rtype: list[str]
+    """
+    return list(_TEMPLATES)
+
+
+def get_template_text(template_name: str) -> str:
+    """
+    Retrieve the YAML text of a built-in template by its identifier.
+
+    :param template_name: A ``template:``-prefixed name, e.g.
+                          ``"template:data_sets_full"``.
+    :type template_name: str
+    :return: The template's YAML text.
+    :rtype: str
+    :raises ValueError: If no template goes by that name.
+    """
+    if template_name not in _TEMPLATES:
+        raise ValueError(f"Template name {template_name} is not supported.")
+
+    return _TEMPLATES[template_name]()

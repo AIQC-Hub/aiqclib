@@ -20,6 +20,7 @@ except PackageNotFoundError:
 from aiqclib.interface.batch import available_modes, run_batch
 from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
+from aiqclib.interface.config import read_config_template
 from aiqclib.interface.config import write_config_template
 from aiqclib.interface.nrtqc import run_nrt_qc
 from aiqclib.interface.prepare import create_training_dataset
@@ -32,6 +33,7 @@ __all__ = [
     "available_modes",
     "classify_dataset",
     "read_config",
+    "read_config_template",
     "write_config_template",
     "create_training_dataset",
     "format_summary_stats",

@@ -6,7 +6,7 @@ to provide structured access and resolution of NRT QC sub-configurations
 YAML-based configuration files.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.utils.config import get_config_item
@@ -127,6 +127,33 @@ class NRTQCConfig(ConfigBase):
         :rtype: List[str]
         """
         return [x["name"] for x in self.data["qc_item_set"]["items"]]
+
+    def _summary_extra(self, width: int) -> List[Tuple[str, List[str]]]:
+        """
+        Add the enabled QC items to the configuration summary.
+
+        The QC items are to an NRT QC configuration what the feature set is to
+        a dataset configuration, so they take the same place in the summary.
+        A non-default ``fail_flag`` is shown alongside the item name, since it
+        changes what the item writes when it fails.
+
+        :param width: The total line width the summary is formatted to.
+        :type width: int
+        :return: A single ``("qc items", lines)`` row, or an empty list when
+                 no items are enabled.
+        :rtype: list[tuple[str, list[str]]]
+        """
+        items = (self.data or {}).get("qc_item_set", {}).get("items", [])
+        if not items:
+            return []
+
+        names = [
+            f"{x['name']} (flag {x['fail_flag']})"
+            if x.get("fail_flag", 4) != 4
+            else x["name"]
+            for x in items
+        ]
+        return [("qc items", self._wrap(", ".join(names), width))]
 
     def get_variable_flag(self, target_name: str) -> Optional[str]:
         """

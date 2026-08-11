@@ -7,8 +7,9 @@ It uses JSON schemas for validation and supports template-based configuration lo
 """
 
 import os
+import textwrap
 from abc import ABC
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 
 import jsonschema
 import yaml
@@ -20,14 +21,7 @@ from aiqclib.common.config.yaml_schema import (
     get_classification_config_schema,
     get_nrtqc_config_schema,
 )
-from aiqclib.common.config.yaml_templates import (
-    get_config_data_set_template,
-    get_config_data_set_full_template,
-    get_config_train_set_template,
-    get_config_classify_set_template,
-    get_config_classify_set_full_template,
-    get_config_nrtqc_template,
-)
+from aiqclib.common.config.yaml_templates import get_template_text
 from aiqclib.common.utils.config import get_config_item
 from aiqclib.common.utils.config import read_config
 from aiqclib.common.utils.file import expand_path
@@ -53,6 +47,9 @@ class ConfigBase(ABC):
     :vartype expected_class_name: str, optional
     :ivar section_name: The top-level section of the config this instance manages.
     :vartype section_name: str
+    :ivar config_file: The YAML path or ``template:`` identifier this instance
+                       was loaded from, kept for reporting.
+    :vartype config_file: str
     :ivar yaml_schema: The JSON schema used for validating the configuration.
     :vartype yaml_schema: dict
     :ivar full_config: The entire configuration loaded from the YAML file.
@@ -98,22 +95,13 @@ class ConfigBase(ABC):
         if section_name not in yaml_schemas:
             raise ValueError(f"Section name {section_name} is not supported.")
 
-        yaml_templates = {
-            "template:data_sets": get_config_data_set_template,
-            "template:data_sets_full": get_config_data_set_full_template,
-            "template:training_sets": get_config_train_set_template,
-            "template:classification_sets": get_config_classify_set_template,
-            "template:classification_sets_full": get_config_classify_set_full_template,
-            "template:nrt_qc_sets": get_config_nrtqc_template,
-        }
         if str(config_file).startswith("template:"):
-            if str(config_file) not in yaml_templates:
-                raise ValueError(f"Template name {config_file} is not supported.")
-            full_config = yaml.safe_load(yaml_templates.get(str(config_file))())
+            full_config = yaml.safe_load(get_template_text(str(config_file)))
         else:
             full_config = read_config(config_file)
 
         self.section_name: str = section_name
+        self.config_file: str = str(config_file)
         self.yaml_schema: Dict = yaml.safe_load(yaml_schemas.get(section_name)())
         self.full_config: Dict = full_config
         self.valid_yaml: bool = False
@@ -142,20 +130,35 @@ class ConfigBase(ABC):
                 "'auto_select' option is invalid when there are multiple data set names"
             )
 
+    def check_schema(self) -> Tuple[bool, str]:
+        """
+        Check the loaded configuration against the schema without storing
+        the outcome.
+
+        This is the side-effect-free half of :meth:`validate`, so that
+        reporting code (:meth:`summary`) can describe the configuration
+        without changing :attr:`valid_yaml` underneath a caller.
+
+        :return: Whether the configuration is valid, and a message describing
+                 the outcome.
+        :rtype: tuple[bool, str]
+        """
+        try:
+            validate(instance=self.full_config, schema=self.yaml_schema)
+            return True, "YAML file is valid"
+        except jsonschema.exceptions.ValidationError as e:
+            return False, f"YAML file is invalid: {e.message}"
+
     def validate(self) -> str:
         """
-        Validate the loaded configuration against the corresponding schema.
+        Validate the loaded configuration against the corresponding schema,
+        storing the outcome in :attr:`valid_yaml`.
 
         :return: A message indicating whether validation succeeded or failed.
         :rtype: str
         """
-        try:
-            validate(instance=self.full_config, schema=self.yaml_schema)
-            self.valid_yaml = True
-            return "YAML file is valid"
-        except jsonschema.exceptions.ValidationError as e:
-            self.valid_yaml = False
-            return f"YAML file is invalid: {e.message}"
+        self.valid_yaml, message = self.check_schema()
+        return message
 
     def select(self, dataset_name: str) -> None:
         """
@@ -547,11 +550,286 @@ class ConfigBase(ABC):
             step_name="normalize", default_file_name=default_file_name
         )
 
-    def __repr__(self) -> str:
-        """
-        Return a string representation of the configuration object.
+    # ------------------------------------------------------------------
+    # Reporting
+    # ------------------------------------------------------------------
 
-        :return: String identifying the instance and its managed section.
+    #: Width of the label column used by :meth:`summary`, including its
+    #: two-space indent. Continuation lines are indented to match.
+    _label_width: int = 12
+
+    #: Steps whose paths are resolved without the dataset folder, i.e. those
+    #: the step classes read with ``use_dataset_folder=False``. Only
+    #: :meth:`summary` uses this — the step classes remain the authority on
+    #: their own paths, so a subclass listing the wrong steps misreports a
+    #: directory rather than changing where anything is written.
+    _steps_without_dataset_folder: Tuple[str, ...] = ("input",)
+
+    @classmethod
+    def _wrap(cls, text: str, width: int) -> List[str]:
+        """
+        Wrap a comma-separated value to the summary's content column.
+
+        :param text: The text to wrap.
+        :type text: str
+        :param width: The total line width the summary is formatted to.
+        :type width: int
+        :return: The wrapped lines, without indentation.
+        :rtype: list[str]
+        """
+        return textwrap.wrap(text, width=max(width - cls._label_width, 20)) or [""]
+
+    def _entry_names(self) -> List[str]:
+        """
+        List the names of every entry in this instance's section.
+
+        :return: The entry names, or an empty list if the section is missing
+                 or malformed.
+        :rtype: list[str]
+        """
+        try:
+            return [x["name"] for x in self.full_config[self.section_name]]
+        except (KeyError, TypeError, IndexError):
+            return []
+
+    def _summary_targets(self) -> List[str]:
+        """
+        Describe each target variable and the flag values it labels from.
+
+        :return: One line per target, or an empty list when no target set is
+                 resolved.
+        :rtype: list[str]
+        """
+        try:
+            variables = self.get_target_variables()
+        except (KeyError, TypeError):
+            return []
+
+        lines = []
+        for variable in variables:
+            if self.is_flag_missing(variable):
+                detail = "no flag"
+            else:
+                detail = f"flag {variable['flag']}"
+                for key, label in (
+                    ("pos_flag_values", "pos"),
+                    ("neg_flag_values", "neg"),
+                ):
+                    if variable.get(key) is not None:
+                        detail += f", {label} {variable[key]}"
+            lines.append(f"{variable.get('name', '?')} ({detail})")
+        return lines
+
+    def _summary_input_file(self) -> List[str]:
+        """
+        Resolve the input file the pipeline will read for this configuration.
+
+        :return: A single-element list holding the resolved path, or an empty
+                 list when the configuration names no input file.
+        :rtype: list[str]
+        """
+        file_name = (self.data or {}).get("input_file_name")
+        if not file_name:
+            return []
+        try:
+            return [
+                self.get_full_file_name(
+                    "input",
+                    default_file_name=file_name,
+                    use_dataset_folder="input"
+                    not in self._steps_without_dataset_folder,
+                )
+            ]
+        except (KeyError, TypeError, ValueError):
+            return [file_name]
+
+    def _summary_filters(self, width: int) -> List[str]:
+        """
+        Describe the active row filters of the ``input`` step.
+
+        These are worth surfacing because a filter that matches nothing — a
+        ``keep_years`` naming years the input does not cover, say — empties
+        the dataset without any hint in the configuration itself.
+
+        :param width: The total line width the summary is formatted to.
+        :type width: int
+        :return: The wrapped filter description, or an empty list when no
+                 filter is set.
+        :rtype: list[str]
+        """
+        try:
+            params = self.get_step_params("input")
+        except (KeyError, TypeError):
+            return []
+
+        active = [
+            f"{key} {value}"
+            for key, value in (params.get("filter_method_dict") or {}).items()
+            if value
+        ]
+        if not active:
+            return []
+
+        text = ", ".join(active)
+        if (params.get("sub_steps") or {}).get("filter_rows") is False:
+            text += "  (not applied: sub_steps.filter_rows is false)"
+        return self._wrap(text, width)
+
+    def _step_directory(self, step_name: str) -> str:
+        """
+        Compose the output directory a step writes into.
+
+        This is :meth:`get_full_file_name` without the file name, which the
+        step classes supply themselves and which is therefore not knowable
+        from the configuration alone.
+
+        :param step_name: The name of the step.
+        :type step_name: str
+        :return: The directory, or a placeholder when it cannot be resolved.
         :rtype: str
         """
-        return f"ConfigBase(section_name={self.section_name})"
+        try:
+            dataset_folder = (
+                ""
+                if step_name in self._steps_without_dataset_folder
+                else self.get_dataset_folder_name(step_name)
+            )
+            return os.path.normpath(
+                os.path.join(
+                    self.get_base_path(step_name),
+                    dataset_folder,
+                    self.get_step_folder_name(step_name),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            return "<unresolved>"
+
+    def _summary_steps(self) -> List[str]:
+        """
+        Tabulate each configured step, its class and its output directory.
+
+        :return: One aligned line per step, or an empty list when no step
+                 class set is resolved.
+        :rtype: list[str]
+        """
+        steps = (self.data or {}).get("step_class_set", {}).get("steps", {})
+        if not steps:
+            return []
+
+        name_width = max(len(str(x)) for x in steps)
+        class_width = max(len(str(x)) for x in steps.values())
+        return [
+            f"{name:<{name_width}}  {str(class_name):<{class_width}}  "
+            f"{self._step_directory(name)}"
+            for name, class_name in steps.items()
+        ]
+
+    def _summary_extra(self, width: int) -> List[Tuple[str, List[str]]]:
+        """
+        Supply subclass-specific summary rows.
+
+        Subclasses override this to report what only they have — the NRT QC
+        items, for instance. Rows are inserted after the features row.
+
+        :param width: The total line width the summary is formatted to.
+        :type width: int
+        :return: ``(label, lines)`` pairs; empty in the base class.
+        :rtype: list[tuple[str, list[str]]]
+        """
+        return []
+
+    def summary(self, width: int = 88) -> str:
+        """
+        Build a readable summary of what this configuration resolves to.
+
+        This is what :meth:`__str__` returns, so ``print(config)`` shows the
+        summary. It reports the source file, the schema status, and — once an
+        entry has been selected — the targets, features, input file, row
+        filters, and the class and output directory of every step. Nothing is
+        recomputed or cached: the summary reflects :attr:`data` as it stands,
+        including any changes made to it since :meth:`select`.
+
+        Before an entry is selected, the available entry names are listed
+        instead, so a configuration file can be inspected without knowing what
+        it contains.
+
+        :param width: The line width to wrap long values to. Step paths are
+                      never wrapped, since a broken path is worse than a long
+                      line.
+        :type width: int
+        :return: The summary, as a multi-line string without a trailing
+                 newline.
+        :rtype: str
+        """
+        is_valid, message = self.check_schema()
+        count = len(self._entry_names())
+
+        rows: List[Tuple[str, List[str]]] = [
+            ("source", [self.config_file]),
+            (
+                "section",
+                [f"{self.section_name} ({count} entr{'y' if count == 1 else 'ies'})"],
+            ),
+            ("schema", self._wrap("valid" if is_valid else message, width)),
+        ]
+
+        entry_names = self._entry_names()
+        if self.data is None and entry_names:
+            rows.append(("entries", self._wrap(", ".join(entry_names), width)))
+        elif self.data is not None:
+            features = (self.data.get("feature_set") or {}).get("features") or []
+            for label, values in (
+                ("targets", self._summary_targets()),
+                (
+                    "features",
+                    self._wrap(", ".join(features), width) if features else [],
+                ),
+                *self._summary_extra(width),
+                ("input", self._summary_input_file()),
+                ("filters", self._summary_filters(width)),
+                ("steps", self._summary_steps()),
+            ):
+                if values:
+                    rows.append((label, values))
+
+        name = self.dataset_name or "<nothing selected>"
+        lines = [f"{type(self).__name__}: {name}"]
+        for label, values in rows:
+            for index, value in enumerate(values):
+                indent = (
+                    f"  {label:<{self._label_width - 2}}"
+                    if index == 0
+                    else " " * self._label_width
+                )
+                lines.append(f"{indent}{value}")
+
+        if self.data is None:
+            lines.append(
+                "  (call select(<name>) to resolve one of the entries above)"
+                if entry_names
+                else f"  (no '{self.section_name}' entries found in this file)"
+            )
+
+        return "\n".join(lines)
+
+    def __str__(self) -> str:
+        """
+        Return the configuration summary, so ``print(config)`` is informative.
+
+        :return: The multi-line summary from :meth:`summary`.
+        :rtype: str
+        """
+        return self.summary()
+
+    def __repr__(self) -> str:
+        """
+        Return a short, single-line representation of the configuration object.
+
+        :return: String identifying the instance, its managed section and the
+                 selected entry.
+        :rtype: str
+        """
+        return (
+            f"{type(self).__name__}(section_name={self.section_name}, "
+            f"dataset_name={self.dataset_name})"
+        )

@@ -7,6 +7,8 @@ structured access to dataset settings, including targets, step classes,
 and step parameters, by resolving references within the configuration.
 """
 
+from typing import Tuple
+
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.utils.config import get_config_item
 
@@ -31,6 +33,11 @@ class TrainingConfig(ConfigBase):
     The class name expected by :class:`ConfigBase` for consistency checks
     when instantiating TrainingConfig from YAML.
     """
+
+    #: Unlike the other stages, training reads its ``input`` step *from* the
+    #: dataset folder — those are the split sets the preparation stage wrote
+    #: there. Used by :meth:`ConfigBase.summary` only.
+    _steps_without_dataset_folder: Tuple[str, ...] = ()
 
     def __init__(self, config_file: str, auto_select: bool = False) -> None:
         """

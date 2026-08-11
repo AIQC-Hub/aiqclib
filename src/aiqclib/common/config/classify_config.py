@@ -7,6 +7,8 @@ from YAML-based configuration files, simplifying the management of complex
 ML pipeline configurations.
 """
 
+from typing import Tuple
+
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.utils.config import get_config_item
 
@@ -28,6 +30,12 @@ class ClassificationConfig(ConfigBase):
     The class name expected by this configuration to validate it 
     aligns with the YAML definition. Used by :class:`aiqclib.common.base.config_base.ConfigBase`.
     """
+
+    #: The ``model`` step reads models the *training* stage wrote, so its
+    #: ``base_path`` already points inside that stage's dataset folder and the
+    #: classification one is not appended. Used by
+    #: :meth:`ConfigBase.summary` only.
+    _steps_without_dataset_folder: Tuple[str, ...] = ("input", "model")
 
     def __init__(self, config_file: str, auto_select: bool = False) -> None:
         """
