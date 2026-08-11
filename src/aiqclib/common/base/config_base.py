@@ -246,23 +246,59 @@ class ConfigBase(ABC):
         """
         Retrieve the parameters dictionary for a model.
 
+        ``model_params`` may be written in either of two forms, or a mix of
+        both:
+
+        - **Shared**: plain parameter names applied to every model, e.g.
+          ``{n_estimators: 50}``.
+        - **Per-model**: keyed by a model's long or short name, e.g.
+          ``{XGBoost: {device: cuda}, RF: {max_depth: 5}}``. Only the named
+          model receives them.
+
+        A key is treated as a model name when it is one the library
+        recognizes; everything else is a shared parameter. Mixing the two
+        gives shared defaults with per-model overrides on top::
+
+            model_params: { n_estimators: 50, XGBoost: { device: cuda } }
+
+        Here every model gets ``n_estimators``, and XGBoost also gets
+        ``device``.
+
         :param model_long_name: The long-form name of the model.
         :type model_long_name: str
         :param model_short_name: The short-form name of the model.
         :type model_short_name: str
-        :return: Parameters for the specified model or the whole model param dict.
+        :return: The shared parameters merged with this model's own, if any.
         :rtype: dict
+        :raises ValueError: If the entry under a model name is not a mapping.
         """
         model_params = self.data["step_param_set"]["steps"]["model"].get(
             "model_params", {}
         )
 
-        if model_long_name in model_params:
-            return model_params[model_long_name]
-        elif model_short_name in model_params:
-            return model_params[model_short_name]
-        else:
-            return model_params
+        # Imported here, not at module scope: the registry pulls in the model
+        # classes, which inherit from ModelBase and so import this module.
+        from aiqclib.common.loader.single_model_registry import SINGLE_MODEL_REGISTRY
+
+        model_names = set(SINGLE_MODEL_REGISTRY)
+
+        # Anything not naming a model is a parameter shared by all of them.
+        # Without this split an unnamed model fell back to the entire dict and
+        # received the other models' sections as parameters, which their
+        # constructors reject.
+        shared = {k: v for k, v in model_params.items() if k not in model_names}
+
+        own = model_params.get(model_long_name)
+        if own is None:
+            own = model_params.get(model_short_name, {})
+
+        if not isinstance(own, dict):
+            raise ValueError(
+                f"Parameters for model '{model_long_name}' must be a mapping of "
+                f"parameter names to values, but got {type(own).__name__}."
+            )
+
+        return {**shared, **own}
 
     def get_dataset_folder_name(self, step_name: str) -> str:
         """
