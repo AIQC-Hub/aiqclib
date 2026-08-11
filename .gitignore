@@ -38,3 +38,6 @@ test-data.zip
 
 # Personal, machine-local Claude Code instructions (not shared)
 CLAUDE.local.md
+
+# Claude Code local settings (machine-specific paths, not for the repo)
+.claude/settings.local.json
