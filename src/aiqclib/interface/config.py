@@ -1,29 +1,54 @@
 """
-Module providing utilities for writing YAML configuration templates and
-reading them as instantiated configuration objects. Supports "prepare",
-"train", "classify", and "nrt_qc" stages using corresponding registry
-lookups.
+Module providing utilities for writing YAML configuration templates, reading
+them as instantiated configuration objects, and building a configuration
+object directly from a built-in template. Supports "prepare", "train",
+"classify", and "nrt_qc" stages using corresponding registry lookups.
 """
 
-from typing import Optional
+from typing import Dict, Optional, Tuple, Type
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
 from aiqclib.common.config.nrtqc_config import NRTQCConfig
 from aiqclib.common.config.training_config import TrainingConfig
-from aiqclib.common.config.yaml_templates import (
-    get_config_train_set_template,
-    get_config_data_set_template,
-    get_config_data_set_full_template,
-    get_config_data_set_all_template,
-    get_config_classify_set_template,
-    get_config_classify_set_full_template,
-    get_config_nrtqc_template,
-)
+from aiqclib.common.config.yaml_templates import get_template_text
 from aiqclib.common.utils.config import get_config_file
 from aiqclib.common.utils.config import read_config as utils_read_config
 from aiqclib.common.utils.file import ensure_output_file
+
+
+#: Maps a ``"<stage>_<extension>"`` key to the built-in template that serves
+#: it and the configuration class that reads it. Shared by
+#: :func:`write_config_template` and :func:`read_config_template` so the two
+#: always offer the same stages and hand back the same YAML.
+_STAGE_TEMPLATES: Dict[str, Tuple[str, Type[ConfigBase]]] = {
+    "prepare_": ("template:data_sets_all", DataSetConfig),
+    "prepare_full": ("template:data_sets_full", DataSetConfig),
+    "prepare_reduced": ("template:data_sets", DataSetConfig),
+    "train_": ("template:training_sets", TrainingConfig),
+    "classify_": ("template:classification_sets", ClassificationConfig),
+    "classify_full": ("template:classification_sets_full", ClassificationConfig),
+    "nrt_qc_": ("template:nrt_qc_sets", NRTQCConfig),
+}
+
+
+def _get_stage_template(stage: str, extension: str) -> Tuple[str, Type[ConfigBase]]:
+    """
+    Look up the template and configuration class for a stage.
+
+    :param stage: One of "prepare", "train", "classify" or "nrt_qc".
+    :type stage: str
+    :param extension: The template variant; "", "full" or "reduced".
+    :type extension: str
+    :return: The template identifier and the class that reads it.
+    :rtype: tuple[str, type[ConfigBase]]
+    :raises ValueError: If the stage and extension name no known template.
+    """
+    if f"{stage}_{extension}" not in _STAGE_TEMPLATES:
+        raise ValueError(f"Module {stage} is not supported.")
+
+    return _STAGE_TEMPLATES[f"{stage}_{extension}"]
 
 
 def write_config_template(
@@ -76,25 +101,68 @@ def write_config_template(
       >>> # FileExistsError: File '/tmp/prepare.yaml' already exists. Pass
       >>> #                  overwrite=True to replace it, ...
     """
-    function_registry = {
-        "prepare_": get_config_data_set_all_template,
-        "prepare_full": get_config_data_set_full_template,
-        "prepare_reduced": get_config_data_set_template,
-        "train_": get_config_train_set_template,
-        "classify_": get_config_classify_set_template,
-        "classify_full": get_config_classify_set_full_template,
-        "nrt_qc_": get_config_nrtqc_template,
-    }
-    if f"{stage}_{extension}" not in function_registry:
-        raise ValueError(f"Module {stage} is not supported.")
+    template_name, _ = _get_stage_template(stage, extension)
 
-    yaml_text = function_registry[f"{stage}_{extension}"]()
+    yaml_text = get_template_text(template_name)
     file_name = ensure_output_file(
         file_name, create_dirs=create_dirs, overwrite=overwrite
     )
 
     with open(file_name, "w", encoding="utf-8") as yaml_file:
         yaml_file.write(yaml_text)
+
+
+def read_config_template(
+    stage: str, extension: str = "", auto_select: bool = True
+) -> ConfigBase:
+    """
+    Read a built-in YAML configuration template as a configuration object.
+
+    This is the counterpart of :func:`write_config_template`: it takes the same
+    ``stage`` and ``extension`` and resolves the same template, but returns the
+    configuration object directly instead of writing the YAML to a file. It is
+    the quickest way to see what a stage's defaults are — ``print()`` on the
+    result summarizes the targets, features, steps and output directories —
+    and it lets a configuration be built in code, by adjusting the returned
+    object, without a file on disk.
+
+    .. note::
+
+       A template carries placeholder paths (``/path/to/data``) and a
+       placeholder input file name, so a returned object is not ready to run a
+       pipeline with. Set at least ``path_info`` and ``input_file_name`` on it
+       first, or write the template out with :func:`write_config_template`,
+       edit it, and load it with :func:`read_config`.
+
+    :param stage: Determines which template to read; must be one of "prepare",
+                  "train", "classify", or "nrt_qc".
+    :type stage: str
+    :param extension: Determines template extensions; must be one of "",
+                      "full", or "reduced".
+    :type extension: str
+    :param auto_select: If True, select the template's single entry, so the
+                        returned object is fully resolved. Pass False to get
+                        the object with nothing selected, e.g. to inspect
+                        ``full_config`` before choosing.
+    :type auto_select: bool
+    :return: An instantiated configuration object (:class:`DataSetConfig`,
+             :class:`TrainingConfig`, :class:`ClassificationConfig`, or
+             :class:`NRTQCConfig`).
+    :rtype: ConfigBase
+    :raises ValueError: If the combined stage and extension is not found in
+                        the registry.
+
+    Example Usage:
+      >>> config = read_config_template("prepare")
+      >>> config.dataset_name
+      'dataset_0001'
+      >>> config.get_target_names()
+      ['temp', 'psal']
+      >>> config.data["path_info"]["common"]["base_path"] = "~/aiqc_project/data"
+    """
+    template_name, config_class = _get_stage_template(stage, extension)
+
+    return config_class(template_name, auto_select)
 
 
 def read_config(

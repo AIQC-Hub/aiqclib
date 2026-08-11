@@ -106,6 +106,39 @@ instead:
 The same text is available as a string from ``config.summary()``, for logging
 it alongside a run rather than printing it.
 
+Inspecting a Stage's Defaults
+--------------------------------
+
+``read_config_template`` takes the same ``stage`` and ``extension`` arguments
+as ``write_config_template`` but returns the configuration object rather than
+writing the YAML to a file, which is the shortest way to look at what a stage
+starts from:
+
+.. code-block:: python
+
+   print(aq.read_config_template(stage="prepare"))
+
+The returned object can also be customized in code — adjusting ``config.data``
+— and passed straight to a workflow, so a configuration need not exist on disk
+at all. A template carries placeholder paths, so set ``path_info`` and
+``input_file_name`` on it before running anything with it:
+
+.. code-block:: python
+
+   config = aq.read_config_template(stage="prepare")
+   config.data["path_info"]["common"]["base_path"] = "~/aiqc_project/data"
+   config.data["path_info"]["input"]["base_path"] = "~/aiqc_project/input"
+   config.data["input_file_name"] = "my_profiles.parquet"
+
+   print(config)   # confirm the paths and filters before the run
+   aq.create_training_dataset(config)
+
+.. note::
+
+   The prepare template ships with ``remove_years: [2023]`` as an example row
+   filter. It shows up in the ``filters`` row of the summary above — clear it
+   in ``step_param_set`` unless you want that year dropped.
+
 Generalizing to Other Configuration Types and Stages
 ------------------------------------------------------
 
