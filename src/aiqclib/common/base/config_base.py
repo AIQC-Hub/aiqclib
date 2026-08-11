@@ -262,7 +262,9 @@ class ConfigBase(ABC):
             model_params: { n_estimators: 50, XGBoost: { device: cuda } }
 
         Here every model gets ``n_estimators``, and XGBoost also gets
-        ``device``.
+        ``device``. A shared parameter reaches every model in a suite, so it
+        must be one they all accept; anything narrower belongs in a per-model
+        section.
 
         :param model_long_name: The long-form name of the model.
         :type model_long_name: str

@@ -28,7 +28,13 @@ Configuration
 
 To select an algorithm, set the ``model`` key in ``step_class_sets`` to the algorithm's class name (e.g., ``XGBoost``).
 
-To customize the hyperparameters for your selected algorithm, add them to the ``model`` step within ``step_param_sets``.
+To customize the hyperparameters for your selected algorithm, add them under a ``model_params`` key in the ``model`` step within ``step_param_sets``.
+
+.. warning::
+   Hyperparameters must go inside ``model_params``. Keys placed directly under
+   ``model`` are step parameters (such as ``calculate_shap`` or ``methods``)
+   and never reach the algorithm, so a hyperparameter written there is
+   silently ignored and the default is used instead.
 
 Training Configuration Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -49,7 +55,7 @@ Training Configuration Example
         steps:
           input: { }
           validate: { }
-          model: { learning_rate: 0.01 }
+          model: { model_params: { learning_rate: 0.01 } }
           build: { }
 
 Classification Configuration Example
@@ -96,7 +102,7 @@ Training Configuration Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: yaml
-   :emphasize-lines: 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22
+   :emphasize-lines: 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21
 
     step_class_sets:
       - name: training_step_set_1
@@ -115,12 +121,42 @@ Training Configuration Example
                    calculate_shap: True,
                    methods: [ DT, XGB, RF ],
                    model_params: {
-                     DT:  { },             # Default (you still need to set an empty dictionary)
                      XGB: { scale_pos_weight: 200 , n_jobs: 30 },
                      RF:  { n_jobs: 30 }   # Number of parallel jobs
                    }
                  }
           build: { }
+
+Only the models you name are affected; the rest keep their defaults. Above,
+``DT`` needs no entry at all.
+
+Shared and Per-Model Parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The two forms can be combined. A key that names a model applies only to that
+model, while a plain parameter name applies to every model, and a model's own
+section overrides the shared value:
+
+.. code-block:: yaml
+
+    model_params: {
+      max_depth: 8,                  # every model
+      XGB: { max_depth: 12,          # ... except XGBoost, which uses 12
+             scale_pos_weight: 200 }
+    }
+
+.. warning::
+   A shared parameter is passed to *every* model listed in ``methods``, so it
+   must be one they all accept. ``n_jobs``, for example, is unsupported by
+   ``DT``, ``LDA`` and ``GNB``, and sharing it raises
+   ``TypeError: unexpected keyword argument 'n_jobs'``. Where a parameter does
+   not apply to all of them, give it per model instead — as the example above
+   does for ``n_jobs``.
+
+.. note::
+   In earlier versions every method listed in ``methods`` had to be given its
+   own entry — a model that was not named received the whole ``model_params``
+   dictionary, including the other models' sections, and failed to construct.
 
 Classification Configuration Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

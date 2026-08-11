@@ -7,8 +7,10 @@ As this project is still in active development, it does not yet strictly adhere 
 ## [Unreleased]
 ### Added
 - `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
+- New how-to page on GPU acceleration: which parts of the pipeline can use one (XGBoost training only), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, and what to check before running in a container
 
 ### Fixed
+- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored — they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
 - A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`) — making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
 - `MODEL_REGISTRY` aliased `SINGLE_MODEL_REGISTRY` instead of copying it, so importing it added `ModelSuite` to the single-model registry, letting a suite list itself among its own methods
 - A non-mapping value under a model name now raises `ValueError` naming the model, instead of an unpacking `TypeError`
