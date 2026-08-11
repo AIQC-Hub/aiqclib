@@ -37,6 +37,75 @@ For example, to select ``dataset_0002``, you would use:
 
 This ``config`` object will now contain the parameters for ``dataset_0002``, ready for further processes.
 
+Checking What a Configuration Resolves To
+-------------------------------------------
+
+Printing a configuration object summarizes what it resolved to, which is the
+quickest way to confirm you selected the entry you meant:
+
+.. code-block:: python
+
+   config = aq.read_config(config_path, set_name="dataset_0001")
+   print(config)
+
+.. code-block:: text
+
+   DataSetConfig: dataset_0001
+     source    prepare_config.yaml
+     section   data_sets (2 entries)
+     schema    valid
+     targets   temp (flag temp_qc, pos [4, 6, 7], neg [1])
+               psal (flag psal_qc, pos [4, 6, 7], neg [1])
+     features  location, day_of_year, profile_summary_stats, basic_values, flank_up,
+               flank_down
+     input     /path/to/input/nrt_cora_bo_4.parquet
+     filters   remove_years [2023]
+     steps     input    InputDataSetA    /path/to/input
+               summary  SummaryDataSetA  /path/to/data/dataset_0001/summary
+               select   SelectDataSetA   /path/to/data/dataset_0001/select
+               locate   LocateDataSetA   /path/to/data/dataset_0001/locate
+               extract  ExtractDataSetA  /path/to/data/dataset_0001/extract
+               split    SplitDataSetA    /path/to/data/dataset_0001/training
+
+The ``steps`` block is the useful part: it names the class that runs each step
+and the directory its output lands in, with ``~`` and the dataset folder
+already resolved. Reading it before a long run is cheaper than discovering
+afterwards that everything was written somewhere unexpected.
+
+The other rows are worth a glance for the mistakes they make visible:
+
+*   ``targets`` — the variables a model is built for, each with the QC flag
+    column it labels from and the flag values counted as positive (bad) and
+    negative (good). See :ref:`choosing-targets`.
+*   ``filters`` — the active ``keep_years`` / ``remove_years`` row filters. A
+    filter naming years your input does not cover empties the dataset, which
+    is otherwise only reported once the pipeline reaches the step that cannot
+    proceed without rows.
+*   ``schema`` — whether the file validates against the stage's schema, and
+    the first error if it does not. This is reported before an entry is
+    selected too, so printing a configuration that will not load still tells
+    you why.
+
+A configuration that has not selected an entry yet lists the names it offers
+instead:
+
+.. code-block:: python
+
+   config = aq.read_config(config_path, auto_select=False)
+   print(config)
+
+.. code-block:: text
+
+   DataSetConfig: <nothing selected>
+     source    prepare_config.yaml
+     section   data_sets (2 entries)
+     schema    valid
+     entries   dataset_0001, dataset_0002
+     (call select(<name>) to resolve one of the entries above)
+
+The same text is available as a string from ``config.summary()``, for logging
+it alongside a run rather than printing it.
+
 Generalizing to Other Configuration Types and Stages
 ------------------------------------------------------
 
