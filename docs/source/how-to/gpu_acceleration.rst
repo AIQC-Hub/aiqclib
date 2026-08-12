@@ -40,6 +40,52 @@ To confirm your installed build supports CUDA:
     import xgboost as xgb
     print(xgb.build_info()["USE_CUDA"])   # True if GPU-capable
 
+.. _gpu-compute-capability:
+
+GPU Generation and the XGBoost Version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``USE_CUDA`` being ``True`` is necessary but not sufficient. Every NVIDIA GPU
+has a *compute capability* (also written ``SM``) identifying its generation,
+and a wheel carries compiled code only for the generations it was built for.
+As new hardware appears, older ones are dropped. If your GPU predates the
+wheel's oldest supported generation, training fails at ``fit`` time:
+
+.. code-block:: text
+
+    XGBoostError: This program was not compiled for SM 60
+    : cudaErrorInvalidDevice: invalid device ordinal
+
+Nothing earlier warns you — the import succeeds, ``build_info()`` reports
+``USE_CUDA: True``, and the GPU appears in ``nvidia-smi``. Check your compute
+capability with:
+
+.. code-block:: bash
+
+    nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
+
+A worked example: the Tesla P100 is compute capability **6.0** (Pascal).
+``xgboost`` 3.2.0 ships ``SM 60`` code and trains on it; 3.4.0 does not and
+fails as above. Since ``aiqclib`` requires only ``xgboost>=3.0.2``, a fresh
+install resolves to the newest release — so a P100 that worked can stop
+working after an unrelated dependency update.
+
+If you rely on an older GPU, pin the version where you deploy rather than in
+``aiqclib`` itself:
+
+.. code-block:: bash
+
+    pip install "aiqclib" "xgboost==3.2.0"
+
+Pinning in your image or environment keeps the constraint attached to the
+machine that needs it, instead of holding every other user back to an older
+release. Where a CUDA toolkit is available, you can list a wheel's compiled
+generations directly:
+
+.. code-block:: bash
+
+    cuobjdump --list-elf .../site-packages/xgboost/lib/libxgboost.so
+
 Configuration
 -------------
 
@@ -182,9 +228,32 @@ The host driver still has to be present and recent enough for the CUDA version
 the wheel was built against, which ``xgboost.build_info()["CUDA_VERSION"]``
 reports.
 
-Verify inside the container before running a full workflow:
+Verify inside the container before running a full workflow. Fit a small model
+rather than only checking that the GPU is visible — a driver that is present
+and a build that reports ``USE_CUDA`` still leave
+:ref:`compute capability <gpu-compute-capability>` untested:
 
 .. code-block:: bash
 
-    nvidia-smi                                     # driver visible?
-    uv run python -c "import xgboost; print(xgboost.build_info()['USE_CUDA'])"
+    nvidia-smi        # driver visible? note the compute capability
+
+.. code-block:: python
+
+    import json
+    import numpy as np
+    import xgboost as xgb
+
+    X = np.random.rand(10_000, 20).astype(np.float32)
+    y = (X[:, 0] > 0.5).astype(int)
+
+    booster = xgb.train(
+        {"device": "cuda", "tree_method": "hist", "objective": "binary:logistic"},
+        xgb.DMatrix(X, label=y),
+        num_boost_round=10,
+    )
+    config = json.loads(booster.save_config())
+    print(config["learner"]["generic_param"]["device"])   # expect cuda:0
+
+Print the resolved device rather than trusting the run to have used the GPU:
+when XGBoost cannot reach one it falls back to the CPU and completes normally,
+so a successful fit alone proves nothing.
