@@ -64,18 +64,27 @@ capability with:
 
     nvidia-smi --query-gpu=name,compute_cap,memory.total --format=csv
 
-A worked example: the Tesla P100 is compute capability **6.0** (Pascal).
-``xgboost`` 3.2.0 ships ``SM 60`` code and trains on it; 3.4.0 does not and
-fails as above. Since ``aiqclib`` requires only ``xgboost>=3.0.2``, a fresh
-install resolves to the newest release — so a P100 that worked can stop
-working after an unrelated dependency update.
+A worked example: the Tesla P100 is compute capability **6.0** (Pascal), and
+support for it ends partway through the 3.x series:
+
+======================= ==================================
+``xgboost`` release     Trains on a P100 (``SM 60``)
+======================= ==================================
+3.2.0                   yes — the last release that does
+3.3.0                   no
+3.4.0                   no
+======================= ==================================
+
+Since ``aiqclib`` requires only ``xgboost>=3.0.2``, a fresh install resolves to
+the newest release — so a P100 that worked can stop working after an unrelated
+dependency update.
 
 If you rely on an older GPU, pin the version where you deploy rather than in
 ``aiqclib`` itself:
 
 .. code-block:: bash
 
-    pip install "aiqclib" "xgboost==3.2.0"
+    pip install "aiqclib" "xgboost<3.3"
 
 Pinning in your image or environment keeps the constraint attached to the
 machine that needs it, instead of holding every other user back to an older
