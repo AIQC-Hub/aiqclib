@@ -8,23 +8,27 @@ code change and no extra dependency — only a configuration setting.
 What Can Use a GPU
 ------------------
 
-Only XGBoost. This is worth being clear about before investing in a GPU
-setup:
+Only XGBoost — but that covers more than fitting, because everything XGBoost
+does for a model runs on whichever device that model was given:
 
-============================== =========================================
+============================== ==================================================
 Stage / component              Device
-============================== =========================================
+============================== ==================================================
 Dataset preparation            CPU (polars / pandas)
 **XGBoost** training           **GPU**, when ``device: cuda`` is set
+**XGBoost** prediction         **GPU** — see :ref:`gpu-prediction-device`
+**XGBoost** SHAP values        **GPU** — see :ref:`gpu-prediction-device`
 The other eight algorithms     CPU — scikit-learn has no GPU backend
-SHAP value calculation         CPU
-Classification (prediction)    CPU — see :ref:`gpu-prediction-device`
-============================== =========================================
+SHAP for those algorithms      CPU
+============================== ==================================================
 
-So a GPU accelerates the model-fitting step of a single algorithm. If your
-pipeline is dominated by dataset preparation, or you train with
-``ModelSuite`` across all nine algorithms, the overall speedup will be
-proportionally smaller.
+So a GPU accelerates one algorithm, across every stage that uses it. If your
+pipeline is dominated by dataset preparation, or you train with ``ModelSuite``
+across all nine algorithms, the overall speedup will be proportionally
+smaller.
+
+Which stage benefits most is not obvious in advance, and is often not the one
+you set ``device: cuda`` for — see :ref:`gpu-worth-it`.
 
 Requirements
 ------------
@@ -179,8 +183,8 @@ classification on CPU-only machines with the same model files.
 
 .. _gpu-prediction-device:
 
-Prediction Stays on the CPU
----------------------------
+The ``DMatrix`` Fallback Warning
+--------------------------------
 
 When predicting with a GPU-trained model you will see:
 
@@ -189,17 +193,58 @@ When predicting with a GPU-trained model you will see:
     WARNING: Falling back to prediction using DMatrix due to mismatched
     devices. XGBoost is running on: cuda:0, while the input data is on: cpu.
 
-This is expected and harmless. ``aiqclib`` passes feature data to XGBoost as a
-pandas DataFrame, which lives in host memory, so prediction runs on the CPU.
-The GPU accelerates **training only**.
+This is expected and harmless, and — despite how it reads — it does **not**
+mean the work moves to the CPU. ``aiqclib`` passes feature data as a pandas
+DataFrame, which lives in host memory; XGBoost wraps it in a ``DMatrix``,
+copies it to the device, and predicts there. The warning reports that copy,
+not a change of device. The only cost is the transfer.
+
+This matters most for SHAP values, where it is easy to assume the opposite.
+``aiqclib`` constructs ``shap.TreeExplainer(model)`` with no background
+dataset, so SHAP resolves ``feature_perturbation`` to ``tree_path_dependent``
+and takes its XGBoost fast path, computing the values with
+``booster.predict(..., pred_contribs=True)``. That call reaches the same
+booster, still carrying ``device: cuda``, so **TreeSHAP runs on the GPU** —
+and it can benefit far more than fitting does.
+
+.. _gpu-worth-it:
 
 Is It Worth It?
 ---------------
 
-Not automatically. Moving data to the GPU has a fixed overhead that only pays
-off once the dataset is large enough, and on small datasets GPU training is
-*slower* than CPU. Benchmark with your own data before committing to a GPU
-workflow:
+Not automatically, and the gain may not come from the stage you expect.
+Moving data to the GPU has a fixed overhead that only pays off once the
+dataset is large enough, and on small datasets GPU training is no faster than
+CPU, or slower.
+
+A measured example — one region of CTD data, on one machine, with ``device``
+the only difference between the two runs and the CPU run pinned to
+``n_jobs: 20``:
+
+======================================== ========== ========== =========
+Step of ``train_and_evaluate``           GPU        CPU        Speedup
+======================================== ========== ========== =========
+Cross-validation (fitting only)          2509s      2595s      1.03x
+Validation reports and plots             62s        61s        1.00x
+Build, test and SHAP                     7604s      17716s     2.33x
+Final model fit and write                699s       684s       0.98x
+**Whole train phase**                    **10885s** **21059s** **1.93x**
+======================================== ========== ========== =========
+
+The phase came out roughly twice as fast, but **fitting gained nothing**.
+Cross-validation and the final model are fitting alone, and both were level
+with the CPU; the dataset was simply not large enough for the GPU to pay off
+there. The entire saving sits in the one step that also computes SHAP values.
+The same run with ``enable_shap: false`` would have shown no useful difference
+at all.
+
+Two things follow. Benchmark the workflow you actually run, rather than a bare
+``fit``, or you will measure the part that did not change. And read a
+comparison's thread count before trusting the ratio — the CPU side of this one
+had 20 threads, and TreeSHAP on CPU scales with them, so a different
+``n_jobs`` moves the 2.33x.
+
+Timing the whole phase both ways on your own data settles it:
 
 .. code-block:: python
 
