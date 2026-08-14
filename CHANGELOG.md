@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+- `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
+- New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does — fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin — a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting
+
+### Fixed
+- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored — they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
+- A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`) — making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
+- `MODEL_REGISTRY` aliased `SINGLE_MODEL_REGISTRY` instead of copying it, so importing it added `ModelSuite` to the single-model registry, letting a suite list itself among its own methods
+- A non-mapping value under a model name now raises `ValueError` naming the model, instead of an unpacking `TypeError`
+
 ## [0.10.0] - 2026-08-11
 ### Added
 - `read_config_template(stage, extension)` returns a built-in template as a configuration object, taking the same arguments as `write_config_template` but skipping the file. Useful for inspecting a stage's defaults (`print(aq.read_config_template("prepare"))`) and for building a configuration in code without one on disk
