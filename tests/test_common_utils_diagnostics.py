@@ -5,6 +5,10 @@ while measuring nothing: when every label is the same class, the report comes
 back full of 1.0 scores and the metric plots have no curve. The tests verify
 that the situation is detected, that the message says what to check, and that
 ordinary two-class data stays silent.
+
+``warn_shap_cost`` is the odd one out: it reports a cost rather than a defect,
+so what matters is that it stays quiet on small data, fires once rather than
+per target, and names the setting that turns SHAP off.
 """
 
 import warnings
@@ -12,11 +16,27 @@ import warnings
 import polars as pl
 import pytest
 
+from aiqclib.common.utils import diagnostics
 from aiqclib.common.utils.diagnostics import (
+    SHAP_ROW_WARNING_THRESHOLD,
     check_dataset_not_empty,
     check_labels_not_single_class,
+    warn_shap_cost,
     warn_single_class_labels,
 )
+
+
+@pytest.fixture
+def unwarned():
+    """Reset the once-per-process SHAP warning flag around a test.
+
+    The flag is module state by design, so without this the first test to
+    trigger it would silence every test after it -- and the order would decide
+    which ones pass.
+    """
+    diagnostics._shap_cost_warned = False
+    yield
+    diagnostics._shap_cost_warned = False
 
 
 class TestWarnSingleClassLabels:
@@ -174,3 +194,44 @@ class TestCheckLabelsNotSingleClass:
         labels = pl.Series("label", [0, 0])
         with pytest.raises(ValueError, match="drop it from the 'target_set'"):
             check_labels_not_single_class(labels, "pres")
+
+
+class TestWarnShapCost:
+    """The heads-up that SHAP is about to dominate the run."""
+
+    def test_small_dataset_is_silent(self, unwarned):
+        """Below the threshold SHAP is cheap enough not to mention."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert warn_shap_cost(SHAP_ROW_WARNING_THRESHOLD - 1) is False
+
+    def test_large_dataset_warns(self, unwarned):
+        """At the threshold the cost is worth saying out loud."""
+        with pytest.warns(UserWarning, match="SHAP values") as record:
+            assert warn_shap_cost(SHAP_ROW_WARNING_THRESHOLD, "temp") is True
+        message = str(record[0].message)
+        assert "temp" in message
+        assert f"{SHAP_ROW_WARNING_THRESHOLD:,}" in message
+
+    def test_message_names_the_setting_that_turns_it_off(self, unwarned):
+        """A warning with no remedy in it is just noise."""
+        with pytest.warns(UserWarning, match="calculate_shap"):
+            warn_shap_cost(500_000, "temp")
+
+    def test_warns_only_once_per_process(self, unwarned):
+        """The message is about the setting, not about any one target."""
+        with pytest.warns(UserWarning):
+            assert warn_shap_cost(500_000, "temp") is True
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert warn_shap_cost(500_000, "psal") is False
+
+    def test_fold_is_named_when_given(self, unwarned):
+        """Same context convention as the other diagnostics."""
+        with pytest.warns(UserWarning, match="fold 2"):
+            warn_shap_cost(500_000, "temp", k=2)
+
+    def test_target_name_is_optional(self, unwarned):
+        """Callers without a target still get a usable message."""
+        with pytest.warns(UserWarning, match="this target"):
+            warn_shap_cost(500_000)

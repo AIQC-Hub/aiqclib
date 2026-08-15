@@ -24,6 +24,12 @@ to check. Whether it is an error or a warning depends on what survives it:
 * Single-class labels are a warning when a model is merely being *evaluated*
   against them: the metrics are degenerate but the model is not, and applying
   a model to data that happens to be entirely good is a legitimate QC run.
+
+One diagnostic here is about cost rather than correctness. Computing SHAP
+values is optional and off by default, but once enabled it is usually the
+slowest thing in a run -- and nothing in the output attributes the time to it,
+so a phase simply takes far longer with no indication of which setting is
+responsible. :func:`warn_shap_cost` says so before the time is spent.
 """
 
 import warnings
@@ -177,6 +183,65 @@ def warn_single_class_labels(
         f"This usually means every selected row carried the same QC flag; "
         f"check 'pos_flag_values' / 'neg_flag_values' against the flag values "
         f"actually present in the input.",
+        UserWarning,
+        stacklevel=3,
+    )
+    return True
+
+
+#: Row count above which computing SHAP values is worth warning about. A rough
+#: threshold, not a cliff: the real cost is rows x trees x depth^2, so a deep
+#: forest can be slow well below this and a shallow one fast well above it.
+SHAP_ROW_WARNING_THRESHOLD: int = 100_000
+
+#: Set once the SHAP cost warning has been issued. The message is about the
+#: setting, not about any one target, so repeating it per target and per fold
+#: would be noise -- and warnings' own de-duplication does not help here,
+#: because the row count makes each message textually distinct.
+_shap_cost_warned: bool = False
+
+
+def warn_shap_cost(
+    n_rows: int,
+    target_name: Optional[str] = None,
+    k: int = 0,
+) -> bool:
+    """
+    Warn once that SHAP values are being computed over a large dataset.
+
+    SHAP is off by default and costs nothing until switched on, but once it is
+    on it is easily the most expensive part of a run, and nothing in the output
+    says so -- the phase simply takes much longer, with no indication of which
+    setting caused it. Measured on CTD data, it accounted for roughly half of a
+    training phase and almost all of a classification phase.
+
+    Warned once per process rather than per target: the message concerns the
+    ``calculate_shap`` setting, which is the same for every target in a run.
+
+    :param n_rows: The number of rows SHAP values will be computed for.
+    :type n_rows: int
+    :param target_name: The target being explained, used in the message.
+    :type target_name: Optional[str]
+    :param k: The fold number; 0 means a single, unfolded evaluation.
+    :type k: int
+    :return: True when a warning was issued.
+    :rtype: bool
+    """
+    global _shap_cost_warned
+
+    if _shap_cost_warned or n_rows < SHAP_ROW_WARNING_THRESHOLD:
+        return False
+
+    _shap_cost_warned = True
+    where = _context(target_name, k)
+    warnings.warn(
+        f"Computing SHAP values for {where} over {n_rows:,} rows. This is "
+        f"usually the slowest part of a run: its cost grows with rows x trees "
+        f"x depth^2, and on comparable data it has accounted for roughly half "
+        f"of a training phase and almost all of a classification phase. Set "
+        f"'calculate_shap: false' under the model step to skip it. For "
+        f"XGBoost, 'device: cuda' computes it on the GPU and roughly halves "
+        f"the time, but does not change its share of the work.",
         UserWarning,
         stacklevel=3,
     )

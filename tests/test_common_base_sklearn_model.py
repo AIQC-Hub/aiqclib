@@ -34,6 +34,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.scikit_learn_model_base import SklearnModelBase
+from aiqclib.common.utils import diagnostics
 
 
 # ---------------------------------------------------------------------------
@@ -500,3 +501,39 @@ class TestSklearnModelBase:
             ]
             expected = (scores >= model_wrapper.predicted_label_threshold).astype(int)
             assert np.array_equal(predicted, expected)
+
+    def test_calculate_shap_warns_on_a_large_test_set(self, model_wrapper):
+        """A large explanation set gets the cost warning before the work starts.
+
+        The unit tests for ``warn_shap_cost`` cover the message; this covers
+        the wiring, which is the part that can silently come undone.
+        """
+        rows = diagnostics.SHAP_ROW_WARNING_THRESHOLD
+        diagnostics._shap_cost_warned = False
+        try:
+            with patch.dict("sys.modules", {"shap": MagicMock()}) as mock_sys_modules:
+                mock_explainer = MagicMock()
+                mock_explainer.shap_values.return_value = np.zeros((rows, 2))
+                mock_sys_modules["shap"].TreeExplainer.return_value = mock_explainer
+
+                model_wrapper.expected_class_name = "XGBoost"
+                model_wrapper.model = MockSklearnClassifier()
+                model_wrapper.test_set = pl.DataFrame(
+                    {
+                        "f1": [1.0] * rows,
+                        "f2": [2.0] * rows,
+                        "label": [0] * rows,
+                    }
+                )
+                model_wrapper.predictions = pl.DataFrame(
+                    {
+                        "label": [0] * rows,
+                        "predicted_label": [0] * rows,
+                        "score": [0.1] * rows,
+                    }
+                )
+
+                with pytest.warns(UserWarning, match="calculate_shap"):
+                    model_wrapper.calculate_shap()
+        finally:
+            diagnostics._shap_cost_warned = False

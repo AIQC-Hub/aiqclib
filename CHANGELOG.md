@@ -6,6 +6,8 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Added
+- Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap` — it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
+- The SHAP how-to has a "What It Costs" section with measured shares, how the cost scales, and why turning it off is a bigger lever than a GPU
 - `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
 - New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does — fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin — a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting, and why `GPUTreeExplainer` is not used — 28x on `RandomForest`, but slower than the ordinary explainer for XGBoost and absent from every published `shap` wheel
 
