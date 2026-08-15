@@ -118,7 +118,7 @@ Training Configuration Example
           input: { }
           validate: { }
           model: {
-                   calculate_shap: True,
+                   calculate_shap: False,
                    methods: [ DT, XGB, RF ],
                    model_params: {
                      XGB: { scale_pos_weight: 200 , n_jobs: 30 },
@@ -131,11 +131,13 @@ Only the models you name are affected; the rest keep their defaults. Above,
 ``DT`` needs no entry at all.
 
 .. note::
-   ``calculate_shap: True`` applies to every method in the suite, and the
-   methods do not cost the same. The three above are tree models with a fast
-   explainer; adding ``SVM``, ``KNN``, ``GNB`` or ``MLP`` brings in
-   ``shap.KernelExplainer``, which re-queries the model thousands of times per
-   explanation and can dominate the run on its own. See :ref:`shap-cost`.
+   ``calculate_shap`` is shown as ``False`` deliberately, matching the default
+   and the configuration templates. Switching it on applies to **every** method
+   in the suite, and the methods do not cost the same: the three above are tree
+   models with a fast explainer, while ``SVM``, ``KNN``, ``GNB`` and ``MLP``
+   bring in ``shap.KernelExplainer``, which re-queries the model thousands of
+   times per explanation and can dominate the run on its own. A suite is the
+   most expensive place to enable it — see :ref:`shap-cost`.
 
 Shared and Per-Model Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
