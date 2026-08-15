@@ -19,7 +19,7 @@ Dataset preparation            CPU (polars / pandas)
 **XGBoost** prediction         **GPU** — see :ref:`gpu-prediction-device`
 **XGBoost** SHAP values        **GPU** — see :ref:`gpu-prediction-device`
 The other eight algorithms     CPU — scikit-learn has no GPU backend
-SHAP for those algorithms      CPU
+SHAP for those algorithms      CPU — but see :ref:`gpu-shap-other-trees`
 ============================== ==================================================
 
 So a GPU accelerates one algorithm, across every stage that uses it. If your
@@ -266,6 +266,78 @@ Timing the whole phase both ways on your own data settles it:
 Also check that your data fits in GPU memory (``nvidia-smi`` reports the
 total), remembering that the histogram algorithm needs working space beyond
 the dataset itself.
+
+.. _gpu-shap-other-trees:
+
+SHAP for the Other Tree Models
+------------------------------
+
+``RandomForest`` and ``DecisionTree`` compute their SHAP values on the CPU.
+``shap`` does ship a GPU implementation, ``GPUTreeExplainer``, and on those
+models it is dramatically faster — a measured **28x** on a 100-tree, depth-6
+forest explaining 20,000 rows (15.2s to 0.5s), agreeing with the CPU result to
+within floating-point noise.
+
+``aiqclib`` does not use it, for two reasons worth knowing before you reach
+for it yourself.
+
+**It does not help where the time goes.** For XGBoost — the algorithm whose
+SHAP values dominate a typical run — ``GPUTreeExplainer`` is *slower* than the
+ordinary ``TreeExplainer``, 0.2s against 0.1s in that same benchmark. The
+plain explainer already reaches the GPU (see
+:ref:`gpu-prediction-device`), so the specialised one only adds marshalling.
+It accelerates exactly the algorithms that had no GPU path, and no others.
+
+**It is not in the published wheel.** ``GPUTreeExplainer`` calls a compiled
+extension, ``_cext_gpu``, that no PyPI release of ``shap`` contains. Calling
+it on a normal install fails:
+
+.. code-block:: text
+
+    ImportError: cannot import name '_cext_gpu' from 'shap'
+
+Building it requires the CUDA *toolkit* — ``nvcc``, not merely a driver —
+which is the one thing the rest of this page does not otherwise need, since
+the ``xgboost`` wheel bundles its own CUDA runtime.
+
+If your workflow leans on the scikit-learn tree models and you want it anyway,
+build ``shap`` from source in an image based on an NVIDIA CUDA *devel* tag.
+Four traps, each of which produces a working install that fails only when the
+explainer is finally called:
+
+* **Use CUDA 12, not 13.** ``shap`` compiles for ``sm_60`` upward, and CUDA 13
+  dropped Pascal — a 13.x toolkit fails on the architecture an older card
+  needs. The same ceiling described in :ref:`gpu-compute-capability`, reached
+  from the other direction.
+* **The trigger is version-specific.** From 0.52 the build is CMake-based and
+  switched on by ``SHAP_ENABLE_CUDA=1``. Earlier releases ignore that variable
+  and always attempt CUDA — but catch any compile error, warn
+  ``Could not compile cuda extensions``, and retry without it. The install
+  then *succeeds*, having produced a CPU-only ``shap``. Capture the build log
+  and search it for that warning rather than trusting the exit status.
+* **Verify from outside the source tree.** Running ``import shap`` with the
+  checkout as the working directory picks up the source package rather than
+  the installed one, which never holds the compiled extension — an
+  ``ImportError`` that looks like a failed build but is not.
+* **Check what landed**, rather than that the build finished:
+
+  .. code-block:: python
+
+      import glob, os, shap
+      print(sorted(os.path.basename(p)
+                   for p in glob.glob(os.path.join(os.path.dirname(shap.__file__), "*.so"))))
+
+  ``_cext`` alone means the GPU extension was skipped.
+
+Then use it directly on the models that benefit, leaving XGBoost on the
+ordinary explainer:
+
+.. code-block:: python
+
+    import shap
+
+    explainer = shap.explainers.GPUTree(random_forest_model)
+    shap_values = explainer.shap_values(x_test)
 
 Running on a Remote GPU Server
 ------------------------------
