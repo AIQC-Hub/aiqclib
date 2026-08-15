@@ -6,6 +6,7 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Added
+- New NRT QC item `position_on_land` (RTQC4), flagging profiles whose position is not in the ocean. It reads an externally computed sea floor depth column already in the input (`depth_column`, default `bathymetry`, deliberately not `depth`, which is the measurement depth) rather than an external bathymetry grid, with `positive_depth` (default `true`) saying which sign means deeper. Absent from the config templates, and a missing column raises rather than passing every row
 - `run_batch` accepts `mode="nrt_qc"`, running the NRT QC module over a table of datasets from an `nrt_qc_set_name` column and an `nrt_qc_config` file. It is not part of `mode="all"`, which still runs prepare, train and classify: NRT QC flags are an input to the prepare phase rather than a step of it
 - NRT QC items accept `include_in_final_flag` (default `true`): an item set to `false` still runs and still writes its flag column, but no longer feeds the aggregated `{variable}_nrt_flag`, so a test can be recorded without deciding the verdict
 

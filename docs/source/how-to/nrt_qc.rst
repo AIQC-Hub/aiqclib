@@ -46,6 +46,38 @@ every observation in it:
    Latitude must lie within [-90, 90] and longitude within [-180, 180]. A
    missing position fails.
 
+``position_on_land`` (RTQC4)
+   The position must be in the ocean. The recommendation checks it against a
+   bathymetry grid; this implementation instead reads a column already
+   present in the input, holding the sea floor depth at the position, which
+   is what such a lookup would have produced. **Computing that column is
+   your job**, done upstream where the input is assembled.
+
+   ``depth_column`` names the column, ``bathymetry`` by default. It is
+   deliberately not ``depth``: this is the depth of the sea floor, not of
+   the measurement, and an input may carry both. Reading a measurement
+   depth as bathymetry would flag every shallow observation as being on
+   land, so the two are kept apart by name.
+
+   ``positive_depth`` says which sign means deeper: with :obj:`True` (the
+   default) the ocean is ``depth > 0``, and with :obj:`False` it is
+   ``depth < 0``. Sea level itself counts as land under both conventions.
+   Get this wrong and the test inverts completely, so check your data
+   before enabling the item.
+
+   A null depth passes, since unknown bathymetry is not evidence of land,
+   but a **missing column is an error**: an input without the column cannot
+   run this test, and silently passing every row would be worse than saying
+   so.
+
+   The item is **not in the configuration template**, because most inputs
+   carry no such column. Add it by name to enable it:
+
+   .. code-block:: yaml
+
+      - name: position_on_land
+        params: { depth_column: bath, positive_depth: false }
+
 ``stuck_value`` (RTQC13)
    All non-null measurements of a variable being identical indicates a stuck
    sensor, so the variable is flagged throughout the profile. Profiles with

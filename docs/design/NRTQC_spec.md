@@ -221,7 +221,6 @@ configuration.
 | Item | Reason |
 |------|--------|
 | RTQC1 Platform identification | GTS/Argo-specific (WMO/ptt matching) |
-| RTQC4 Position on land | Requires external bathymetry (ETOPO2); candidate for a later version |
 | RTQC5 Impossible speed | Argo/GTS drift-specific |
 | RTQC10 Bottom spike | XBT only |
 | RTQC15 Grey list | Argo DAC infrastructure |
@@ -247,9 +246,26 @@ The output parquet = **all original input columns** plus:
    temp→salinity propagation of §4.11.
 
 Item short names (used in column names and config): `impossible_date`,
-`impossible_location`, `global_range`, `regional_range`,
+`impossible_location`, `position_on_land`, `global_range`, `regional_range`,
 `pressure_increasing`, `spike`, `gradient`, `digit_rollover`, `stuck_value`,
 `density_inversion`, `temp_to_psal`.
+
+**RTQC4 was originally excluded** as needing external bathymetry (ETOPO2).
+It is implemented instead against a column already present in the input,
+holding the sea floor depth at the profile position, which is what a
+bathymetry lookup would have produced. That keeps the dependency out of the
+library and pushes the lookup upstream, where the input is assembled. The
+item is deliberately absent from the configuration templates, since most
+inputs carry no such column, and a missing column raises rather than
+passing every row.
+
+The column defaults to `bathymetry`, **not** `depth`. An input may carry a
+measurement depth as well, and the two are not interchangeable: reading a
+measurement depth as bathymetry would flag every shallow observation as
+land. The `positive_depth` parameter is the second half of the same
+hazard, since the sign convention inverts the test outright. The CTD test
+fixture happens to carry `bath`, real bathymetry that is negative below sea
+level, which is what the step 2 tests exercise both conventions against.
 
 ### 6.1 Flag comparison report
 

@@ -81,6 +81,7 @@ Item                             RTQC    Level        Output column(s)
 ================================ ======= ============ =========================================
 ``impossible_date``              RTQC2   profile      ``qc_impossible_date``
 ``impossible_location``          RTQC3   profile      ``qc_impossible_location``
+``position_on_land``             RTQC4   profile      ``qc_position_on_land``
 ``global_range``                 RTQC6   observation  ``{var}_qc_global_range``
 ``regional_range``               RTQC7   observation  ``{var}_qc_regional_range``
 ``pressure_increasing``          RTQC8   observation  ``qc_pressure_increasing``
@@ -125,6 +126,21 @@ Notes:
 
 *   **regional_range** has no built-in defaults; supply your region's
     ranges, or the item raises an error (no silent pass).
+*   **position_on_land** is **not in the template**, because it needs a
+    column that most inputs do not carry. Add it by name to enable it:
+
+    .. code-block:: yaml
+
+       - name: position_on_land
+         params: { depth_column: bathymetry, positive_depth: true }
+
+    ``depth_column`` (default ``bathymetry``) names the column holding the
+    **sea floor depth at the profile position**, computed externally before
+    the workflow runs. This is not the depth of the measurement, which is
+    why the default is not ``depth``: an input may well carry both, and
+    reading one as the other would flag every shallow observation as being
+    on land. ``positive_depth`` (default :obj:`True`) says whether larger
+    values mean deeper. A missing column is an error, not a silent pass.
 *   **spike** / **gradient** use the ``shallow`` threshold below
     ``depth_threshold`` (in decibars) and ``deep`` at or beyond it.
 *   **density_inversion** computes the potential density anomaly sigma-0

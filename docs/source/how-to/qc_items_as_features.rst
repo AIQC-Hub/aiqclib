@@ -57,9 +57,9 @@ and give it an entry in ``feature_param_sets``.
          - feature: qc_impossible_date
 
 The available item names are the ``qc_``-prefixed registry names:
-``qc_impossible_date``, ``qc_impossible_location``, ``qc_global_range``,
-``qc_regional_range``, ``qc_pressure_increasing``, ``qc_spike``,
-``qc_gradient``, ``qc_digit_rollover``, ``qc_stuck_value``,
+``qc_impossible_date``, ``qc_impossible_location``, ``qc_position_on_land``,
+``qc_global_range``, ``qc_regional_range``, ``qc_pressure_increasing``,
+``qc_spike``, ``qc_gradient``, ``qc_digit_rollover``, ``qc_stuck_value``,
 ``qc_density_inversion`` and ``qc_temp_to_psal``. For what each one checks, see
 :ref:`nrt-qc-items`; for their default thresholds, see
 :doc:`../configuration/nrtqc`.
@@ -197,8 +197,9 @@ for tree-based models but matters for the linear ones (Logistic Regression,
 LDA, SVM), where collinear inputs make coefficients unstable and hard to read.
 
 Profile-level items (``qc_impossible_date``, ``qc_impossible_location``,
-``qc_stuck_value``) take one value for every observation in a profile, so they
-carry far less per-row information than their column count suggests.
+``qc_position_on_land``, ``qc_stuck_value``) take one value for every
+observation in a profile, so they carry far less per-row information than
+their column count suggests.
 
 Flag values are codes, not magnitudes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

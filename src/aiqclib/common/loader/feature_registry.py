@@ -24,6 +24,7 @@ from aiqclib.prepare.features.qc_global_range import QCGlobalRange
 from aiqclib.prepare.features.qc_gradient import QCGradient
 from aiqclib.prepare.features.qc_impossible_date import QCImpossibleDate
 from aiqclib.prepare.features.qc_impossible_location import QCImpossibleLocation
+from aiqclib.prepare.features.qc_position_on_land import QCPositionOnLand
 from aiqclib.prepare.features.qc_pressure_increasing import QCPressureIncreasing
 from aiqclib.prepare.features.qc_regional_range import QCRegionalRange
 from aiqclib.prepare.features.qc_spike import QCSpike
@@ -48,6 +49,7 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "flank_down": FlankDown,
     "qc_impossible_date": QCImpossibleDate,
     "qc_impossible_location": QCImpossibleLocation,
+    "qc_position_on_land": QCPositionOnLand,
     "qc_global_range": QCGlobalRange,
     "qc_regional_range": QCRegionalRange,
     "qc_pressure_increasing": QCPressureIncreasing,
