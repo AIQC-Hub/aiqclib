@@ -130,6 +130,13 @@ Training Configuration Example
 Only the models you name are affected; the rest keep their defaults. Above,
 ``DT`` needs no entry at all.
 
+.. note::
+   ``calculate_shap: True`` applies to every method in the suite, and the
+   methods do not cost the same. The three above are tree models with a fast
+   explainer; adding ``SVM``, ``KNN``, ``GNB`` or ``MLP`` brings in
+   ``shap.KernelExplainer``, which re-queries the model thousands of times per
+   explanation and can dominate the run on its own. See :ref:`shap-cost`.
+
 Shared and Per-Model Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

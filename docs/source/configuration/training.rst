@@ -73,7 +73,7 @@ This section provides detailed parameters for the classes defined in your chosen
 
 *   **steps.input**: Parameters for the input data loading step (often empty or simple flags).
 *   **steps.validate.k_fold**: For ``KFoldValidation``, specifies the number of folds for cross-validation.
-*   **steps.model.calculate_shap**: This is used to control SHAP value calculation.
+*   **steps.model.calculate_shap**: This is used to control SHAP value calculation. It defaults to ``False``, and enabling it is normally the largest single change to how long a training run takes — see :ref:`shap-cost`.
 *   **steps.model.model_params.scale_pos_weight**: This is used to address imbalanced datasets by weighting the positive class. For example, ``200`` indicates a ratio of negative to positive records of 200:1.
 *   **steps.model.model_params.n_jobs**: The number of threads used by XGBoost. It tries to use all available CPU cores if it is set to `-1`.
 *   **steps.build**: Parameters for the final model building step (often empty or simple flags for saving).

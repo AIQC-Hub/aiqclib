@@ -231,6 +231,11 @@ Final model fit and write                699s       684s       0.98x
 **Whole train phase**                    **10885s** **21059s** **1.93x**
 ======================================== ========== ========== =========
 
+Before reading that as an argument for a GPU, note what it implies: if SHAP is
+the cost, then *not computing it* is the larger lever. ``calculate_shap:
+false`` removes most of that runtime outright, where the GPU halves it — see
+:ref:`shap-cost` for what it costs in each phase.
+
 The phase came out roughly twice as fast, but **fitting gained nothing**.
 Cross-validation and the final model are fitting alone, and both were level
 with the CPU; the dataset was simply not large enough for the GPU to pay off
