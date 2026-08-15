@@ -185,6 +185,26 @@ folded into a real flag value; the agreement metrics count only the values
 listed in ``pos_flag_values`` / ``neg_flag_values``. The input's flag columns
 are written to the output unchanged, whatever type they use.
 
+Running several regions at once
+-------------------------------
+
+``run_batch`` drives NRT QC over a table of datasets the same way it drives
+the other workflows:
+
+.. code-block:: python
+
+   summary = aq.run_batch(
+       "datasets.txt",
+       mode="nrt_qc",
+       nrt_qc_config="nrt_qc_config.yaml",
+       verbose=True,
+   )
+
+Each row's ``nrt_qc_set_name`` names the set to select, so one configuration
+file holding one entry per region replaces the per-region files suggested
+above. Note that ``mode="all"`` does **not** include NRT QC: see
+:ref:`batch-nrt-qc` for why, and for the ordering that follows from it.
+
 Using QC items as training features
 -----------------------------------
 

@@ -74,6 +74,10 @@ so a hand-aligned table works as written:
    bo_bo      dataset_bo_bo_0001     training_bo_bo_0001     classification_bo_bo_0001
    cora_bo    dataset_cora_bo_0001   training_cora_bo_0001   classification_cora_bo_0001
 
+One table can serve every mode: add an ``nrt_qc_set_name`` column alongside the
+others and the same file drives ``mode="nrt_qc"`` as well. Columns a mode does
+not need are ignored, so adding one breaks nothing that already works.
+
 Blank lines and ``#`` comment lines are ignored. A ``.tsv`` or ``.csv``
 extension is read by that delimiter instead, which is what you need if a value
 ever contains a space. A Polars DataFrame can be passed directly in place of a
@@ -105,9 +109,12 @@ Modes
    * - ``"classify"``
      - :func:`~aiqclib.interface.classify.classify_dataset`
      - ``classification_set_name``
+   * - ``"nrt_qc"``
+     - :func:`~aiqclib.interface.nrtqc.run_nrt_qc`
+     - ``nrt_qc_set_name``
    * - ``"all"``
-     - all three, in that order, per dataset
-     - all three columns
+     - prepare, train and classify, in that order, per dataset
+     - those three columns
 
 Only the columns and configuration files a mode needs are required, so a table
 for ``mode="prepare"`` needs nothing but the name and prepare columns. The
@@ -115,6 +122,52 @@ current list is always available from ``aq.available_modes()``.
 
 A blank cell skips that phase for that dataset, which is how a region that
 takes part in some phases but not others is expressed.
+
+.. _batch-nrt-qc:
+
+NRT QC Is Not Part of ``"all"``
+-------------------------------
+
+``"all"`` runs prepare, train and classify. It does **not** run ``nrt_qc``,
+which has to be asked for by name:
+
+.. code-block:: python
+
+   summary = aq.run_batch(
+       "datasets.txt",
+       mode="nrt_qc",
+       nrt_qc_config="nrt_qc_config.yaml",
+   )
+
+The three phases in ``"all"`` chain together, each consuming what the previous
+one wrote. NRT QC does not sit in that chain: it produces flag columns that
+are an *input* to the prepare phase, usable as training features (see
+:doc:`qc_items_as_features`), rather than a step of it. Running it inside
+``"all"`` would redo the QC on every retrain, on data that has not changed.
+
+So the usual order is to run the QC once when the input data changes, then
+the training pipeline as often as you like:
+
+.. code-block:: python
+
+   aq.run_batch("datasets.txt", mode="nrt_qc", nrt_qc_config="nrt_qc_config.yaml")
+
+   aq.run_batch(
+       "datasets.txt",
+       mode="all",
+       prepare_config="prepare_config.yaml",
+       training_config="training_config.yaml",
+       classification_config="classification_config.yaml",
+   )
+
+.. note::
+
+   The NRT QC guide suggests one configuration file per region, because the
+   regional ranges differ. For a batch, put the regions in **one** file
+   instead: ``qc_item_sets`` is a top-level list, so it can hold one item set
+   per region, with one ``nrt_qc_sets`` entry each referencing its own. The
+   ``nrt_qc_set_name`` column then names the entry per row, exactly as the
+   other phases work.
 
 Running Part of a Table
 -----------------------

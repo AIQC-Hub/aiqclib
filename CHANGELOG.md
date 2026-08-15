@@ -6,6 +6,7 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 ### Added
+- `run_batch` accepts `mode="nrt_qc"`, running the NRT QC module over a table of datasets from an `nrt_qc_set_name` column and an `nrt_qc_config` file. It is not part of `mode="all"`, which still runs prepare, train and classify: NRT QC flags are an input to the prepare phase rather than a step of it
 - NRT QC items accept `include_in_final_flag` (default `true`): an item set to `false` still runs and still writes its flag column, but no longer feeds the aggregated `{variable}_nrt_flag`, so a test can be recorded without deciding the verdict
 
 ### Changed

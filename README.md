@@ -145,8 +145,9 @@ This workflow processes a dataset using a trained model and generates:
 
 ### Running several datasets at once
 
-`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`) or `"all"` of
-them over a table of dataset names, returning a summary of every run:
+`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`, `"nrt_qc"`) or
+`"all"` of the first three over a table of dataset names, returning a summary of
+every run:
 
 ```python
 import aiqclib as aq
@@ -160,6 +161,10 @@ summary = aq.run_batch(
     verbose=True,
 )
 ```
+
+NRT QC is run the same way, with `mode="nrt_qc"` and `nrt_qc_config=...`. It is
+deliberately not part of `"all"`, because its flags are an input to the prepare
+phase rather than a step of it.
 
 See the batch guide in the documentation for the table format and options.
 
