@@ -34,6 +34,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.scikit_learn_model_base import SklearnModelBase
+from aiqclib.common.utils import diagnostics
 
 
 # ---------------------------------------------------------------------------
@@ -500,3 +501,124 @@ class TestSklearnModelBase:
             ]
             expected = (scores >= model_wrapper.predicted_label_threshold).astype(int)
             assert np.array_equal(predicted, expected)
+
+    def test_calculate_shap_warns_on_a_large_test_set(self, model_wrapper):
+        """A large explanation set gets the cost warning before the work starts.
+
+        The unit tests for ``warn_shap_cost`` cover the message; this covers
+        the wiring, which is the part that can silently come undone.
+        """
+        rows = diagnostics.SHAP_ROW_WARNING_THRESHOLD
+        diagnostics._shap_cost_warned = False
+        try:
+            with patch.dict("sys.modules", {"shap": MagicMock()}) as mock_sys_modules:
+                mock_explainer = MagicMock()
+                mock_explainer.shap_values.return_value = np.zeros((rows, 2))
+                mock_sys_modules["shap"].TreeExplainer.return_value = mock_explainer
+
+                model_wrapper.expected_class_name = "XGBoost"
+                model_wrapper.model = MockSklearnClassifier()
+                model_wrapper.test_set = pl.DataFrame(
+                    {
+                        "f1": [1.0] * rows,
+                        "f2": [2.0] * rows,
+                        "label": [0] * rows,
+                    }
+                )
+                model_wrapper.predictions = pl.DataFrame(
+                    {
+                        "label": [0] * rows,
+                        "predicted_label": [0] * rows,
+                        "score": [0.1] * rows,
+                    }
+                )
+
+                with pytest.warns(UserWarning, match="calculate_shap"):
+                    model_wrapper.calculate_shap()
+        finally:
+            diagnostics._shap_cost_warned = False
+
+    def test_tree_explainer_does_not_touch_the_training_set(self, model_wrapper):
+        """Tree models take no background data, so none should be built.
+
+        TreeExplainer is constructed without a reference distribution, but the
+        training set used to be converted to pandas for one regardless -- on
+        every call, on the most common path, and then discarded. A training set
+        that raises when read proves the tree branch never reaches for it.
+        """
+
+        class ExplodingFrame:
+            def select(self, *args, **kwargs):
+                raise AssertionError(
+                    "background data was built for a tree model, which does not use it"
+                )
+
+        with patch.dict("sys.modules", {"shap": MagicMock()}) as mock_sys_modules:
+            mock_explainer = MagicMock()
+            mock_explainer.shap_values.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
+            mock_sys_modules["shap"].TreeExplainer.return_value = mock_explainer
+
+            model_wrapper.expected_class_name = "XGBoost"
+            model_wrapper.model = MockSklearnClassifier()
+            model_wrapper.training_set = ExplodingFrame()
+            model_wrapper.test_set = pl.DataFrame(
+                {"f1": [1.0, 2.0], "f2": [3.0, 4.0], "label": [0, 1]}
+            )
+            model_wrapper.predictions = pl.DataFrame(
+                {"label": [0, 1], "predicted_label": [0, 1], "score": [0.1, 0.9]}
+            )
+
+            model_wrapper.calculate_shap()
+
+        assert model_wrapper.shap_values is not None
+
+    def test_linear_explainer_still_gets_background_data(self, model_wrapper):
+        """The laziness must not starve the explainers that do need it."""
+        with patch.dict("sys.modules", {"shap": MagicMock()}) as mock_sys_modules:
+            mock_shap = mock_sys_modules["shap"]
+            mock_explainer = MagicMock()
+            mock_explainer.shap_values.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
+            mock_shap.LinearExplainer.return_value = mock_explainer
+
+            model_wrapper.expected_class_name = "LogisticRegression"
+            model_wrapper.model = MockSklearnClassifier()
+            model_wrapper.training_set = pl.DataFrame(
+                {"f1": [1.0, 2.0, 3.0], "f2": [4.0, 5.0, 6.0], "label": [0, 1, 0]}
+            )
+            model_wrapper.test_set = pl.DataFrame(
+                {"f1": [1.0, 2.0], "f2": [3.0, 4.0], "label": [0, 1]}
+            )
+            model_wrapper.predictions = pl.DataFrame(
+                {"label": [0, 1], "predicted_label": [0, 1], "score": [0.1, 0.9]}
+            )
+
+            model_wrapper.calculate_shap()
+
+            # Built from the training set (3 rows), not the test set (2).
+            background = mock_shap.LinearExplainer.call_args[0][1]
+            assert background.shape == (3, 2)
+
+    def test_background_falls_back_to_the_input_without_a_training_set(
+        self, model_wrapper
+    ):
+        """Classification has no training set; the input is the reference."""
+        with patch.dict("sys.modules", {"shap": MagicMock()}) as mock_sys_modules:
+            mock_shap = mock_sys_modules["shap"]
+            mock_explainer = MagicMock()
+            mock_explainer.shap_values.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
+            mock_shap.LinearExplainer.return_value = mock_explainer
+
+            model_wrapper.expected_class_name = "LinearDiscriminantAnalysis"
+            model_wrapper.model = MockSklearnClassifier()
+            model_wrapper.training_set = None
+            model_wrapper.test_set = pl.DataFrame(
+                {"f1": [1.0, 2.0], "f2": [3.0, 4.0], "label": [0, 1]}
+            )
+            model_wrapper.predictions = pl.DataFrame(
+                {"label": [0, 1], "predicted_label": [0, 1], "score": [0.1, 0.9]}
+            )
+
+            model_wrapper.calculate_shap()
+
+            background = mock_shap.LinearExplainer.call_args[0][1]
+            assert background.shape == (2, 2)

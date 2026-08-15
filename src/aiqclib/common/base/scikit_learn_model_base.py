@@ -19,6 +19,7 @@ from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
 from aiqclib.common.utils.diagnostics import (
     check_labels_not_single_class,
+    warn_shap_cost,
     warn_single_class_labels,
 )
 
@@ -217,12 +218,24 @@ class SklearnModelBase(ModelBase):
 
         x_test = self.test_set.select(pl.exclude("label")).to_pandas()
 
-        # Determine optimal background data for explainers that require it
-        if self.training_set is not None:
-            background_data = self.training_set.select(pl.exclude("label")).to_pandas()
-        else:
-            # Fallback to test data if training data is unavailable (e.g., classification phase)
-            background_data = x_test
+        # Say so before spending the time, not after. SHAP is off by default,
+        # so reaching here is always a deliberate choice -- but the cost of
+        # that choice is invisible until the phase has already run long.
+        warn_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
+
+        def background_data() -> pd.DataFrame:
+            """Reference distribution for the explainers that need one.
+
+            Built on demand rather than up front. The tree branch below takes
+            no background data at all, so computing this eagerly converted the
+            whole training set to pandas and discarded it -- on the most
+            common path, and on every call.
+            """
+            if self.training_set is not None:
+                return self.training_set.select(pl.exclude("label")).to_pandas()
+            # No training set in the classification phase; the input being
+            # explained is the best available reference distribution.
+            return x_test
 
         model_name = getattr(self, "expected_class_name", "Unknown")
 
@@ -233,7 +246,7 @@ class SklearnModelBase(ModelBase):
 
         # 2. Linear Models (Fast)
         elif model_name in ["LogisticRegression", "LinearDiscriminantAnalysis"]:
-            explainer = shap.LinearExplainer(self.model, background_data)
+            explainer = shap.LinearExplainer(self.model, background_data())
             shap_output = explainer.shap_values(x_test)
 
         # 3. Model-Agnostic / Neural Models (Slow)
@@ -242,9 +255,8 @@ class SklearnModelBase(ModelBase):
                 f"Using slow KernelExplainer for {model_name}. This may take a while."
             )
             # Summarize background data heavily to prevent massive slowdowns
-            background_summary = shap.kmeans(
-                background_data, min(100, background_data.shape[0])
-            )
+            background = background_data()
+            background_summary = shap.kmeans(background, min(100, background.shape[0]))
 
             explainer = shap.KernelExplainer(
                 self.model.predict_proba, background_summary

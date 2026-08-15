@@ -46,6 +46,61 @@ Classification Configuration Example
 .. note::
    The same configuration works when using the ``ModelSuite`` class for evaluating multiple algorithms.
 
+.. _shap-cost:
+
+What It Costs
+-------------
+
+SHAP is off by default, and switching it on is normally the single largest
+change you can make to how long a run takes. Nothing in the output attributes
+the time to it, so the phase simply takes much longer with no indication of
+which setting is responsible.
+
+Measured on production CTD data, with the values computed on a GPU:
+
+============================================ ==========================
+Phase                                        Share of the time in SHAP
+============================================ ==========================
+Training (small dataset)                     ~47%
+Training (large dataset)                     ~65%
+**Classification**                           **~99%**
+============================================ ==========================
+
+Classification is almost entirely SHAP because it does no fitting at all — it
+loads a model, predicts, and explains, and the prediction is a rounding error
+beside the explanation.
+
+Two consequences worth planning around:
+
+* **The cost grows faster than your data.** TreeSHAP scales with rows ×
+  trees × depth², so a dataset an order of magnitude larger can cost more than
+  an order of magnitude more. Between two real datasets differing about
+  tenfold in fitting time, SHAP time differed twentyfold.
+* **Turning it off is a bigger lever than any hardware.** ``calculate_shap:
+  false`` removes roughly half of a training phase and nearly all of a
+  classification phase. For XGBoost, ``device: cuda`` computes SHAP on the GPU
+  and roughly halves its cost (see :doc:`gpu_acceleration`), which is
+  worthwhile but much smaller.
+
+Those figures are for XGBoost, which uses the fastest explainer available. The
+algorithms served by ``shap.KernelExplainer`` below — SVM, KNN, Gaussian Naive
+Bayes and the multi-layer perceptron — are slower by a wide margin, because
+that explainer has no shortcut and must re-query the model thousands of times
+per explanation. Enabling SHAP for a ``ModelSuite`` that includes them costs
+far more than these numbers suggest, and the cost is dominated by those
+methods rather than shared evenly across the suite.
+
+``aiqclib`` warns once per run when SHAP is computed over more than 100,000
+rows, naming the setting that disables it. Treat the threshold as a rough
+signal rather than a boundary: the real cost is rows × trees × depth², so a
+deep forest can be slow well below it and a shallow one comfortable well
+above. Cross-validation is exempt regardless — SHAP is switched off for the
+k-fold phase so that validation does not pay this cost once per fold.
+
+The decision is yours and depends on use, not on speed: if the values inform QC
+decisions or model interpretation, this is simply their price. If they are
+written and rarely read, they are the first thing to switch off.
+
 Importing SHAP Values
 ---------------------
 
@@ -79,7 +134,7 @@ The "Fast & Exact" Group (shap.TreeExplainer)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   - **Models**: XGBoost, Random Forest, Decision Tree.
-  - **How it works**: SHAP has a highly optimized, C++ backed explainer specifically for tree-based models. It calculates exact Shapley values incredibly fast.
+  - **How it works**: SHAP has a highly optimized, C++ backed explainer specifically for tree-based models. It calculates exact Shapley values, and is fast relative to the model-agnostic explainer below — though in absolute terms it is still usually the most expensive part of a run (see :ref:`shap-cost`).
 
 The "Fast & Linear" Group (shap.LinearExplainer)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

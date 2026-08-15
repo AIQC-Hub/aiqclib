@@ -25,5 +25,9 @@ from aiqclib.train.models.model_suite import ModelSuite
 #: class objects that inherit from :class:`~aiqclib.common.base.model_base.ModelBase`.
 #:
 #: :type: Dict[str, Type[ModelBase]]
-MODEL_REGISTRY: Dict[str, Type[ModelBase]] = SINGLE_MODEL_REGISTRY
+# Copied, not aliased: updating the name in place also mutated
+# SINGLE_MODEL_REGISTRY, so importing this module added ModelSuite to the
+# registry of single models — letting a suite list itself as one of its own
+# methods, and making the set of known model names depend on import order.
+MODEL_REGISTRY: Dict[str, Type[ModelBase]] = dict(SINGLE_MODEL_REGISTRY)
 MODEL_REGISTRY.update({"ModelSuite": ModelSuite, "MS": ModelSuite})

@@ -85,3 +85,7 @@ is controlled independently by ``calculate_shap`` (see :doc:`shap_values`):
 
 In the label-free mode the ``label`` column of the SHAP output is null, while
 the per-feature SHAP contributions and the ``score`` are unaffected.
+
+It is off by default, and classification is where it costs most: the phase does
+no fitting, so nearly all of its time goes into explaining. Enable it when you
+want the explanations, not as a matter of course — see :ref:`shap-cost`.
