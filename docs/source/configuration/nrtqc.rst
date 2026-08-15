@@ -134,6 +134,45 @@ Notes:
     (see the :doc:`../how-to/nrt_qc` guide); omit it for independently
     measured salinity.
 
+.. _nrtqc-final-flag-items:
+
+Choosing which items decide the final flag
+""""""""""""""""""""""""""""""""""""""""""
+
+Every item feeds the aggregated ``{variable}_nrt_flag`` by default. Set
+``include_in_final_flag: false`` on an item to keep running it while leaving
+it out of that aggregation:
+
+.. code-block:: yaml
+
+   qc_item_sets:
+     - name: qc_item_set_1
+       items:
+         - name: global_range
+         - name: spike
+         - name: stuck_value
+           include_in_final_flag: false    # column kept, does not decide
+         - name: digit_rollover
+           include_in_final_flag: false
+
+The excluded item still runs, and its flag column is still written to the
+output, so the set of columns is the same either way. Only the final flag
+changes. This separates *did this test fail* from *does this test decide the
+verdict*, which is what you want for a test that is informative but too
+aggressive to gate on, or one you are still evaluating.
+
+.. note::
+
+   ``temp_to_psal`` reads the aggregated ``temp_nrt_flag`` rather than the
+   raw item columns, so excluding an item from **temperature** also removes
+   it from what propagates to salinity. Excluding ``temp_to_psal`` itself
+   still writes ``psal_qc_temp_to_psal``, but leaves ``psal_nrt_flag``
+   untouched.
+
+The comparison report of step 4 covers every item regardless, so an excluded
+item keeps its ``item_breakdown`` rows. That is deliberate: those rows are
+the evidence for deciding whether to exclude it in the first place.
+
 `step_class_sets`
 ^^^^^^^^^^^^^^^^^
 The Python classes for the four NRT QC steps: reading the input (``input``),

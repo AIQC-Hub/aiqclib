@@ -5,10 +5,13 @@ Coverage:
 - ``select()`` resolves every referenced sub-configuration section and
   aliases ``qc_variable_set`` to ``target_set`` for the ConfigBase helpers
 - ``get_qc_items()`` merges built-in defaults with config overrides and
-  resolves ``fail_flag``
+  resolves ``fail_flag`` and ``include_in_final_flag``
+- ``get_final_flag_item_names()`` returns the aggregation subset, and the
+  summary marks the items left out of it
 - ``get_variable_flag()`` returns the configured flag column or None
-- Schema strictness: variables require only ``name``; unknown item keys and
-  invalid ``fail_flag`` values are rejected
+- Schema strictness: variables require only ``name``; unknown item keys,
+  invalid ``fail_flag`` values and a non-boolean ``include_in_final_flag``
+  are rejected
 - Template YAMLs resolve folder paths through the step-path machinery
 """
 
@@ -157,6 +160,69 @@ class TestGetQCItems:
         assert resolved["global_range"]["fail_flag"] == 4
 
 
+class TestFinalFlagItems:
+    """``include_in_final_flag`` selects which items feed the final flag."""
+
+    def test_defaults_to_every_item(self, template_config):
+        """Without the key, every enabled item feeds the final flag."""
+        assert template_config.get_final_flag_item_names() == TEMPLATE_ITEM_NAMES
+        assert all(x["include_in_final_flag"] for x in template_config.get_qc_items())
+
+    def test_excluded_item_dropped_from_final_flag_only(self, template_config):
+        """An excluded item leaves the final-flag list but stays enabled."""
+        items = template_config.data["qc_item_set"]["items"]
+        {x["name"]: x for x in items}["stuck_value"]["include_in_final_flag"] = False
+
+        assert "stuck_value" not in template_config.get_final_flag_item_names()
+        # Still enabled: it runs and still writes its own flag column.
+        assert "stuck_value" in template_config.get_qc_item_names()
+
+    def test_resolved_item_carries_the_switch(self, template_config):
+        """get_qc_items reports the resolved value per item."""
+        items = template_config.data["qc_item_set"]["items"]
+        {x["name"]: x for x in items}["spike"]["include_in_final_flag"] = False
+
+        resolved = {x["name"]: x for x in template_config.get_qc_items()}
+        assert resolved["spike"]["include_in_final_flag"] is False
+        assert resolved["gradient"]["include_in_final_flag"] is True
+
+    def test_order_preserved(self, template_config):
+        """The included names keep configuration order."""
+        items = template_config.data["qc_item_set"]["items"]
+        by_name = {x["name"]: x for x in items}
+        by_name["impossible_date"]["include_in_final_flag"] = False
+        by_name["gradient"]["include_in_final_flag"] = False
+
+        expected = [
+            x for x in TEMPLATE_ITEM_NAMES if x not in ("impossible_date", "gradient")
+        ]
+        assert template_config.get_final_flag_item_names() == expected
+
+    def test_summary_marks_excluded_items(self, template_config):
+        """An excluded item is visible in the printed summary.
+
+        The summary wraps to a fixed width, so whitespace is normalised
+        before matching; the annotation itself can straddle a line break.
+        """
+        items = template_config.data["qc_item_set"]["items"]
+        {x["name"]: x for x in items}["stuck_value"]["include_in_final_flag"] = False
+
+        summary = " ".join(str(template_config).split())
+        assert "stuck_value (not in final flag)" in summary
+        # An ordinary item is still shown plainly.
+        assert "spike (not in final flag)" not in summary
+
+    def test_summary_shows_both_annotations(self, template_config):
+        """A softened item excluded from the final flag shows both notes."""
+        items = template_config.data["qc_item_set"]["items"]
+        by_name = {x["name"]: x for x in items}
+        by_name["regional_range"]["fail_flag"] = 3
+        by_name["regional_range"]["include_in_final_flag"] = False
+
+        summary = " ".join(str(template_config).split())
+        assert "regional_range (flag 3, not in final flag)" in summary
+
+
 # ---------------------------------------------------------------------------
 # Existing-flag resolution (for the comparison step)
 # ---------------------------------------------------------------------------
@@ -236,6 +302,22 @@ class TestNRTQCSchema:
     def test_missing_section_rejected(self, schema, template_dict):
         """Dropping a required top-level section fails validation."""
         del template_dict["qc_item_sets"]
+        with pytest.raises(ValidationError):
+            jsonschema_validate(instance=template_dict, schema=schema)
+
+    def test_include_in_final_flag_accepted(self, schema, template_dict):
+        """A boolean ``include_in_final_flag`` passes validation."""
+        template_dict["qc_item_sets"][0]["items"][0]["include_in_final_flag"] = False
+        jsonschema_validate(instance=template_dict, schema=schema)
+
+    def test_non_boolean_include_rejected(self, schema, template_dict):
+        """A non-boolean ``include_in_final_flag`` fails validation.
+
+        Worth pinning: YAML would happily accept ``"false"`` as a string,
+        which is truthy in Python and would silently keep the item in the
+        final flag.
+        """
+        template_dict["qc_item_sets"][0]["items"][0]["include_in_final_flag"] = "false"
         with pytest.raises(ValidationError):
             jsonschema_validate(instance=template_dict, schema=schema)
 

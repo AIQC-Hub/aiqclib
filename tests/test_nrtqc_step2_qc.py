@@ -71,6 +71,25 @@ class TestRunQCItems:
         """temp_to_psal is not run in step 2 (needs aggregated flags)."""
         assert "psal_qc_temp_to_psal" not in qc_step.qc_data.columns
 
+    def test_items_excluded_from_the_final_flag_still_run(self, nrtqc_config_001):
+        """include_in_final_flag governs aggregation only, never execution.
+
+        Step 2 must keep producing every item's column so an excluded item
+        stays usable as a training feature. Pinned because filtering here
+        would look like a reasonable optimisation and would silently drop
+        columns from the output.
+        """
+        by_name = {x["name"]: x for x in nrtqc_config_001.data["qc_item_set"]["items"]}
+        for name in ("spike", "impossible_date", "global_range"):
+            by_name[name]["include_in_final_flag"] = False
+
+        ds_input = load_nrtqc_step1_input_dataset(nrtqc_config_001)
+        ds_input.read_input_data()
+        ds_qc = load_nrtqc_step2_qc_dataset(nrtqc_config_001, ds_input.input_data)
+        ds_qc.run_qc_items()
+
+        assert set(ds_qc.qc_item_columns()) == EXPECTED_ITEM_COLUMNS
+
 
 class TestQCStepErrors:
     """Error handling of the QC step."""

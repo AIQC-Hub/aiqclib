@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- NRT QC items accept `include_in_final_flag` (default `true`): an item set to `false` still runs and still writes its flag column, but no longer feeds the aggregated `{variable}_nrt_flag`, so a test can be recorded without deciding the verdict
+
 ### Changed
 - Em and en dashes removed throughout the docs, docstrings and comments, replaced with ordinary punctuation; the rule is recorded in `CLAUDE.md`
 - Sphinx `smartquotes_action` set to `"qe"`, so `--` and `---` are no longer rendered as dashes in the HTML

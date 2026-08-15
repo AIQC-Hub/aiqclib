@@ -805,7 +805,9 @@ def _get_nrtqc_item_sets() -> str:
 
     This template enables QC items by name and shows the built-in default
     parameters, which can be overridden per item. Items also accept an
-    optional ``fail_flag`` (3 or 4, default 4) to soften a failing test.
+    optional ``fail_flag`` (3 or 4, default 4) to soften a failing test, and
+    an optional ``include_in_final_flag`` (default :obj:`True`) to keep an
+    item running while leaving it out of the aggregated NRT flag.
     Region-dependent values (e.g. regional_range) are edited per region,
     with one configuration file prepared for each region.
 
@@ -836,6 +838,8 @@ qc_item_sets:
       - name: digit_rollover
         params: { temp: 10.0, psal: 5.0 }
       - name: stuck_value
+        # Add 'include_in_final_flag: false' to any item to keep its flag
+        # column while leaving it out of the aggregated {variable}_nrt_flag.
       - name: density_inversion
         params: { threshold: 0.03 }
       - name: temp_to_psal

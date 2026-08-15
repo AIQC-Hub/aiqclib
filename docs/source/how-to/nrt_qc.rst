@@ -112,6 +112,36 @@ file per region** (e.g. Arctic, Baltic, Mediterranean): the files share the
 same structure and differ only in region-dependent parameters such as the
 regional ranges or the density inversion threshold.
 
+Choosing which items decide the final flag
+------------------------------------------
+
+By default every enabled item feeds the aggregated
+``{variable}_nrt_flag``. An item can be kept running while being left out of
+that aggregation:
+
+.. code-block:: yaml
+
+   qc_item_sets:
+     - name: qc_item_set_1
+       items:
+         - name: spike
+         - name: stuck_value
+           include_in_final_flag: false
+
+The item still runs and ``{variable}_qc_stuck_value`` is still written, so
+the output columns are unchanged; only ``{variable}_nrt_flag`` differs. Use
+it when a test is worth recording but too aggressive to gate on, or when you
+want to measure a test's behaviour (via the comparison report, which still
+covers every item) before letting it affect the verdict.
+
+Two consequences are worth knowing. Excluding an item from **temperature**
+also removes it from what ``temp_to_psal`` propagates, because that item
+reads the aggregated ``temp_nrt_flag`` rather than the raw columns. And
+excluding ``temp_to_psal`` itself still writes ``psal_qc_temp_to_psal``
+while leaving ``psal_nrt_flag`` alone.
+
+See :ref:`nrtqc-final-flag-items` for the reference entry.
+
 Temperature-to-salinity propagation
 -----------------------------------
 
@@ -119,7 +149,9 @@ When salinity is computed from temperature and conductivity, a temperature
 flagged 4 (or 3) corrupts the salinity too. Enabling the ``temp_to_psal``
 item propagates the final temperature flag onto salinity with its severity,
 recorded in its own ``psal_qc_temp_to_psal`` column so the propagation stays
-traceable. Datasets with independently measured salinity simply omit the item.
+traceable. Datasets with independently measured salinity simply omit the item
+entirely, or keep it for traceability with
+``include_in_final_flag: false``.
 
 Comparing against existing flags
 --------------------------------
