@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.11.0] - 2026-08-15
 ### Added
 - Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap` — it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
 - The SHAP how-to has a "What It Costs" section with measured shares, how the cost scales, and why turning it off is a bigger lever than a GPU
