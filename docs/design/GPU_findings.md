@@ -76,11 +76,16 @@ Splitting `calculate_shap` three ways:
 | output assembly | 1.3 | 0.4% |
 
 **There is no optimisation available inside `aiqclib`.** A plausible theory —
-that `common/base/scikit_learn_model_base.py:228` building `background_data`
-from the whole training set, which the tree branch at `:236` never uses, was a
-meaningful cost — was **wrong**: 0.5 s total. It remains a real defect worth
-cleaning up, but as hygiene, not performance. Its speed also implies the
-conversion is near zero-copy, so it is probably not a memory problem either.
+that building `background_data` from the whole training set, which the tree
+branch never uses, was a meaningful cost — was **wrong**: 0.5 s total. Its
+speed also implies the conversion is near zero-copy, so it was probably not
+the memory spike it was blamed for either.
+
+It was a genuine defect nonetheless, and is fixed: `background_data` is now a
+local function called only by the two branches that need one
+(`common/base/scikit_learn_model_base.py:226`), so the tree path never builds
+it. Expect no measurable speedup — that is the point of recording it here,
+since the obvious-looking waste was not where the time went.
 
 ## 3. Reading the verbose log
 
