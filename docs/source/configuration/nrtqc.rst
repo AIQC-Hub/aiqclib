@@ -74,7 +74,7 @@ softens a failing test to "probably bad".
 
 For what each item checks, rather than how it is configured, see
 :ref:`nrt-qc-items` in the how-to guide. The same items can be used as model
-input features — see :doc:`../how-to/qc_items_as_features`.
+input features; see :doc:`../how-to/qc_items_as_features`.
 
 ================================ ======= ============ =========================================
 Item                             RTQC    Level        Output column(s)
@@ -89,7 +89,7 @@ Item                             RTQC    Level        Output column(s)
 ``digit_rollover``               RTQC12  observation  ``{var}_qc_digit_rollover``
 ``stuck_value``                  RTQC13  profile      ``{var}_qc_stuck_value``
 ``density_inversion``            RTQC14  observation  ``temp_qc_...`` and ``psal_qc_...``
-``temp_to_psal``                 —       observation  ``psal_qc_temp_to_psal``
+``temp_to_psal``                 n/a     observation  ``psal_qc_temp_to_psal``
 ================================ ======= ============ =========================================
 
 .. code-block:: yaml
@@ -123,7 +123,7 @@ Item                             RTQC    Level        Output column(s)
 
 Notes:
 
-*   **regional_range** has no built-in defaults — supply your region's
+*   **regional_range** has no built-in defaults; supply your region's
     ranges, or the item raises an error (no silent pass).
 *   **spike** / **gradient** use the ``shallow`` threshold below
     ``depth_threshold`` (in decibars) and ``deep`` at or beyond it.

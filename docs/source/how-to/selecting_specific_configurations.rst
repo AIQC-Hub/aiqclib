@@ -74,14 +74,14 @@ afterwards that everything was written somewhere unexpected.
 
 The other rows are worth a glance for the mistakes they make visible:
 
-*   ``targets`` — the variables a model is built for, each with the QC flag
+*   ``targets``: the variables a model is built for, each with the QC flag
     column it labels from and the flag values counted as positive (bad) and
     negative (good). See :ref:`choosing-targets`.
-*   ``filters`` — the active ``keep_years`` / ``remove_years`` row filters. A
+*   ``filters``: the active ``keep_years`` / ``remove_years`` row filters. A
     filter naming years your input does not cover empties the dataset, which
     is otherwise only reported once the pipeline reaches the step that cannot
     proceed without rows.
-*   ``schema`` — whether the file validates against the stage's schema, and
+*   ``schema``: whether the file validates against the stage's schema, and
     the first error if it does not. This is reported before an entry is
     selected too, so printing a configuration that will not load still tells
     you why.
@@ -118,8 +118,8 @@ starts from:
 
    print(aq.read_config_template(stage="prepare"))
 
-The returned object can also be customized in code — adjusting ``config.data``
-— and passed straight to a workflow, so a configuration need not exist on disk
+The returned object can also be customized in code (adjusting ``config.data``)
+and passed straight to a workflow, so a configuration need not exist on disk
 at all. A template carries placeholder paths, so set ``path_info`` and
 ``input_file_name`` on it before running anything with it:
 
@@ -136,7 +136,7 @@ at all. A template carries placeholder paths, so set ``path_info`` and
 .. note::
 
    The prepare template ships with ``remove_years: [2023]`` as an example row
-   filter. It shows up in the ``filters`` row of the summary above — clear it
+   filter. It shows up in the ``filters`` row of the summary above; clear it
    in ``step_param_set`` unless you want that year dropped.
 
 Generalizing to Other Configuration Types and Stages

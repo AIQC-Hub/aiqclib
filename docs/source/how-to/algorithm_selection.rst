@@ -137,7 +137,7 @@ Only the models you name are affected; the rest keep their defaults. Above,
    models with a fast explainer, while ``SVM``, ``KNN``, ``GNB`` and ``MLP``
    bring in ``shap.KernelExplainer``, which re-queries the model thousands of
    times per explanation and can dominate the run on its own. A suite is the
-   most expensive place to enable it — see :ref:`shap-cost`.
+   most expensive place to enable it; see :ref:`shap-cost`.
 
 Shared and Per-Model Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -159,12 +159,12 @@ section overrides the shared value:
    must be one they all accept. ``n_jobs``, for example, is unsupported by
    ``DT``, ``LDA`` and ``GNB``, and sharing it raises
    ``TypeError: unexpected keyword argument 'n_jobs'``. Where a parameter does
-   not apply to all of them, give it per model instead — as the example above
+   not apply to all of them, give it per model instead, as the example above
    does for ``n_jobs``.
 
 .. note::
    In earlier versions every method listed in ``methods`` had to be given its
-   own entry — a model that was not named received the whole ``model_params``
+   own entry: a model that was not named received the whole ``model_params``
    dictionary, including the other models' sections, and failed to construct.
 
 Classification Configuration Example

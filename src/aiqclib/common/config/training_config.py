@@ -35,7 +35,7 @@ class TrainingConfig(ConfigBase):
     """
 
     #: Unlike the other stages, training reads its ``input`` step *from* the
-    #: dataset folder — those are the split sets the preparation stage wrote
+    #: dataset folder; those are the split sets the preparation stage wrote
     #: there. Used by :meth:`ConfigBase.summary` only.
     _steps_without_dataset_folder: Tuple[str, ...] = ()
 

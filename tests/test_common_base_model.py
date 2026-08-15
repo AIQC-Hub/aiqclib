@@ -17,7 +17,7 @@ subclasses (ModelBaseWithEmptyName, ModelBaseWithExpectedName,
 ModelBaseWithWrongName) stay at module level.
 
 Fix to original: the file's top-level docstring claimed this tested
-"DataSetBase in aiqclib.common.base.model_base" — a copy-paste error.
+"DataSetBase in aiqclib.common.base.model_base", a copy-paste error.
 This file tests ``ModelBase`` (which lives in ``aiqclib.common.base.model_base``).
 """
 
@@ -37,7 +37,7 @@ from aiqclib.common.base.model_base import ModelBase
 
 
 class ModelBaseWithEmptyName(ModelBase):
-    """Subclass with no ``expected_class_name`` — used to test the
+    """Subclass with no ``expected_class_name``, used to test the
     NotImplementedError path in ModelBase's constructor."""
 
     def __init__(self, config: ConfigBase) -> None:
@@ -82,7 +82,7 @@ class ModelBaseWithExpectedName(ModelBase):
 
 class ModelBaseWithWrongName(ModelBase):
     """Subclass whose ``expected_class_name`` ("XGBoostZ") doesn't match
-    any registered model class — triggers the ValueError path."""
+    any registered model class, triggers the ValueError path."""
 
     expected_class_name: str = "XGBoostZ"
 
@@ -139,7 +139,7 @@ class TestModelBaseMethods:
     def test_load_model_success(self, training_config_001, training_dir):
         """load_model loads a joblib whose class matches ``_get_model_class()``.
 
-        Uses ``model_temp_xgb.joblib`` — a temp-target XGBoost fixture.
+        Uses ``model_temp_xgb.joblib``, a temp-target XGBoost fixture.
         """
         ds = ModelBaseWithExpectedName(training_config_001)
         ds.load_model(str(training_dir / "model_temp_xgb.joblib"))
@@ -163,7 +163,7 @@ class TestModelBaseMethods:
 
         Unset == False; True propagates as True; explicit False propagates as False.
         Contrast with KFoldValidationSuite, which suppresses SHAP regardless
-        of config — that override happens at the step level, not on
+        of config; that override happens at the step level, not on
         ModelBase itself.
         """
         model = ModelBaseWithExpectedName(training_config_001)

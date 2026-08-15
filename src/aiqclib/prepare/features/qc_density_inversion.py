@@ -7,7 +7,7 @@ compared at consecutive profile levels in both directions. From top to
 bottom, an observation fails when its density is smaller than the previous
 (lesser-pressure) density beyond the threshold; from bottom to top, when its
 density is larger than the next (greater-pressure) density beyond the
-threshold — so both levels of an inverted pair are flagged. Because the
+threshold, so both levels of an inverted pair are flagged. Because the
 density combines temperature and salinity, both variables are flagged
 jointly. Small inversions below the configurable threshold are allowed.
 """

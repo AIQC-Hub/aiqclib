@@ -68,7 +68,7 @@ def _run_fold_validation(ds: KFoldValidation) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Core KFoldValidation tests (XGBoost path — the default config)
+# Core KFoldValidation tests (XGBoost path, the default config)
 # ---------------------------------------------------------------------------
 
 
@@ -127,7 +127,7 @@ class TestKFoldValidation:
         """``calculate_shap`` in config is forwarded to the base model.
 
         The original test repeats the construction three times with three
-        values (unset, True, False) and checks the result — preserved here.
+        values (unset, True, False) and checks the result; preserved here.
         """
         ds = KFoldValidation(training_config_001)
         assert ds.base_model.enable_shap is False

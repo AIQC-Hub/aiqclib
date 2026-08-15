@@ -184,7 +184,7 @@ class TestClassifyDataSetNegX5:
         """End-to-end classify pipeline with the negx5_model models produces all outputs.
 
         Original NegX5 test didn't assert SHAP absence (no calculate_shap
-        setup); preserving that — _assert_classify_outputs default
+        setup); preserving that: _assert_classify_outputs default
         ``expect_shap=False`` checks the SHAP files are absent.
         """
         classify_dataset(self.config)

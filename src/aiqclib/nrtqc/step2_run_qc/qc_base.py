@@ -29,7 +29,7 @@ class QCDataSetBase(DataSetBase):
     Base class for running the configured NRT QC items (step ``"qc"``).
 
     Takes the validated input data from step 1 and applies every item
-    enabled in the configuration's ``qc_item_set`` — except the deferred
+    enabled in the configuration's ``qc_item_set``, except the deferred
     propagation items, which need the aggregated flags of step 3. The
     result, stored in :attr:`qc_data`, is the input frame plus one flag
     column per item/variable combination.

@@ -3,9 +3,9 @@ Module providing YAML templates for both dataset preparation
 and training configurations. These templates can be customized
 to fit various data pipeline requirements.
 
-Each template is also registered under a ``template:`` identifier — see
+Each template is also registered under a ``template:`` identifier (see
 :func:`get_template_names` and :func:`get_template_text` at the end of this
-module — so a template can be named wherever a configuration file path is
+module), so a template can be named wherever a configuration file path is
 expected.
 """
 

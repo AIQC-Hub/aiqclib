@@ -121,8 +121,8 @@ def read_config_template(
     This is the counterpart of :func:`write_config_template`: it takes the same
     ``stage`` and ``extension`` and resolves the same template, but returns the
     configuration object directly instead of writing the YAML to a file. It is
-    the quickest way to see what a stage's defaults are — ``print()`` on the
-    result summarizes the targets, features, steps and output directories —
+    the quickest way to see what a stage's defaults are: ``print()`` on the
+    result summarizes the targets, features, steps and output directories,
     and it lets a configuration be built in code, by adjusting the returned
     object, without a file on disk.
 

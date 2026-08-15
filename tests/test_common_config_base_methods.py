@@ -8,12 +8,12 @@ ConfigBase (and are inherited identically by TrainingConfig and
 ClassificationConfig).
 
 Four test classes, organised by concern:
-- ``TestBaseConfigPathMethods``    — get_base_path / get_step_folder_name /
+- ``TestBaseConfigPathMethods``:     get_base_path / get_step_folder_name /
   get_dataset_folder_name / get_file_name / get_full_file_name
-- ``TestBaseConfigBaseClass``      — get_base_class
-- ``TestBaseConfigTargets``        — get_target_variables / get_target_names
+- ``TestBaseConfigBaseClass``:       get_base_class
+- ``TestBaseConfigTargets``:         get_target_variables / get_target_names
   / get_target_dict / get_target_file_names
-- ``TestBaseConfigSummaryStats``   — get_summary_stats / feature param
+- ``TestBaseConfigSummaryStats``:    get_summary_stats / feature param
   update
 
 Refactored from four ``unittest.TestCase`` classes that each repeated the
@@ -90,7 +90,7 @@ class TestBaseConfigPathMethods:
         assert dataset_config_002.get_step_folder_name("select") == "select"
 
     def test_no_auto_select_step_folder_name(self, dataset_config_002):
-        """With folder_name_auto=False, the step name is *not* used as a fallback —
+        """With folder_name_auto=False, the step name is *not* used as a fallback;
         the result is an empty string when no folder name is configured."""
         assert (
             dataset_config_002.get_step_folder_name("select", folder_name_auto=False)
@@ -156,7 +156,7 @@ class TestBaseConfigPathMethods:
 
 
 class TestBaseConfigBaseClass:
-    """Tests for get_base_class — the step → class-name mapping from step_class_set."""
+    """Tests for get_base_class: the step → class-name mapping from step_class_set."""
 
     def test_input_base_class(self, dataset_config_001):
         """get_base_class('input') returns the configured class name (InputDataSetA)."""
@@ -197,7 +197,7 @@ class TestBaseConfigTargets:
 
     These tests inspect the 3-target ``target_set_1`` defined in
     test_dataset_001.yaml (temp/psal/pres). The dataset config still
-    includes pres — only the classify-side YAMLs were updated to use a
+    includes pres; only the classify-side YAMLs were updated to use a
     2-target ``target_set_1_2``. The dataset target_set is independent
     of whether pres data is empty in the train/test split, so all three
     targets remain in the config.
@@ -260,7 +260,7 @@ class TestBaseConfigSummaryStats:
     def test_update_feature_param_with_stats(self, dataset_config_001):
         """Every feature_param entry that has a stats_set has been augmented with stats.
 
-        This side-effect happens during ``.select()`` — feature_param_set
+        This side-effect happens during ``.select()``; feature_param_set
         entries with a stats_set reference get a populated ``stats`` field
         from the corresponding summary_stats block.
         """

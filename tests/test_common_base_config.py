@@ -16,11 +16,11 @@ Coverage:
 
 Refactored from a ``unittest.TestCase`` + a pytest-style template class.
 The mock subclass ``ConfigBaseWithExpectedName`` stays at module level.
-Setup is replaced by the ``dataset_yaml_001`` fixture — ConfigBase loads
+Setup is replaced by the ``dataset_yaml_001`` fixture; ConfigBase loads
 its own YAML, so the tests need the *path*, not a pre-loaded config.
 
 Class rename: the first class was named ``TestDatasetBaseMethods`` in the
-original — a copy-paste typo, since it tests ``ConfigBase`` (not
+original, a copy-paste typo, since it tests ``ConfigBase`` (not
 ``DataSetBase``, which lives in ``test_common_base_dataset.py``). Renamed
 to ``TestConfigBaseMethods`` so the name matches the class under test.
 ``pytest -k`` filters now target the correct test surface.
@@ -58,14 +58,14 @@ class ConfigBaseWithExpectedName(ConfigBase):
 class TestConfigBaseMethods:
     """Tests for ConfigBase's abstract-class behaviour, __str__, and validation.
 
-    Renamed from ``TestDatasetBaseMethods`` — the original was a copy-paste
+    Renamed from ``TestDatasetBaseMethods``; the original was a copy-paste
     from ``test_common_base_dataset.py``. This file tests ConfigBase.
     """
 
     def test_common_base_path(self, dataset_yaml_001):
         """Direct instantiation of ConfigBase raises NotImplementedError.
 
-        ConfigBase is abstract — subclasses must define
+        ConfigBase is abstract; subclasses must define
         ``expected_class_name``.
         """
         with pytest.raises(NotImplementedError):
@@ -154,7 +154,7 @@ class TestConfigSummary:
     """Tests for ``summary()`` and the ``__str__`` it backs.
 
     The summary is documentation of a resolved configuration, so the tests
-    check that it reports what the pipeline will actually do — in particular
+    check that it reports what the pipeline will actually do, in particular
     that each step's directory is the one the step class resolves for itself,
     which is not a given: ``input`` and (in classification) ``model`` are read
     without the dataset folder that every other step includes.
@@ -189,7 +189,7 @@ class TestConfigSummary:
         """Every step's reported directory is the one its files land in.
 
         ``get_full_file_name`` is what the step classes call, so comparing
-        against it catches a summary that composes the path differently —
+        against it catches a summary that composes the path differently:
         the ``input`` step, which resolves without the dataset folder, is the
         case that would otherwise slip through.
         """

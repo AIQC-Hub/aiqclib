@@ -4,13 +4,13 @@ This file is the sibling of ``test_common_loaders_model.py``, which focuses
 on XGBoost + ModelSuite. This file covers the other 8 single-model wrappers
 (LogisticRegression, LinearDiscriminantAnalysis, SupportVectorMachine,
 DecisionTree, RandomForest, KNearestNeighbors, GaussianNaiveBayes,
-MultilayerPerceptron) — plus XGBoost again, so that all 9 wrappers can be
+MultilayerPerceptron), plus XGBoost again, so that all 9 wrappers can be
 verified from a single source of truth.
 
 Coverage:
 - Each of the 9 wrappers loads correctly via both its long-form name
   (``XGBoost``, ``LogisticRegression``, ...) and its short alias
-  (``XGB``, ``Logit``, ...) — 18 (config_name, wrapper_class) cases total
+  (``XGB``, ``Logit``, ...), 18 (config_name, wrapper_class) cases total
 - An invalid config string raises ValueError
 - Calling build/predict/create_report on a freshly-loaded wrapper (no
   training_set, no test_set, no predictions) raises ValueError
@@ -21,7 +21,7 @@ methods (one per wrapper), each containing two ``self.config.data[...]`` +
 over 18 cases.
 
 The 5 error tests at the bottom are duplicated in
-``test_common_loaders_model.py`` — both files call ``load_model_class``
+``test_common_loaders_model.py``; both files call ``load_model_class``
 with the default config (which yields XGBoost) and exercise the same error
 paths. Preserving both for maximum regression coverage.
 """
@@ -45,7 +45,7 @@ from aiqclib.train.models.xgboost import XGBoost
 #
 # Could be derived from MODEL_CASES in _model_cases.py, but MODEL_CASES only
 # tracks the long-form name. Adding an ``aliases`` field there would let
-# multiple files share this mapping — flagged as a possible future refactor.
+# multiple files share this mapping; flagged as a possible future refactor.
 # For now, the list is local to this file.
 # ---------------------------------------------------------------------------
 

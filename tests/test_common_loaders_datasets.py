@@ -1,23 +1,23 @@
 """Unit tests for the prepare-stage dataset loader functions.
 
 Six classes, one per prepare-pipeline step:
-- ``TestInputClassLoader``     — load_step1_input_dataset
-- ``TestSummaryClassLoader``   — load_step2_summary_dataset
-- ``TestSelectClassLoader``    — load_step3_select_dataset
-- ``TestLocateClassLoader``    — load_step4_locate_dataset
-- ``TestExtractClassLoader``   — load_step5_extract_dataset
-- ``TestSplitClassLoader``     — load_step6_split_dataset
+- ``TestInputClassLoader``:      load_step1_input_dataset
+- ``TestSummaryClassLoader``:    load_step2_summary_dataset
+- ``TestSelectClassLoader``:     load_step3_select_dataset
+- ``TestLocateClassLoader``:     load_step4_locate_dataset
+- ``TestExtractClassLoader``:    load_step5_extract_dataset
+- ``TestSplitClassLoader``:      load_step6_split_dataset
 
 Each loader is exercised against two configs:
-- ``dataset_config_001`` — standard prepare config (3-target, qc-filtered)
-- ``dataset_config_005`` — "select-all" variant (keeps all rows, different
+- ``dataset_config_001``: standard prepare config (3-target, qc-filtered)
+- ``dataset_config_005``: "select-all" variant (keeps all rows, different
   loader classes for steps that have an _all suffix)
 
 Refactored from already-pytest classes that used a ``_set_config(idx)`` helper
 + parallel data lists (e.g. ``selected_profiles = [50, 503]``) and indexed
 into them by parametrize idx. The refactored version uses
 ``request.getfixturevalue()`` to resolve a fixture name to an instance, and
-parametrize cases carry the per-config expected values directly — no more
+parametrize cases carry the per-config expected values directly; no more
 indexing parallel lists.
 """
 
@@ -58,7 +58,7 @@ _INPUT_COLS = 30
 # Step 1: input
 # ---------------------------------------------------------------------------
 
-# (config_fixture_name, expected_class) — both configs use the same input class.
+# (config_fixture_name, expected_class); both configs use the same input class.
 _INPUT_LOADER_CASES = [
     ("dataset_config_001", InputDataSetA),
     ("dataset_config_005", InputDataSetA),

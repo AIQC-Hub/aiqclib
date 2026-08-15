@@ -7,14 +7,14 @@ For every configured variable that carries an existing flag column (the
 ``flag`` entry of its ``qc_variable_set`` definition, e.g. ``temp_qc``),
 a summary report is built with three sections:
 
-1. ``contingency`` — the cross-tabulation of existing flag value and new
+1. ``contingency``: the cross-tabulation of existing flag value and new
    NRT flag value with counts and percentages. Works with any existing
    flag scheme; no value mapping is required.
-2. ``agreement`` — binary agreement metrics (accuracy, precision, recall
+2. ``agreement``: binary agreement metrics (accuracy, precision, recall
    plus the underlying confusion counts), reported only when
    ``pos_flag_values`` / ``neg_flag_values`` are configured for the
    variable, using the same convention as the other modules.
-3. ``item_breakdown`` — per enabled QC item, how many observations the
+3. ``item_breakdown``: per enabled QC item, how many observations the
    item flagged within each existing flag value, showing which items
    drive agreement or disagreement.
 

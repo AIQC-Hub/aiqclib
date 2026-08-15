@@ -1,9 +1,9 @@
 """Unit tests for the training-stage loader functions.
 
 Three classes cover the three loader functions:
-- ``TestTrainingInputClassLoader``    — load_step1_input_training_set
-- ``TestModelValidationClassLoader``  — load_step2_model_validation_class
-- ``TestBuildModelClassLoader``       — load_step4_build_model_class
+- ``TestTrainingInputClassLoader``:     load_step1_input_training_set
+- ``TestModelValidationClassLoader``:   load_step2_model_validation_class
+- ``TestBuildModelClassLoader``:        load_step4_build_model_class
 
 Each verifies that:
 1. The loader returns an instance of the expected wrapper class with the
@@ -21,9 +21,9 @@ is empty).
 Config choice per class:
 - ``TestTrainingInputClassLoader``     uses ``training_config_001`` (3-target)
 - ``TestModelValidationClassLoader``   uses ``training_config_001`` + ``training_input_001``
-  (3-target — only checks training data, where pres is non-empty)
+  (3-target, only checks training data, where pres is non-empty)
 - ``TestBuildModelClassLoader``        uses ``training_config_001_bo002`` +
-  ``training_input_001_bo002`` (2-target — checks test data, where pres
+  ``training_input_001_bo002`` (2-target, checks test data, where pres
   is empty under the reduced fixtures)
 
 When the library handles zero-row test data, switch ``TestBuildModelClassLoader``
@@ -147,7 +147,7 @@ class TestBuildModelClassLoader:
     test_training_and_test_sets asserts ``ds.test_sets["pres"].shape[0] == 12``,
     which fails under the reduced fixtures where pres test data has zero
     rows. NRT_BO_002 excludes pres entirely, so the per-target dicts only
-    have temp + psal keys — iteration uses TARGETS_NONEMPTY.
+    have temp + psal keys; iteration uses TARGETS_NONEMPTY.
     """
 
     def test_load_dataset_valid_config(self, training_config_001_bo002):

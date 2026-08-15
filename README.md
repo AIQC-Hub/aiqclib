@@ -31,7 +31,7 @@ The package is available on PyPI.
 pip install aiqclib
 ```
 
-**Using conda:** *(not published yet — the conda-forge recipe submission is still in progress; use pip or uv for now)*
+**Using conda:** *(not published yet: the conda-forge recipe submission is still in progress; use pip or uv for now)*
 ```bash
 conda install -c conda-forge aiqclib
 ```

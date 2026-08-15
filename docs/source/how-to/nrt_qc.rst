@@ -5,9 +5,9 @@ The NRT QC module applies the automated real-time QC tests recommended for
 temperature and salinity profiles (Argo/CTD RTQC tests) to an input dataset
 and writes the original parquet enriched with:
 
-* **one flag column per QC item** — e.g. ``temp_qc_spike``,
-  ``qc_impossible_date`` — usable directly as training features, and
-* **a final NRT flag per variable** — ``temp_nrt_flag`` / ``psal_nrt_flag``,
+* **one flag column per QC item**, e.g. ``temp_qc_spike`` or
+  ``qc_impossible_date``, usable directly as training features, and
+* **a final NRT flag per variable**: ``temp_nrt_flag`` / ``psal_nrt_flag``,
   the most severe flag among the variable's applicable item columns.
 
 Flags follow the IOC/Argo scheme: 1 (good), 3 (probably bad), 4 (bad).
@@ -62,7 +62,7 @@ Observation-level tests produce one result per measurement:
 
 ``regional_range`` (RTQC7)
    The same check against the tighter ranges of the configuration file's
-   region. There are **no built-in defaults** — supply your region's bounds
+   region. There are **no built-in defaults**; supply your region's bounds
    or the item raises an error rather than silently passing everything.
 
 ``pressure_increasing`` (RTQC8)
@@ -140,7 +140,7 @@ give each variable its ``flag`` column in the ``qc_variable_sets`` section:
 ``run_nrt_qc`` then writes one comparison report per variable
 (``nrt_qc_flag_comparison_{variable}.tsv``) containing a contingency table
 of existing vs new flag values, binary agreement metrics (accuracy,
-precision, recall — only when the pos/neg flag values are given), and a
+precision, recall; only when the pos/neg flag values are given), and a
 per-item breakdown showing which items drive the disagreements. Variables
 without a ``flag`` are skipped; omit all flags to skip the comparison step
 entirely.

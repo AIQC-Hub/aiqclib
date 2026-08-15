@@ -14,7 +14,7 @@ Why you might want them
 -----------------------
 
 The QC items encode domain knowledge that a model would otherwise have to
-rediscover from the raw values — that a measurement far from its vertical
+rediscover from the raw values: that a measurement far from its vertical
 neighbours is suspect, that pressure should increase down a profile, that
 density should not invert. Supplying the outcome of each test as a feature
 lets the model learn *when to trust those rules* rather than learning the rules
@@ -76,7 +76,7 @@ Each entry accepts the same three keys, all optional:
    The variables to produce flag columns for.
 
 ``fail_flag``
-   The flag emitted when the test fails — ``4`` (bad) by default, ``3`` to
+   The flag emitted when the test fails: ``4`` (bad) by default, ``3`` to
    record the failure as "probably bad" instead.
 
 .. important::
@@ -116,8 +116,8 @@ feature table:
    psal_qc_global_range
    qc_impossible_date
 
-Each is never null — ``1`` where the test passed, the item's ``fail_flag``
-where it failed — so they need no imputation.
+Each is never null (``1`` where the test passed, the item's ``fail_flag``
+where it failed), so they need no imputation.
 
 .. note::
 
@@ -140,7 +140,7 @@ This is the one to think about first.
 
 The QC items implement the Argo/CTD real-time tests. The ``temp_qc`` /
 ``psal_qc`` columns that these tutorials label from are **near-real-time QC
-flags** (see :ref:`which-qc-flags`) — which the data provider produced by
+flags** (see :ref:`which-qc-flags`), which the data provider produced by
 running largely those same tests. ``aiqclib`` treats the two as measuring the
 same thing elsewhere: the NRT QC module's comparison step scores its computed
 items against the input's existing flags with accuracy, precision and recall.
@@ -153,7 +153,7 @@ transfer to delayed-mode or expert-reviewed labels.
 
 This does not make the combination wrong, but it changes what a good score
 means. It is most defensible when the labels come from a source *independent*
-of the automated tests — delayed-mode flags, or expert review. When labelling
+of the automated tests: delayed-mode flags, or expert review. When labelling
 from NRT flags, treat a jump in performance after adding QC items as a
 suspicious result to investigate, not a win.
 
@@ -161,7 +161,7 @@ Items that never fire
 ^^^^^^^^^^^^^^^^^^^^^
 
 Most QC tests fail rarely, and a feature with a single distinct value carries
-no information — it only widens the table and slows training. Running six items
+no information; it only widens the table and slows training. Running six items
 over the test fixtures produced ten columns, of which eight were constant:
 
 .. code-block:: text
@@ -189,7 +189,7 @@ Duplicated and overlapping columns
 
 ``qc_density_inversion`` flags temperature and salinity **jointly**, so
 ``temp_qc_density_inversion`` and ``psal_qc_density_inversion`` are always
-identical — two perfectly collinear columns. Keep one.
+identical: two perfectly collinear columns. Keep one.
 
 Others overlap without being identical: ``qc_spike`` and ``qc_gradient`` differ
 only in their test statistic and fire on similar observations. That is harmless
@@ -205,7 +205,7 @@ Flag values are codes, not magnitudes
 
 A flag column holds ``1`` for pass and the ``fail_flag`` (``4``, or ``3``) for
 fail. Those are category codes, but they arrive as numbers, and the gap between
-them is arbitrary — nothing means a failure is "three units worse" than a pass.
+them is arbitrary; nothing means a failure is "three units worse" than a pass.
 Tree-based models are unaffected, since they only split on the value. Distance-
 and coefficient-based models (KNN, SVM, Logistic Regression, LDA, MLP) do read
 the magnitude, so switching an item's ``fail_flag`` from ``4`` to ``3`` changes
@@ -221,7 +221,7 @@ Items that need extra configuration
    As in the NRT QC module, this means one configuration per region.
 
 ``qc_temp_to_psal``
-   Reads an aggregated temperature flag column — ``temp_nrt_flag`` by default —
+   Reads an aggregated temperature flag column (``temp_nrt_flag`` by default),
    which is produced by the NRT QC module, not by the preparation pipeline.
    Unless that column is already present in your input file, adding this item
    as a feature fails with ``ColumnNotFoundError: unable to find column
@@ -234,15 +234,15 @@ Cost
 Every listed item is computed for each observation during ``extract``, and the
 vertical tests (``qc_spike``, ``qc_gradient``, ``qc_density_inversion``) need
 neighbouring rows. A long item list makes preparation slower and the feature
-table wider without necessarily making the model better — :doc:`shap_values`
+table wider without necessarily making the model better; :doc:`shap_values`
 is the way to check whether the added columns are earning their place.
 
 Next Steps
 ----------
 
-*   :doc:`nrt_qc` — running the QC items as a standalone module, and what each
+*   :doc:`nrt_qc`: running the QC items as a standalone module, and what each
     item checks.
-*   :doc:`../configuration/preparation` — the full ``feature_sets`` and
+*   :doc:`../configuration/preparation`: the full ``feature_sets`` and
     ``feature_param_sets`` reference.
-*   :doc:`shap_values` — checking whether the added features actually
+*   :doc:`shap_values`: checking whether the added features actually
     contribute to the model.

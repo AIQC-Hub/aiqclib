@@ -2,8 +2,8 @@
 
 KFoldValidationSuite is the multi-model variant of KFoldValidation: it runs
 k-fold cross-validation across several methods in parallel (here just XGB
-and DT, to keep tests fast). Composite keys are used throughout —
-``xgb_temp``, ``dt_psal``, etc. — instead of just ``temp``, because each
+and DT, to keep tests fast). Composite keys are used throughout:
+``xgb_temp``, ``dt_psal``, etc., instead of just ``temp``, because each
 target has multiple models.
 
 Refactored from a single ``unittest.TestCase`` class with a module-level
@@ -17,7 +17,7 @@ collapsed into nested loops over ``SUITE_KEYS``.
 Note on SHAP behaviour:
 Unlike BuildModelSuite (step4), which propagates ``calculate_shap`` to the
 underlying ModelSuite (SHAP is computed at the testing stage),
-KFoldValidationSuite explicitly **does not** propagate the flag — validation
+KFoldValidationSuite explicitly **does not** propagate the flag; validation
 never uses SHAP, regardless of config. ``test_shap_flag`` defends this
 distinction.
 """
@@ -63,7 +63,7 @@ def training_config_001_validate_suite(training_config_001):
     Because pytest shares the underlying ``training_config_001`` instance
     across fixtures within a test, the conftest ``training_input_001``
     fixture (which depends on ``training_config_001``) will see these
-    mutations — but the input loading only uses the target_set, not the
+    mutations, but the input loading only uses the target_set, not the
     model class, so process_targets still produces 3-target training data.
     """
     training_config_001.data["step_class_set"]["steps"]["validate"] = (

@@ -3,12 +3,12 @@
 This file centralises three kinds of setup that previously lived in every
 ``setUp``:
 
-1. **Path constants** (``TESTS_DIR``, ``DATA_DIR``, etc.) — exposed both as
+1. **Path constants** (``TESTS_DIR``, ``DATA_DIR``, etc.): exposed both as
    module-level constants for import and as fixtures for use as test arguments.
-2. **Config loaders** — one fixture per (stage, config number) pair, each
+2. **Config loaders**: one fixture per (stage, config number) pair, each
    returning a fresh, ``select()``-ed config object. Function-scoped, so
    mutations don't leak between tests.
-3. **Common dataset/training input wiring** — fixtures that produce the
+3. **Common dataset/training input wiring**: fixtures that produce the
    ``ds_input`` object the way previous ``setup_training_step2`` /
    ``setup_training_step4`` module-level helpers did.
 
@@ -20,7 +20,7 @@ Conventions:
   fixture and clean up manually with ``os.remove`` so commenting out the
   cleanup lets you inspect outputs after a failure.
 
-When adding fixtures here, keep them general — anything used by only one or
+When adding fixtures here, keep them general; anything used by only one or
 two files should live in those files, not here.
 """
 
@@ -85,7 +85,7 @@ TARGETS: tuple[str, ...] = ("temp", "psal", "pres")
 # The library half of this is now done: zero-row splits raise a clear error
 # naming the target (``check_dataset_not_empty``), instead of being written
 # out and failing later at the model as a feature-name mismatch. That makes
-# this constant load-bearing rather than a workaround — tests wanting the
+# this constant load-bearing rather than a workaround; tests wanting the
 # successful path must restrict themselves to targets that have rows, and
 # the refusal is covered directly by
 # ``test_interface_prepare.TestCreateTrainingDataSetEmptyTarget``.
@@ -112,31 +112,31 @@ def tests_dir() -> Path:
 
 @pytest.fixture
 def data_dir() -> Path:
-    """``tests/data/`` — root of all test fixtures."""
+    """``tests/data/``: root of all test fixtures."""
     return DATA_DIR
 
 
 @pytest.fixture
 def config_dir() -> Path:
-    """``tests/data/config/`` — YAML config files."""
+    """``tests/data/config/``: YAML config files."""
     return CONFIG_DIR
 
 
 @pytest.fixture
 def input_dir() -> Path:
-    """``tests/data/input/`` — raw pre-pipeline input data."""
+    """``tests/data/input/``: raw pre-pipeline input data."""
     return INPUT_DIR
 
 
 @pytest.fixture
 def training_dir() -> Path:
-    """``tests/data/training/`` — train/test parquet files and model joblibs."""
+    """``tests/data/training/``: train/test parquet files and model joblibs."""
     return TRAINING_DIR
 
 
 @pytest.fixture
 def test_output_dir() -> Path:
-    """``tests/data/test/`` — destination for test-generated output files.
+    """``tests/data/test/``: destination for test-generated output files.
 
     Tests should write here, assert the file exists, then ``os.remove(...)``.
     Comment out the remove to inspect outputs after a failure.
@@ -152,7 +152,7 @@ def test_data_file() -> Path:
 
 
 # ----------------------------------------------------------------------------
-# YAML path fixtures (paths, not loaded configs — used by tests that exercise
+# YAML path fixtures (paths, not loaded configs; used by tests that exercise
 # config loading itself, e.g. test_common_utils_config.py)
 # ----------------------------------------------------------------------------
 
@@ -213,7 +213,7 @@ def classify_yaml_003() -> Path:
 
 
 # ----------------------------------------------------------------------------
-# Config loaders — pre-selected, function-scoped (fresh per test, no mutation
+# Config loaders: pre-selected, function-scoped (fresh per test, no mutation
 # leakage)
 # ----------------------------------------------------------------------------
 
@@ -272,13 +272,13 @@ def dataset_config_005() -> DataSetConfig:
 
 @pytest.fixture
 def training_config_001() -> TrainingConfig:
-    """Selects ``NRT_BO_001`` — 3-target (temp, psal, pres)."""
+    """Selects ``NRT_BO_001``, 3-target (temp, psal, pres)."""
     return _load_training_config("test_training_001.yaml")
 
 
 @pytest.fixture
 def training_config_001_bo002() -> TrainingConfig:
-    """test_training_001.yaml with NRT_BO_002 selected — 2-target (temp, psal).
+    """test_training_001.yaml with NRT_BO_002 selected, 2-target (temp, psal).
 
     NRT_BO_002 uses target_set_1_2 which excludes pres. Useful for tests
     that exercise build/test pipelines where the reduced fixtures have zero
@@ -295,7 +295,7 @@ def training_config_002() -> TrainingConfig:
 
 @pytest.fixture
 def training_config_002_bo002() -> TrainingConfig:
-    """test_training_002.yaml with NRT_BO_002 selected — 2-target (temp, psal).
+    """test_training_002.yaml with NRT_BO_002 selected, 2-target (temp, psal).
 
     NRT_BO_002 uses target_set_2 which excludes pres. Useful for tests
     that exercise build/test pipelines where the reduced fixtures have zero
@@ -312,7 +312,7 @@ def training_config_003() -> TrainingConfig:
 
 @pytest.fixture
 def training_config_003_bo002() -> TrainingConfig:
-    """test_training_003.yaml with NRT_BO_002 selected — 2-target (temp, psal).
+    """test_training_003.yaml with NRT_BO_002 selected, 2-target (temp, psal).
 
     NRT_BO_002 uses target_set_2 which excludes pres. Useful for tests
     that exercise build/test pipelines where the reduced fixtures have zero
@@ -495,7 +495,7 @@ def build_prepare_pipeline(
     Returns a SimpleNamespace with attributes for each stage that ran:
     ``config`` (always), and any of ``input``, ``summary``, ``select``,
     ``locate``, ``extract``. ``stop_after`` controls how far through the
-    pipeline to run — use the earliest stage your test actually needs to
+    pipeline to run; use the earliest stage your test actually needs to
     keep test time down.
 
     :param config: a fresh, select()-ed DataSetConfig
@@ -628,7 +628,7 @@ def build_classify_prepare_pipeline(
 
 
 # ----------------------------------------------------------------------------
-# Training-input wiring — replicates the old setup_training_step2 /
+# Training-input wiring: replicates the old setup_training_step2 /
 # setup_training_step4 helpers
 # ----------------------------------------------------------------------------
 
@@ -688,7 +688,7 @@ def training_input_negx5(training_config_003):
 
 
 # ----------------------------------------------------------------------------
-# Classify-pipeline helper — runs prepare steps 1-5 against one or more
+# Classify-pipeline helper: runs prepare steps 1-5 against one or more
 # classify configs and returns the paired (configs, extracts).
 #
 # Used by step6 (classify_all + classify_suite) and may be reused by future
@@ -709,7 +709,7 @@ def run_classify_prepare_pipeline(
     ``ds_extract`` whose ``target_features`` is the test set ClassifyAll(Suite)
     consumes.
 
-    See also ``build_classify_prepare_pipeline`` — the single-config variant
+    See also ``build_classify_prepare_pipeline``, the single-config variant
     that returns a SimpleNamespace instead of a (configs, extracts) tuple.
 
     :param config_files: list of YAML paths, one per config to test

@@ -41,7 +41,7 @@ Required Input Data Columns
      - Pressure for each observation.
 
 Other columns (targets such as ``temp``, QC flags, etc.) are passed through
-untouched. QC flag columns need no preparation whatever type they use — see
+untouched. QC flag columns need no preparation whatever type they use; see
 `QC Flag Columns`_ below.
 
 What ``aiqclib`` does for you
@@ -78,8 +78,8 @@ coordinates would split one profile, while identical timestamps at the same
 location would merge two.
 
 **Validating.** The required columns are checked, and mismatched types are
-converted where possible — handy for CSV/TSV inputs, where numbers and dates
-often arrive as strings.
+converted where possible, which is handy for CSV/TSV inputs, where numbers
+and dates often arrive as strings.
 
 Configure all three in the ``input`` step:
 
@@ -161,7 +161,7 @@ Converting a numeric timestamp
 ------------------------------
 
 ``profile_timestamp`` must be a real datetime. A numeric epoch (e.g. days since
-1950-01-01) is ambiguous, so ``aiqclib`` cannot convert it automatically —
+1950-01-01) is ambiguous, so ``aiqclib`` cannot convert it automatically;
 do this yourself before running the workflow:
 
 .. code-block:: python
@@ -183,7 +183,7 @@ do this yourself before running the workflow:
    )
 
 .. important::
-   Remove duplicate rows at the platform/profile level first — duplicates can
+   Remove duplicate rows at the platform/profile level first, since duplicates can
    produce incorrect datasets even when everything else is correct.
 
 Save the Preprocessed Data

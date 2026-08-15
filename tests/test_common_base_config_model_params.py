@@ -57,7 +57,7 @@ class TestGetModelParams:
         }
 
     def test_named_section_is_not_given_to_other_models(self, training_config_001):
-        """An unnamed model gets nothing — not the other models' sections.
+        """An unnamed model gets nothing, not the other models' sections.
 
         This is the regression: the fallback returned the whole dict, so
         RandomForest received ``{"XGBoost": {...}}`` and its constructor
@@ -163,8 +163,8 @@ class TestRegistrySeparation:
     ``MODEL_REGISTRY`` used to be an alias of ``SINGLE_MODEL_REGISTRY`` rather
     than a copy, so importing it mutated the single-model registry. That let a
     suite list itself among its own methods, and made the set of known model
-    names — which ``get_model_params`` uses to tell a model section from a
-    shared parameter — depend on which modules had been imported.
+    names (which ``get_model_params`` uses to tell a model section from a
+    shared parameter) depend on which modules had been imported.
     """
 
     def test_suite_is_not_a_single_model(self):

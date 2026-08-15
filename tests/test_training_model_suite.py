@@ -4,7 +4,7 @@ ModelSuite is the multi-method wrapper consumed by BuildModelSuite,
 KFoldValidationSuite, and ClassifyAllSuite. Tests verify:
 - ``multi`` flag is True (single-model wrappers have it False)
 - ``calculate_shap`` IS propagated (this is the wrapper's behaviour;
-  individual step classes — like KFoldValidationSuite — may override)
+  individual step classes (like KFoldValidationSuite) may override)
 - Default method-loading: all 9 default methods when no ``methods`` list
   is specified in config
 - Custom method-loading: only the explicitly listed methods are loaded,

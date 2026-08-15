@@ -1,6 +1,6 @@
 """Unit tests for the ``ExtractDataSetA`` class.
 
-ExtractDataSetA gathers outputs from steps 1–4 (input, summary, select,
+ExtractDataSetA gathers outputs from steps 1-4 (input, summary, select,
 locate) and produces per-target feature DataFrames keyed by target name.
 
 Refactored from three ``unittest.TestCase``/pytest classes

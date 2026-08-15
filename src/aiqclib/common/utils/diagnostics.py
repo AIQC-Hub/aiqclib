@@ -17,7 +17,7 @@ symptom several steps removed from the cause.
 Each is reported here at the point it is detected, naming the target and what
 to check. Whether it is an error or a warning depends on what survives it:
 
-* No rows at all is an error — nothing downstream can recover from it.
+* No rows at all is an error: nothing downstream can recover from it.
 * Single-class labels are an error when a model is about to be *fitted* on
   them, because the resulting model predicts one class at one constant score
   and the model file gives no sign of it afterwards.
@@ -88,8 +88,8 @@ def check_dataset_not_empty(
     raise ValueError(
         f"The {dataset_name} for {where} has no rows, so there is nothing to "
         f"train on, evaluate or classify. This usually means the row filters "
-        f"removed everything — check 'keep_years' / 'remove_years' against the "
-        f"years the input actually covers — or that no profile matched the "
+        f"removed everything (check 'keep_years' / 'remove_years' against the "
+        f"years the input actually covers), or that no profile matched the "
         f"selection criteria. Left unchecked this surfaces much later as a "
         f"mismatch between the model's feature names and the input's."
     )
@@ -105,12 +105,12 @@ def check_labels_not_single_class(
 
     Fitting succeeds on single-class labels and produces a model that predicts
     that class for every row, with a positive-class score that has exactly one
-    distinct value — so no ``prediction_threshold`` can recover it. The model
+    distinct value, so no ``prediction_threshold`` can recover it. The model
     is written out and used at classification time looking like any other,
     which makes this worth refusing rather than warning about.
 
-    Evaluating on single-class labels is a lesser problem — the scores are
-    degenerate but the model is not — and stays a warning; see
+    Evaluating on single-class labels is a lesser problem (the scores are
+    degenerate but the model is not) and stays a warning; see
     :func:`warn_single_class_labels`.
 
     :param labels: The labels the model is about to be trained on.

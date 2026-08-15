@@ -40,7 +40,7 @@ TARGET_VALUES: dict[str, dict] = {
 
 
 # ---------------------------------------------------------------------------
-# Tests against test_dataset_001.yaml (default — no neg_x_multiplier)
+# Tests against test_dataset_001.yaml (default, no neg_x_multiplier)
 # ---------------------------------------------------------------------------
 
 
@@ -171,7 +171,7 @@ class TestLocateDataSetA:
 
 
 # ---------------------------------------------------------------------------
-# Tests against test_dataset_003.yaml (NegX5 — neg_x_multiplier active)
+# Tests against test_dataset_003.yaml (NegX5, neg_x_multiplier active)
 # ---------------------------------------------------------------------------
 
 

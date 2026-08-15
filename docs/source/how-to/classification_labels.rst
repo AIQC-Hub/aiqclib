@@ -4,9 +4,9 @@ Classifying With or Without Labels
 The classification pipeline can run in two modes, chosen per target from
 whether a QC ``flag`` column is available:
 
-* **With labels** — a ``flag`` is given, so ground-truth labels are built and
+* **With labels**: a ``flag`` is given, so ground-truth labels are built and
   the model's performance is evaluated.
-* **Without labels** — no ``flag`` is available (unlabeled data), so the
+* **Without labels**: no ``flag`` is available (unlabeled data), so the
   pipeline predicts every row but skips evaluation.
 
 You do not need a dummy QC column for unlabeled data.
@@ -28,7 +28,7 @@ negative rows:
            neg_flag_values: [ 1, 2 ]
 
 Rows are labelled from the flag, and the classify phase writes predictions plus
-the evaluation artefacts — the report, the **model-scores** file
+the evaluation artefacts: the report, the **model-scores** file
 (see :doc:`performance_evaluation`), and the metric plots.
 
 The flag column may hold integers, strings or floats, and the values may be
@@ -49,7 +49,7 @@ creation and performance evaluation:
    target_sets:
      - name: target_set_1
        variables:
-         - name: temp        # no `flag` — classify without evaluation
+         - name: temp        # no `flag`, so classify without evaluation
 
 Predictions (``predicted_label`` and ``score``) are still produced; only the
 report, model-scores, and metric-plot files are skipped.
@@ -88,4 +88,4 @@ the per-feature SHAP contributions and the ``score`` are unaffected.
 
 It is off by default, and classification is where it costs most: the phase does
 no fitting, so nearly all of its time goes into explaining. Enable it when you
-want the explanations, not as a matter of course — see :ref:`shap-cost`.
+want the explanations, not as a matter of course; see :ref:`shap-cost`.

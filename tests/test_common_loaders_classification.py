@@ -1,13 +1,13 @@
 """Unit tests for the classify-stage dataset loader functions.
 
 Seven classes, one per classify-pipeline step:
-- ``TestClassifyInputClassLoader``     — load_classify_step1_input_dataset
-- ``TestClassifySummaryClassLoader``   — load_classify_step2_summary_dataset
-- ``TestClassifySelectClassLoader``    — load_classify_step3_select_dataset
-- ``TestClassifyLocateClassLoader``    — load_classify_step4_locate_dataset
-- ``TestClassifyExtractClassLoader``   — load_classify_step5_extract_dataset
-- ``TestClassifyClassifyClassLoader``  — load_classify_step6_classify_dataset
-- ``TestClassifyConcatClassLoader``    — load_classify_step7_concat_dataset
+- ``TestClassifyInputClassLoader``:      load_classify_step1_input_dataset
+- ``TestClassifySummaryClassLoader``:    load_classify_step2_summary_dataset
+- ``TestClassifySelectClassLoader``:     load_classify_step3_select_dataset
+- ``TestClassifyLocateClassLoader``:     load_classify_step4_locate_dataset
+- ``TestClassifyExtractClassLoader``:    load_classify_step5_extract_dataset
+- ``TestClassifyClassifyClassLoader``:   load_classify_step6_classify_dataset
+- ``TestClassifyConcatClassLoader``:     load_classify_step7_concat_dataset
 
 For each loader:
 1. The default config produces an instance of the expected class with the
@@ -315,7 +315,7 @@ class TestClassifyClassifyClassLoader:
 # Step 7: concat
 # ---------------------------------------------------------------------------
 
-# Suite-mutation helper for step 7 — adds concat=ConcatDataSetSuite and the
+# Suite-mutation helper for step 7: adds concat=ConcatDataSetSuite and the
 # methods param list to the step 6 mutations.
 _SUITE_METHODS = ("xgb", "dt")
 

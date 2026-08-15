@@ -6,7 +6,7 @@ BasicValues) consumes the same five upstream inputs (selected_profiles,
 filtered_input, selected_rows, summary_stats) and produces feature
 DataFrames. Tests verify:
 - Input wiring (the upstream frames land on the feature instance with
-  expected shapes) — shared across all features via
+  expected shapes), shared across all features via
   ``_assert_init_arguments``.
 - Feature-specific extraction logic (extract_features + scale_first /
   scale_second produce the expected output shape).
@@ -60,7 +60,7 @@ def pipeline(dataset_config_001, test_data_file):
 def _make_feature(feature_cls, feature_info, pipeline, target: str = "temp"):
     """Construct a feature class instance from a build_prepare_pipeline result.
 
-    Pure helper — no test state. Used by every per-feature test that
+    Pure helper, no test state. Used by every per-feature test that
     instantiates a feature class.
     """
     return feature_cls(

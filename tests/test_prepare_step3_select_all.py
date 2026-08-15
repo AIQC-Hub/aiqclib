@@ -1,6 +1,6 @@
 """Unit tests for the ``SelectDataSetAll`` class.
 
-SelectDataSetAll is the "select-all" variant of SelectDataSetA — it labels
+SelectDataSetAll is the "select-all" variant of SelectDataSetA; it labels
 *every* profile in the input data rather than filtering to positive/negative
 pairs. The test config is ``test_dataset_005.yaml``, which uses the
 select-all configuration.

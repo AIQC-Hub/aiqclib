@@ -107,7 +107,7 @@ class TestSelectDataSetA:
     ):
         """write_selected_profiles before label_profiles raises ValueError."""
         ds = SelectDataSetA(dataset_config_001, input_data=dataset_input_001.input_data)
-        # The output path doesn't matter — we expect the call to fail before writing.
+        # The output path doesn't matter; we expect the call to fail before writing.
         ds.output_file_name = str(test_output_dir / "test_selected_profiles.parquet")
 
         with pytest.raises(ValueError):

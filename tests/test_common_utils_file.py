@@ -39,14 +39,14 @@ from aiqclib.common.utils.file import (
 # Shared test-case data
 # ---------------------------------------------------------------------------
 
-# Each tuple is (file_name, expected_rows, file_type) — used by both the
+# Each tuple is (file_name, expected_rows, file_type), used by both the
 # explicit-type and inferred-type parametrized tests. The inferred-type
 # test passes ``file_type=None``, ignoring the third element of each tuple.
 
 # the test-data reduction. If the user has reduced this specific file (and
 # not just the train/test split outputs), update to the actual current
 # row count. Reference: the row count for input_data shape assertions in
-# test_prepare_step1_input_a.py uses the same number — both should match.
+# test_prepare_step1_input_a.py uses the same number; both should match.
 _PARQUET_ROW_COUNT = 3267
 
 # CSV/TSV files have ``_row1`` in their filename indicating a single row.
@@ -104,7 +104,7 @@ class TestReadInputFile:
     ):
         """Each supported file type also reads with file_type inferred from extension.
 
-        The third tuple element (``file_type``) is unused here — kept in the
+        The third tuple element (``file_type``) is unused here; kept in the
         parametrize signature so the test cases stay sharable with the
         explicit-type test. ``_`` would obscure the column meaning.
         """
@@ -143,7 +143,7 @@ class TestReadInputFile:
         assert isinstance(df, pl.DataFrame)
 
     def test_empty_options(self, input_dir):
-        """``options=None`` is treated the same as ``options={}`` — file still reads."""
+        """``options=None`` is treated the same as ``options={}``; file still reads."""
         df = read_input_file(
             input_dir / "nrt_cora_bo_test_2023_row1.csv.gz",
             file_type="csv.gz",

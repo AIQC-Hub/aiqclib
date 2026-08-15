@@ -66,7 +66,7 @@ Training (large dataset)                     ~65%
 **Classification**                           **~99%**
 ============================================ ==========================
 
-Classification is almost entirely SHAP because it does no fitting at all — it
+Classification is almost entirely SHAP because it does no fitting at all: it
 loads a model, predicts, and explains, and the prediction is a rounding error
 beside the explanation.
 
@@ -83,8 +83,8 @@ Two consequences worth planning around:
   worthwhile but much smaller.
 
 Those figures are for XGBoost, which uses the fastest explainer available. The
-algorithms served by ``shap.KernelExplainer`` below — SVM, KNN, Gaussian Naive
-Bayes and the multi-layer perceptron — are slower by a wide margin, because
+algorithms served by ``shap.KernelExplainer`` below (SVM, KNN, Gaussian Naive
+Bayes and the multi-layer perceptron) are slower by a wide margin, because
 that explainer has no shortcut and must re-query the model thousands of times
 per explanation. Enabling SHAP for a ``ModelSuite`` that includes them costs
 far more than these numbers suggest, and the cost is dominated by those
@@ -94,7 +94,7 @@ methods rather than shared evenly across the suite.
 rows, naming the setting that disables it. Treat the threshold as a rough
 signal rather than a boundary: the real cost is rows × trees × depth², so a
 deep forest can be slow well below it and a shallow one comfortable well
-above. Cross-validation is exempt regardless — SHAP is switched off for the
+above. Cross-validation is exempt regardless: SHAP is switched off for the
 k-fold phase so that validation does not pay this cost once per fold.
 
 The decision is yours and depends on use, not on speed: if the values inform QC
@@ -112,7 +112,7 @@ When enabled, ``aiqclib`` writes per-instance SHAP values to a Parquet file duri
 
    shap = aq.read_shap_scores("classify_shap_values_temp.parquet")
 
-The file has three metadata columns — ``label``, ``predicted_label`` and ``score`` — followed by one ``<feature>_shap`` column per feature. By default the ``_shap`` suffix is stripped so each feature column is named by its feature (``temp_mean_shap`` becomes ``temp_mean``); the metadata columns are returned unchanged. Pass ``strip_suffix=False`` to keep the original names.
+The file has three metadata columns (``label``, ``predicted_label`` and ``score``) followed by one ``<feature>_shap`` column per feature. By default the ``_shap`` suffix is stripped so each feature column is named by its feature (``temp_mean_shap`` becomes ``temp_mean``); the metadata columns are returned unchanged. Pass ``strip_suffix=False`` to keep the original names.
 
 The result is a `Polars <https://pola.rs/>`_ DataFrame, ready for SHAP plots such as mean-importance bar charts, summary plots, and dependence plots. For example, to obtain the SHAP value matrix and the feature names:
 
@@ -134,7 +134,7 @@ The "Fast & Exact" Group (shap.TreeExplainer)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   - **Models**: XGBoost, Random Forest, Decision Tree.
-  - **How it works**: SHAP has a highly optimized, C++ backed explainer specifically for tree-based models. It calculates exact Shapley values, and is fast relative to the model-agnostic explainer below — though in absolute terms it is still usually the most expensive part of a run (see :ref:`shap-cost`).
+  - **How it works**: SHAP has a highly optimized, C++ backed explainer specifically for tree-based models. It calculates exact Shapley values, and is fast relative to the model-agnostic explainer below, though in absolute terms it is still usually the most expensive part of a run (see :ref:`shap-cost`).
 
 The "Fast & Linear" Group (shap.LinearExplainer)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -187,7 +187,7 @@ class TestReadConfigTemplate:
         """The object is built from the same YAML the file would contain.
 
         The two functions take the same arguments, so they must resolve the
-        same template — they share one registry precisely so a stage cannot
+        same template; they share one registry precisely so a stage cannot
         be added to one and forgotten in the other.
 
         Compared before selection: ``select()`` resolves the ``min_max``

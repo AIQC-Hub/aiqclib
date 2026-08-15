@@ -5,19 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Em and en dashes removed throughout the docs, docstrings and comments, replaced with ordinary punctuation; the rule is recorded in `CLAUDE.md`
+- Sphinx `smartquotes_action` set to `"qe"`, so `--` and `---` are no longer rendered as dashes in the HTML
 
 ## [0.11.0] - 2026-08-15
 ### Added
-- Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap` — it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
+- Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap`; it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
 - The SHAP how-to has a "What It Costs" section with measured shares, how the cost scales, and why turning it off is a bigger lever than a GPU
 - `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
-- New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does — fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin — a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting, and why `GPUTreeExplainer` is not used — 28x on `RandomForest`, but slower than the ordinary explainer for XGBoost and absent from every published `shap` wheel
+- New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does: fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin, since a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting, and why `GPUTreeExplainer` is not used: 28x on `RandomForest`, but slower than the ordinary explainer for XGBoost and absent from every published `shap` wheel
 
 ### Fixed
-- The `ModelSuite` example in the algorithm-selection guide set `calculate_shap: True`, contradicting the default and the config templates — and a suite is the most expensive place to enable it, since `SVM`, `KNN`, `GNB` and `MLP` route through `KernelExplainer`
+- The `ModelSuite` example in the algorithm-selection guide set `calculate_shap: True`, contradicting the default and the config templates, and a suite is the most expensive place to enable it, since `SVM`, `KNN`, `GNB` and `MLP` route through `KernelExplainer`
 - SHAP for tree models no longer converts the whole training set to pandas to build background data it never uses; the conversion is now made only by the explainers that need one
-- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored — they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
-- A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`) — making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
+- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored; they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
+- A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`), making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
 - `MODEL_REGISTRY` aliased `SINGLE_MODEL_REGISTRY` instead of copying it, so importing it added `ModelSuite` to the single-model registry, letting a suite list itself among its own methods
 - A non-mapping value under a model name now raises `ValueError` naming the model, instead of an unpacking `TypeError`
 
@@ -29,7 +32,7 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ### Changed
 - `repr(config)` now names the concrete config class and the selected entry, instead of always reporting `ConfigBase` and the section alone
-- The built-in templates live in one registry shared by the config classes and the interface, so the default `prepare` template is now reachable as `template:data_sets_all` — previously it was the one variant `write_config_template` could write but no config class could load
+- The built-in templates live in one registry shared by the config classes and the interface, so the default `prepare` template is now reachable as `template:data_sets_all`; previously it was the one variant `write_config_template` could write but no config class could load
 
 ## [0.9.1] - 2026-08-10
 ### Fixed
@@ -38,7 +41,7 @@ As this project is still in active development, it does not yet strictly adhere 
 ## [0.9.0] - 2026-08-10
 ### Added
 - The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
-- New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls — circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
+- New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls: circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
 
 ### Changed
 - A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output
@@ -46,7 +49,7 @@ As this project is still in active development, it does not yet strictly adhere 
 - `pres` is no longer a target in the config templates or documentation examples: `pres_qc` rarely carries bad flags, so it trained a model that could flag nothing. Pressure remains an input feature and profile ordering column
 
 ### Fixed
-- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round — the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
+- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round: the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
 
 ## [0.8.0] - 2026-08-10
 ### Fixed

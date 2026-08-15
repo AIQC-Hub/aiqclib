@@ -19,7 +19,7 @@ shutil.rmtree teardown. Now uses:
   generated SVG be inspected on failure.
 - A ``mock_model`` fixture for per-test isolation of the MockModel state.
 
-The MockModel class stays at module level — test infrastructure, not data.
+The MockModel class stays at module level: test infrastructure, not data.
 """
 
 import os
@@ -68,7 +68,7 @@ class MockModel:
 
 @pytest.fixture
 def mock_model():
-    """Fresh MockModel per test — avoids model_scores leaking across tests."""
+    """Fresh MockModel per test; avoids model_scores leaking across tests."""
     return MockModel()
 
 
@@ -89,7 +89,7 @@ class TestCreateMetricPlots:
     def test_single_fold_plot_generation(self, mock_model, test_output_dir):
         """A single-fold model-scores table (e.g. test set with k=1) produces an SVG.
 
-        With one fold there's no mean/std logic — just the single ROC/PR
+        With one fold there's no mean/std logic, just the single ROC/PR
         curve. The output file must exist and have non-zero size.
         """
         target_name = "temp"
@@ -138,7 +138,7 @@ class TestCreateMetricPlots:
 
         sklearn's ``roc_curve`` errors when called on single-class data.
         create_metric_plots should detect this and skip the problematic
-        fold instead of crashing — the test verifies success by checking
+        fold instead of crashing; the test verifies success by checking
         that the output file gets created (using k=1 which has both classes).
         """
         target_name = "pres"
