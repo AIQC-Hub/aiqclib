@@ -19,15 +19,65 @@ while the work is running rather than at the end:
 
 The time on each line is the elapsed time of the run so far, so the cost of a
 step is the gap to the next line, and the final line gives the total.
+
+:func:`notice` writes a one-off remark in the same shape, for things a run
+should say regardless of ``verbose``:
+
+.. code-block:: text
+
+   [aiqclib] note: Computing SHAP values for target 'temp' over 3,671,789
+   [aiqclib]       rows. This is usually the slowest part of a run.
+
+A notice is deliberately not a :mod:`warnings` warning. Nothing is wrong when
+one appears, and a warning drags in a stack location and a category that say
+more about where the library called it from than about the run.
 """
 
 import sys
+import textwrap
 from contextlib import contextmanager
 from time import perf_counter
 from typing import Iterator, Optional, TextIO
 
 #: Prefix identifying the library on every reported line.
 PREFIX: str = "[aiqclib]"
+
+#: Column to wrap notice text at, prefix included.
+NOTICE_WIDTH: int = 79
+
+
+def notice(message: str, stream: Optional[TextIO] = None) -> None:
+    """
+    Write a one-off note, wrapped and prefixed like the progress lines.
+
+    Unlike the step lines this does not depend on ``verbose``: it is used for
+    remarks a run needs to make whether or not progress reporting is on.
+
+    :param message: The text to write, as one unwrapped paragraph.
+    :type message: str
+    :param stream: Where to write. Defaults to ``sys.stdout``.
+    :type stream: Optional[TextIO]
+    :return: None
+    :rtype: None
+    """
+    out = stream if stream is not None else sys.stdout
+
+    # Every line carries the prefix, so a notice is as greppable as the step
+    # lines and as easy to tell apart from whatever else is on the terminal.
+    #
+    # Nothing is broken mid-token: notices name file paths, and a path split
+    # across two lines cannot be copied, pasted or grepped for. A long one
+    # overruns the width instead, which is the lesser cost.
+    lines = textwrap.wrap(
+        " ".join(message.split()),
+        width=NOTICE_WIDTH,
+        initial_indent=f"{PREFIX} note: ",
+        subsequent_indent=f"{PREFIX}       ",
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    for line in lines:
+        print(line, file=out, flush=True)
 
 
 class ProgressReporter:

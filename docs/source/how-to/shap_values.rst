@@ -90,12 +90,30 @@ per explanation. Enabling SHAP for a ``ModelSuite`` that includes them costs
 far more than these numbers suggest, and the cost is dominated by those
 methods rather than shared evenly across the suite.
 
-``aiqclib`` warns once per run when SHAP is computed over more than 100,000
-rows, naming the setting that disables it. Treat the threshold as a rough
-signal rather than a boundary: the real cost is rows × trees × depth², so a
-deep forest can be slow well below it and a shallow one comfortable well
-above. Cross-validation is exempt regardless: SHAP is switched off for the
-k-fold phase so that validation does not pay this cost once per fold.
+``aiqclib`` says so once per run when SHAP is computed over more than 100,000
+rows, before the time is spent rather than after:
+
+.. code-block:: text
+
+   [aiqclib] note: Computing SHAP values for target 'temp' over 3,671,789
+   [aiqclib]       rows. Expect this to take a while: it is usually the
+   [aiqclib]       slowest part of a run, taking roughly half of a training
+   [aiqclib]       phase and almost all of a classification phase, and its
+   [aiqclib]       cost grows with rows x trees x depth^2. Set
+   [aiqclib]       'calculate_shap: false' under the model step to skip it;
+   [aiqclib]       for XGBoost, 'device: cuda' roughly halves it.
+
+The note is printed whether or not ``verbose`` is set, since its whole purpose
+is to explain a long silence, and it is printed once per run rather than once
+per target: the ``calculate_shap`` setting it names is the same for all of
+them. Nothing is wrong when it appears, which is why it is a note rather than
+a warning.
+
+Treat the threshold as a rough signal rather than a boundary: the real cost is
+rows × trees × depth², so a deep forest can be slow well below it and a
+shallow one comfortable well above. Cross-validation is exempt regardless:
+SHAP is switched off for the k-fold phase so that validation does not pay this
+cost once per fold.
 
 The decision is yours and depends on use, not on speed: if the values inform QC
 decisions or model interpretation, this is simply their price. If they are

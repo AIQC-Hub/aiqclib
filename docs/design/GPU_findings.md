@@ -160,17 +160,101 @@ unreachable ones.
 **This changes if the hardware changes.** On Volta or newer, cuML would put
 those four in reach and this decision should be revisited.
 
-### Taken: warn about the SHAP cost
+### Taken: report the SHAP cost
 
-`common/utils/diagnostics.py:warn_shap_cost`, called from `calculate_shap`,
+`common/utils/diagnostics.py:report_shap_cost`, called from `calculate_shap`,
 fires once per run above 100,000 rows and names `calculate_shap: false`. Once
-per run rather than per target because the message concerns the setting;
-`warnings`' own de-duplication does not cover it, since the row count makes each
-message textually distinct.
+per run rather than per target because the message concerns the setting; a
+module-level flag rather than `warnings`' own de-duplication, which does not
+cover it, since the row count makes each message textually distinct.
+
+It prints a `[aiqclib] note:` line through `progress.notice` rather than
+raising a `UserWarning`. It was a warning first, and in practice that put a
+paragraph of prose under a `site-packages/.../scikit_learn_model_base.py:130:
+UserWarning:` header, which reads as a fault in the library rather than as the
+cost of a setting the user chose. Nothing is wrong when it fires, so nothing
+about it should look like it is.
 
 The threshold is a heuristic chosen without data on typical row counts; the real
 cost is rows × trees × depth². It is a named constant,
 `SHAP_ROW_WARNING_THRESHOLD`.
+
+### Taken: name the file in XGBoost's pickle-version warning
+
+`common/utils/diagnostics.py:clarify_model_load_warnings`, wrapping the load in
+`ModelBase.load_model`. XGBoost's own warning arrives as a `UserWarning`
+attributed to a line in `pickle.py`, naming no file, which in a `run_batch` over
+several datasets leaves nothing to act on.
+
+**Measured, since the warning's own wording is misleading.** It says "generated
+by an older version of XGBoost", which reads as a claim about the file. A save
+and load matrix over the six releases in the uv cache (2.1.4, 3.0.2, 3.0.5,
+3.1.1, 3.2.0, 3.4.0; 36 pairs, one small `XGBClassifier`) shows otherwise:
+
+- **Every** mismatched pair warns, including patch-only gaps (3.0.2 vs 3.0.5),
+  and it warns in both directions. Matching pairs never warn.
+- Predictions from a model loaded into a **newer** XGBoost matched the training
+  version exactly, in every such pair.
+- Predictions from a model loaded into an **older** XGBoost did **not**: a
+  3.2.0-trained model scored 0.240963 under 3.1.1 and newer, and 0.195341 under
+  3.0.5 and older. No error, no failure, a ~19% shift in the score. The same
+  split appeared for a 3.1.1-trained and a 3.4.0-trained model, so the boundary
+  is the format change between 3.0.x and 3.1.x rather than anything about one
+  model.
+
+Repeated on a realistic model (200 trees, depth 6, 20 features, 2000 scored
+rows), since a 3-tree toy could plausibly hide or exaggerate the effect:
+
+| Model trained under | Used under | Scores | SHAP |
+| --- | --- | --- | --- |
+| 3.0.2 | 3.4.0 | bitwise identical, 0 label flips | max diff 1.9e-06 (float32 rounding) |
+| 3.4.0 | 3.0.2 | max diff 0.076, 21/2000 labels flipped at 0.5 | not compared |
+
+So the message must not repeat "older", and the direction is the part worth
+telling the user: same version or newer is safe, older is not. Note that the
+`SM 60` pin recommended for a P100 puts the *training* machine on the older
+release, which is the safe direction, but only while the pin stays off the
+classification machines.
+
+### Taken: stamp the writing version into the model file
+
+`common/utils/model_version.py`. Deciding the severity by direction needs the
+version that wrote the file, and that is **not** recoverable from the loaded
+model: `Booster.save_config()` reports the runtime version, not the file's. It
+does sit in the pickle, as a UBJSON `version` triple inside the serialized
+booster buffer, but only reachable by byte-scraping, which was rejected as too
+fragile.
+
+So `save_model` sets `_aiqclib_xgboost_version` on the estimator immediately
+before `joblib.dump`, and it is pickled along with everything else.
+Alternatives considered and rejected: wrapping the dump in a dict
+(`{"model": ..., "version": ...}`) changes the file format, breaking anything
+that loads these files with plain `joblib.load`, including users; a sidecar
+file can be separated from the model it describes. An extra attribute leaves
+the file a plain pickled estimator. Only XGBoost models are stamped, since they
+are the only ones whose loader raises the warning this answers.
+
+Three outcomes on load:
+
+| Stamp | Direction | Reported as |
+| --- | --- | --- |
+| present | this environment same or newer | `[aiqclib] note:`, no action |
+| present | this environment older | `UserWarning` naming both versions |
+| absent (file predates this) | unknown | `UserWarning` saying so |
+
+Each once per run, for the same reason as the SHAP notice: the cause is the
+environment, not any one file. The three severities are tracked separately, so
+a run loading a safe model and a risky one still hears about the risky one.
+
+Verified end to end against real cross-version pickles rather than mocks, by
+putting the 3.0.2 and 3.4.0 wheels from the `uv` cache on `PYTHONPATH` in turn:
+3.0.2 to 3.4.0 produced the note and no warning, 3.4.0 to 3.0.2 produced the
+warning, and an unstamped file produced the fallback.
+
+Version strings are compared as integer tuples, not as text: XGBoost will reach
+3.10, where `"3.10.0" < "3.9.0"` is true and would report a risky load as safe.
+Anything that does not parse as a plain dotted number (a `.dev` build) falls
+back to the unknown case rather than guessing.
 
 ## 6. Test datasets: fixture versus reference
 

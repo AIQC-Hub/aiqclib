@@ -5,6 +5,10 @@ steps through :class:`ProgressReporter`. The tests verify that a disabled
 reporter is completely silent, that an enabled one names the stage and numbers
 its steps, that a failed run is not reported as a finished one, and that all
 four entry points expose the option with the same default.
+
+:func:`notice` is the exception to all of that: it is not tied to a reporter or
+to ``verbose``, and exists so that a remark a run has to make can be made in
+the same shape as the step lines instead of as a warning.
 """
 
 import inspect
@@ -14,7 +18,13 @@ import re
 import pytest
 
 import aiqclib as aq
-from aiqclib.common.utils.progress import PREFIX, ProgressReporter, report_progress
+from aiqclib.common.utils.progress import (
+    NOTICE_WIDTH,
+    PREFIX,
+    ProgressReporter,
+    notice,
+    report_progress,
+)
 
 
 class TestProgressReporterDisabled:
@@ -123,6 +133,71 @@ class TestReportProgressContext:
         with pytest.raises(ValueError, match="original message"):
             with report_progress("prepare", 1, enabled=True, stream=stream):
                 raise ValueError("original message")
+
+
+class TestNotice:
+    """One-off remarks, wrapped and prefixed like the step lines."""
+
+    LONG = (
+        "Computing SHAP values for target 'temp' over 3,671,789 rows. This is "
+        "usually the slowest part of a run, and the phase will be quiet for a "
+        "long time while it happens."
+    )
+
+    @staticmethod
+    def _lines(message: str) -> list:
+        stream = io.StringIO()
+        notice(message, stream=stream)
+        return stream.getvalue().splitlines()
+
+    def test_short_message_is_one_line(self):
+        """Nothing is wrapped that does not need wrapping."""
+        assert self._lines("Short remark.") == [f"{PREFIX} note: Short remark."]
+
+    def test_every_line_carries_the_prefix(self):
+        """A wrapped notice must stay as greppable as the step lines."""
+        lines = self._lines(self.LONG)
+        assert len(lines) > 1
+        assert all(line.startswith(PREFIX) for line in lines)
+
+    def test_continuation_lines_align_under_the_text(self):
+        """The paragraph reads as one block, indented past the "note:" label."""
+        lines = self._lines(self.LONG)
+        column = len(f"{PREFIX} note: ")
+        for line in lines[1:]:
+            assert line[len(PREFIX) : column].isspace()
+            assert not line[column].isspace()
+
+    def test_lines_stay_within_the_width(self):
+        """A notice must not be the one thing that wraps in the terminal."""
+        assert all(len(line) <= NOTICE_WIDTH for line in self._lines(self.LONG))
+
+    def test_a_long_path_is_not_broken_across_lines(self):
+        """Paths are the one thing worth overrunning the width for.
+
+        Notices name model and input files. A path split over two lines
+        cannot be copied, pasted or grepped for, and the reader has to
+        reassemble it by hand to use it at all, so the wrap gives way instead.
+        """
+        path = "/scratch/workspace/project/data/models/model_temp_xgboost.joblib"
+        lines = self._lines(f"The model in '{path}' was written by another version.")
+
+        assert any(path in line for line in lines)
+
+    def test_existing_newlines_are_re_wrapped(self):
+        """Callers write a paragraph; the layout is decided here.
+
+        A message built from an f-string across several source lines carries
+        no meaningful line breaks of its own, and passing them through would
+        produce lines broken at whatever the source happened to be.
+        """
+        lines = self._lines("A message\nsplit across\nsource lines.")
+        assert lines == [f"{PREFIX} note: A message split across source lines."]
+
+    def test_defaults_to_stdout(self, capsys):
+        """The remark shares the stream the progress lines use."""
+        notice("Written to stdout.")
+        assert "Written to stdout." in capsys.readouterr().out
 
 
 class TestEntryPointSignatures:

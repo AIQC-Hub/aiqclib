@@ -11,6 +11,9 @@ As this project is still in active development, it does not yet strictly adhere 
 - NRT QC items accept `include_in_final_flag` (default `true`): an item set to `false` still runs and still writes its flag column, but no longer feeds the aggregated `{variable}_nrt_flag`, so a test can be recorded without deciding the verdict
 
 ### Changed
+- The SHAP cost heads-up is now a `[aiqclib] note:` line instead of a `UserWarning`, so it no longer reads as a fault in the library. Same message, still once per run and still printed whether or not `verbose` is set
+- Saved models record the XGBoost version that wrote them, and loading one compares it. XGBoost's own warning fires on any version difference, down to the patch release and in both directions, from inside `pickle` and naming no file; only one direction matters, so loading into the same version or newer is now a `[aiqclib] note:` needing no action, and loading into an older one is a warning naming both versions. Model files written before this carry no version and keep a warning saying the direction cannot be checked
+- The GPU how-to documents the XGBoost version mismatch, with measured predictions for one model loaded under six releases: loading into an older XGBoost than trained the model moved scores by up to 0.076 and flipped 21 of 2,000 labels, while loading into a newer one reproduced them bitwise
 - Em and en dashes removed throughout the docs, docstrings and comments, replaced with ordinary punctuation; the rule is recorded in `CLAUDE.md`
 - Sphinx `smartquotes_action` set to `"qe"`, so `--` and `---` are no longer rendered as dashes in the HTML
 

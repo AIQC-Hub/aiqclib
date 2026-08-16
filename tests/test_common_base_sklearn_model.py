@@ -502,10 +502,10 @@ class TestSklearnModelBase:
             expected = (scores >= model_wrapper.predicted_label_threshold).astype(int)
             assert np.array_equal(predicted, expected)
 
-    def test_calculate_shap_warns_on_a_large_test_set(self, model_wrapper):
-        """A large explanation set gets the cost warning before the work starts.
+    def test_calculate_shap_reports_a_large_test_set(self, model_wrapper, capsys):
+        """A large explanation set gets the cost notice before the work starts.
 
-        The unit tests for ``warn_shap_cost`` cover the message; this covers
+        The unit tests for ``report_shap_cost`` cover the message; this covers
         the wiring, which is the part that can silently come undone.
         """
         rows = diagnostics.SHAP_ROW_WARNING_THRESHOLD
@@ -533,8 +533,8 @@ class TestSklearnModelBase:
                     }
                 )
 
-                with pytest.warns(UserWarning, match="calculate_shap"):
-                    model_wrapper.calculate_shap()
+                model_wrapper.calculate_shap()
+                assert "calculate_shap" in capsys.readouterr().out
         finally:
             diagnostics._shap_cost_warned = False
 

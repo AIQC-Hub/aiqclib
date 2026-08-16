@@ -181,6 +181,85 @@ and falls back to CPU, emitting
 Predictions are unaffected. You can therefore train on a GPU server and run
 classification on CPU-only machines with the same model files.
 
+.. _model-version-mismatch:
+
+What does not travel as freely is the XGBoost version. Model files are joblib
+pickles, and unpickling one that a different XGBoost wrote makes XGBoost say
+so, from inside ``pickle`` and without naming a file.
+
+**Expect this whenever two environments are not pinned identically.** It is
+not reserved for large version gaps: measured across six releases, every
+mismatched pair triggers it, including 3.0.2 against 3.0.5, and it triggers in
+both directions. That is by design, in the sense that XGBoost promises nothing
+about pickle compatibility and so flags any difference at all rather than
+judging which ones are safe.
+
+**The direction is what decides whether it matters.** In the same matrix, one
+model was loaded under each version and asked for the same prediction:
+
+============================================ ==============================
+Loading environment                          Predicted score
+============================================ ==============================
+XGBoost 3.2.0 (the version that trained it)  0.240963
+XGBoost 3.4.0 (newer)                        0.240963
+XGBoost 3.1.1 (newer than the model format)  0.240963
+XGBoost 3.0.5 (older)                        **0.195341**
+XGBoost 3.0.2 (older)                        **0.195341**
+XGBoost 2.1.4 (older)                        **0.195341**
+============================================ ==============================
+
+Loading into an older XGBoost than trained the model changed the score by
+about 19%, with no error and no failure of any kind: only this warning marks
+it. Loading into a newer one reproduced the trained score exactly in every
+pair tested.
+
+Checked again on a realistic model (200 trees, depth 6, 20 features, scored
+over 2,000 rows) rather than on the small one used for the matrix. Trained
+under 3.0.2 and used under 3.4.0, the predicted scores were **bitwise
+identical**, with no label change at any threshold, and the SHAP values agreed
+to within float32 rounding (largest difference 1.9e-06). The same model
+trained under 3.4.0 and used under 3.0.2 moved scores by up to 0.076 and
+flipped 21 of the 2,000 labels at a 0.5 threshold.
+
+So the practical rule is to keep the classification environment at the same
+version as the training environment, or newer, and never older.
+
+This is a likely thing to meet after pinning ``xgboost`` for an older GPU as
+above: that pin makes the training machine the *older* environment, which is
+the safe direction, but the pin has to stay off the classification machines
+for that to hold.
+
+``aiqclib`` checks the direction for you. It records the XGBoost version in
+every model it saves, and compares it when the model is loaded, so the two
+cases are reported differently. Loading into the same version or a newer one
+is a note, and needs no action:
+
+.. code-block:: text
+
+    [aiqclib] note: The model in '/data/models/model_temp.joblib' was trained
+    [aiqclib]       under XGBoost 3.0.2 and this environment has XGBoost
+    [aiqclib]       3.4.0. [...] Loading into a newer version is the safe
+    [aiqclib]       direction: in testing it reproduced the trained
+    [aiqclib]       predictions exactly. Nothing to do. Reported once per run.
+
+Loading into an **older** XGBoost is a warning, naming both versions and what
+was measured:
+
+.. code-block:: text
+
+    UserWarning: The model in '/data/models/model_temp.joblib' was trained
+    under XGBoost 3.4.0, but this environment has the older XGBoost 3.0.2.
+    [...] Upgrade this environment to at least XGBoost 3.4.0, or retrain with
+    the installed version.
+
+Either way it is reported once per run, because the cause is the environment
+rather than any one model, so treat it as covering every model that run loads.
+
+Model files saved before this check existed carry no version, so the direction
+cannot be established for them and they keep a warning that says as much.
+Retraining any such target, or simply saving it again with the current version,
+records the version from then on.
+
 .. _gpu-prediction-device:
 
 The ``DMatrix`` Fallback Warning
