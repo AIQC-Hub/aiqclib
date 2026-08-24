@@ -491,6 +491,176 @@ def get_config_data_set_all_template() -> str:
     )
 
 
+def _get_dataset_target_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level target variable sets.
+
+    Adds the ``label_mode`` key controlling the per-profile label: ``binary``
+    (any bad observation, the default) or ``proportion`` (fraction of
+    bad-flagged observations).
+
+    :returns: A string containing the YAML template for profile target sets.
+    :rtype: str
+    """
+    return """
+target_sets:
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: binary  # EDIT: binary or proportion
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: binary  # EDIT: binary or proportion
+
+"""
+
+
+def _get_dataset_feature_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level feature sets.
+
+    Profile-native features are used directly; observation-level features
+    (e.g. ``basic_values``) are included via per-profile aggregation.
+
+    :returns: A string containing the YAML template for profile feature sets.
+    :rtype: str
+    """
+    return """
+feature_sets:
+  - name: feature_set_1
+    features:
+      - location
+      - day_of_year
+      - profile_summary_stats
+      - basic_values
+
+"""
+
+
+def _get_dataset_feature_param_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level feature parameter sets.
+
+    Observation-level features must carry an ``agg`` list naming the
+    per-profile aggregations of their columns (mean, min, max, median, std,
+    sum, first, fail_frac, fail_any); profile-level features are used as-is.
+
+    :returns: A string containing the YAML template for profile feature
+              parameter sets.
+    :rtype: str
+    """
+    return """
+feature_param_sets:
+  - name: feature_set_1_param_set_1
+    params:
+      - feature: location
+        stats_set: { type: raw }
+        col_names: [ longitude, latitude ]
+      - feature: day_of_year
+        convert: cosine
+        col_names: [ profile_timestamp ]
+      - feature: profile_summary_stats
+        stats_set: { type: raw }
+        col_names: [ temp, psal, pres ]
+        summary_stats_names: [ mean, median, sd, pct25, pct75 ]
+      - feature: basic_values
+        stats_set: { type: raw }
+        col_names: [ temp, psal, pres ]
+        # EDIT: per-profile aggregations. Every output column must be unique:
+        # e.g. 'mean' here would collide with profile_summary_stats' temp_mean.
+        agg: [ min, max, std ]
+
+"""
+
+
+def _get_dataset_step_class_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level step class sets.
+
+    Steps 1-3 reuse the observation-level classes; the locate, extract, and
+    split steps use their profile-level variants.
+
+    :returns: A string containing the YAML template for profile step class sets.
+    :rtype: str
+    """
+    return """
+step_class_sets:
+  - name: data_set_step_set_1
+    steps:
+      input: InputDataSetA
+      summary: SummaryDataSetA
+      select: SelectDataSetAll
+      locate: LocateDataSetProfile
+      extract: ExtractDataSetProfile
+      split: SplitDataSetProfile
+
+"""
+
+
+def _get_dataset_step_param_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level step parameter sets.
+
+    Profile-level datasets are much smaller than observation-level ones, so
+    the template suggests a smaller ``k_fold``.
+
+    :returns: A string containing the YAML template for profile step
+              parameter sets.
+    :rtype: str
+    """
+    return """
+step_param_sets:
+  - name: data_set_param_set_1
+    steps:
+      input: { sub_steps: { rename_columns: false,
+                            filter_rows: true },
+               rename_dict: { },
+               filter_method_dict: { remove_years: [ 2023 ],
+                                     keep_years: [ ] } }
+      summary: { }
+      select: { }
+      locate: { }
+      extract: { }
+      split: { test_set_fraction: 0.1,
+               k_fold: 5 }
+
+"""
+
+
+def get_config_data_set_profile_template() -> str:
+    """
+    Retrieve a YAML template string for profile-level dataset preparation.
+
+    Produces one labeled row per profile instead of one per observation:
+
+    - ``target_sets``: variables with ``label_mode`` (binary or proportion).
+    - ``feature_param_sets``: profile-native features used directly and
+      observation-level features aggregated per profile via ``agg``.
+    - ``step_class_sets``: the profile-level locate/extract/split classes.
+
+    All other sections match the observation-level templates.
+
+    :returns: A string containing the YAML template.
+    :rtype: str
+    """
+    return (
+        _get_dataset_path_info_sets()
+        + _get_dataset_target_sets_profile()
+        + _get_dataset_summary_stats_sets()
+        + _get_dataset_feature_sets_profile()
+        + _get_dataset_feature_param_sets_profile()
+        + _get_dataset_feature_stats_sets()
+        + _get_dataset_step_class_sets_profile()
+        + _get_dataset_step_param_sets_profile()
+        + _get_dataset_data_sets()
+    )
+
+
 def get_config_train_set_template() -> str:
     """
     Retrieve a YAML template string for training configurations.
@@ -547,6 +717,77 @@ step_param_sets:
       model: { calculate_shap: False,
                model_params: { scale_pos_weight: 200,
                                n_jobs: -1 } }
+      build: { }
+
+training_sets:
+  - name: training_0001  # EDIT: Your training name
+    dataset_folder_name: dataset_0001  # EDIT: Your output folder
+    path_info: data_set_1
+    target_set: target_set_1
+    step_class_set: training_step_set_1
+    step_param_set: training_param_set_1
+"""
+    return yaml_template
+
+
+def get_config_train_set_profile_template() -> str:
+    """
+    Retrieve a YAML template string for profile-level training configurations.
+
+    Mirrors :func:`get_config_train_set_template` but reads the profile-level
+    prepare output (one row per profile) and shows both label modes:
+    ``binary`` profile labels train with any classifier, while
+    ``proportion`` labels require a regressor model (``XGBoostRegressor`` /
+    ``RandomForestRegressor``). For a regressor, ``predicted_label_threshold``
+    means "flag the profile when the predicted bad fraction reaches the
+    threshold".
+
+    :returns: A string containing the YAML template.
+    :rtype: str
+    """
+    yaml_template = """
+---
+path_info_sets:
+  - name: data_set_1
+    common:
+      base_path: /path/to/data # EDIT: Root output directory
+    input:
+      step_folder_name: training
+
+target_sets:
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: proportion  # EDIT: binary or proportion
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: proportion  # EDIT: binary or proportion
+
+step_class_sets:
+  - name: training_step_set_1
+    steps:
+      input: InputTrainingSetA
+      validate: KFoldValidation
+      # EDIT: proportion labels need a regressor (XGBoostRegressor or
+      # RandomForestRegressor); binary labels use any classifier.
+      model: XGBoostRegressor
+      build: BuildModel
+
+step_param_sets:
+  - name: training_param_set_1
+    steps:
+      input: { }
+      # Profile-level datasets are much smaller than observation-level ones;
+      # keep k_fold modest and match the k_fold used at preparation time.
+      validate: { k_fold: 5 }
+      model: { calculate_shap: False,
+               predicted_label_threshold: 0.5,
+               model_params: { n_jobs: -1 } }
       build: { }
 
 training_sets:
@@ -914,6 +1155,95 @@ nrt_qc_sets:
 """
 
 
+def _get_classify_step_class_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level classification step
+    class sets.
+
+    Steps 1-3 and the classify step reuse the observation-level classes; the
+    locate, extract, and concat steps use their profile-level variants. The
+    model must match the one the profiles were trained with (a regressor for
+    ``label_mode: proportion``).
+
+    :returns: A string containing the YAML template for profile classification
+              step class sets.
+    :rtype: str
+    """
+    return """
+step_class_sets:
+  - name: data_set_step_set_1
+    steps:
+      input: InputDataSetAll
+      summary: SummaryDataSetAll
+      select: SelectDataSetAll
+      locate: LocateDataSetProfile
+      extract: ExtractDataSetProfile
+      model: XGBoost  # EDIT: XGBoostRegressor for proportion-label models
+      classify: ClassifyAll
+      concat: ConcatDataSetProfile
+
+"""
+
+
+def _get_classify_step_param_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level classification step
+    parameter sets.
+
+    :returns: A string containing the YAML template for profile classification
+              step parameter sets.
+    :rtype: str
+    """
+    return """
+step_param_sets:
+  - name: data_set_param_set_1
+    steps:
+      input: { sub_steps: { rename_columns: false,
+                            filter_rows: true },
+               rename_dict: { },
+               filter_method_dict: { remove_years: [ ],
+                                     keep_years: [ 2023 ] } }
+      summary: { }
+      select: { }
+      locate: { }
+      extract: { }
+      # skip_evaluation: True classifies unlabeled data (no QC flag) and skips
+      # performance evaluation. Omit it to auto-detect per target from `flag`.
+      model: { calculate_shap: False }
+      classify: { }
+      # broadcast_to_observations: true joins each profile's prediction onto
+      # every observation of the profile instead of one row per profile.
+      concat: { broadcast_to_observations: false }
+
+"""
+
+
+def get_config_classify_set_profile_template() -> str:
+    """
+    Retrieve a YAML template string for profile-level classification.
+
+    Classifies one row per profile using models trained by the profile-level
+    training stage: profile-native features are used directly, and
+    observation-level features carry the same ``agg`` aggregations as at
+    preparation time. Targets keep ``label_mode`` for evaluation; targets
+    without a flag are classified label-free.
+
+    :returns: A string containing the YAML template.
+    :rtype: str
+    """
+    return (
+        _get_classify_path_info_sets()
+        + _get_dataset_target_sets_profile()
+        + _get_dataset_summary_stats_sets()
+        + _get_dataset_feature_sets_profile()
+        + _get_dataset_feature_param_sets_profile()
+        + _get_dataset_feature_stats_sets()
+        + _get_classify_step_class_sets_profile()
+        + _get_classify_step_param_sets_profile()
+        + _get_classification_sets()
+    )
+
+
 def get_config_nrtqc_template() -> str:
     """
     Retrieve a YAML template string for NRT QC configurations.
@@ -952,9 +1282,12 @@ _TEMPLATES = {
     "template:data_sets": get_config_data_set_template,
     "template:data_sets_all": get_config_data_set_all_template,
     "template:data_sets_full": get_config_data_set_full_template,
+    "template:data_sets_profile": get_config_data_set_profile_template,
     "template:training_sets": get_config_train_set_template,
+    "template:training_sets_profile": get_config_train_set_profile_template,
     "template:classification_sets": get_config_classify_set_template,
     "template:classification_sets_full": get_config_classify_set_full_template,
+    "template:classification_sets_profile": get_config_classify_set_profile_template,
     "template:nrt_qc_sets": get_config_nrtqc_template,
 }
 

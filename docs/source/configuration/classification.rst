@@ -169,6 +169,13 @@ This section defines the specific Python classes that implement the logic for ea
          classify: ClassifyAll
          concat: ConcatDataSetAll
 
+For classifying **one row per profile** with models from the profile-level
+training stage, set ``locate: LocateDataSetProfile``,
+``extract: ExtractDataSetProfile`` and ``concat: ConcatDataSetProfile``
+(the ``concat`` step parameter ``broadcast_to_observations: true``
+repeats each profile's prediction on every observation instead) — see
+:doc:`../how-to/profile_level_pipeline`.
+
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^
 This section provides general parameters for the workflow processes defined in ``step_class_sets``. These parameters control the behavior of various pipeline steps during classification.

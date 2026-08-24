@@ -17,6 +17,8 @@ from aiqclib.train.models.support_vector_machine import SupportVectorMachine
 from aiqclib.train.models.k_nearest_neighbors import KNearestNeighbors
 from aiqclib.train.models.gaussian_naive_bayes import GaussianNaiveBayes
 from aiqclib.train.models.multilayer_perceptron import MultilayerPerceptron
+from aiqclib.train.models.random_forest_regressor import RandomForestRegressor
+from aiqclib.train.models.xgboost_regressor import XGBoostRegressor
 
 #: A dictionary mapping model names to their corresponding Python classes.
 #:
@@ -43,4 +45,8 @@ SINGLE_MODEL_REGISTRY: Dict[str, Type[ModelBase]] = {
     "GNB": GaussianNaiveBayes,
     "MultilayerPerceptron": MultilayerPerceptron,
     "MLP": MultilayerPerceptron,
+    "XGBoostRegressor": XGBoostRegressor,
+    "XGBR": XGBoostRegressor,
+    "RandomForestRegressor": RandomForestRegressor,
+    "RFR": RandomForestRegressor,
 }

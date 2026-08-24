@@ -74,6 +74,11 @@ out of the dataset entirely.
    written as ``4`` or as ``"4"``; both sides are read as whole numbers. See
    :ref:`qc-flag-columns` for the full table.
 
+A variable may also carry an optional ``label_mode`` key (``binary``, the
+default, or ``proportion``), which controls the per-profile label in the
+**profile-level pipeline** — see :doc:`../how-to/profile_level_pipeline`.
+The observation-level pipeline ignores it.
+
 .. _choosing-targets:
 
 Choosing which variables to model
@@ -166,6 +171,11 @@ These two interconnected sections are dedicated to configuring your feature engi
            stats_set: { type: raw }
            col_names: [ temp, psal, pres ]
 
+.. note::
+   In the **profile-level pipeline**, observation-level features additionally
+   carry an ``agg`` key listing per-profile aggregations (e.g.
+   ``agg: [ min, max, std ]``) — see :doc:`../how-to/profile_level_pipeline`.
+
 `feature_stats_sets`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 (**Advanced Use**)
@@ -197,6 +207,12 @@ This section allows you to define and reference custom Python classes that imple
          locate: LocateDataSetAll
          extract: ExtractDataSetA
          split: SplitDataSetAll
+
+For the profile-level pipeline (one labeled row per profile instead of one
+per observation), set ``locate: LocateDataSetProfile``,
+``extract: ExtractDataSetProfile`` and ``split: SplitDataSetProfile`` — see
+:doc:`../how-to/profile_level_pipeline` and the ``prepare`` / ``profile``
+configuration template.
 
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^

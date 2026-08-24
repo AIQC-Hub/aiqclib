@@ -67,6 +67,12 @@ This powerful section allows you to define the core components of your training 
 .. note::
    ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them by setting the ``model`` key. For more details, see the dedicated :doc:`../how-to/algorithm_selection` page.
 
+.. note::
+   Profile-level datasets with ``label_mode: proportion`` need a regressor
+   model — ``XGBoostRegressor`` (``XGBR``) or ``RandomForestRegressor``
+   (``RFR``); binary profile labels train with the regular classifiers. See
+   :doc:`../how-to/profile_level_pipeline`.
+
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^
 This section provides detailed parameters for the classes defined in your chosen ``step_class_sets``. This allows you to fine-tune the behavior of each step, such as specifying the number of folds for cross-validation or providing hyperparameters for your machine learning model.

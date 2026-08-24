@@ -10,11 +10,16 @@ from aiqclib.classify.step1_read_input.dataset_all import InputDataSetAll
 from aiqclib.classify.step2_calc_stats.dataset_all import SummaryDataSetAll
 from aiqclib.classify.step3_select_profiles.dataset_all import SelectDataSetAll
 from aiqclib.classify.step4_select_rows.dataset_all import LocateDataSetAll
+from aiqclib.classify.step4_select_rows.dataset_profile import LocateDataSetProfile
 from aiqclib.classify.step5_extract_features.dataset_all import ExtractDataSetAll
+from aiqclib.classify.step5_extract_features.dataset_profile import (
+    ExtractDataSetProfile,
+)
 from aiqclib.classify.step6_classify_dataset.dataset_all import ClassifyAll
 from aiqclib.classify.step6_classify_dataset.dataset_all_suite import ClassifyAllSuite
 from aiqclib.classify.step7_concat_datasets.concat_base import ConcatDatasetsBase
 from aiqclib.classify.step7_concat_datasets.dataset_all import ConcatDataSetAll
+from aiqclib.classify.step7_concat_datasets.dataset_profile import ConcatDataSetProfile
 from aiqclib.classify.step7_concat_datasets.dataset_suite import ConcatDataSetSuite
 from aiqclib.prepare.step1_read_input.input_base import InputDataSetBase
 from aiqclib.prepare.step2_calc_stats.summary_base import SummaryStatsBase
@@ -57,6 +62,7 @@ SELECT_CLASSIFY_REGISTRY: Dict[str, Type[ProfileSelectionBase]] = {
 #: :type: Dict[str, Type[LocatePositionBase]]
 LOCATE_CLASSIFY_REGISTRY: Dict[str, Type[LocatePositionBase]] = {
     "LocateDataSetAll": LocateDataSetAll,
+    "LocateDataSetProfile": LocateDataSetProfile,
 }
 
 #: A registry mapping class names (as strings, typically from YAML configuration)
@@ -66,6 +72,7 @@ LOCATE_CLASSIFY_REGISTRY: Dict[str, Type[LocatePositionBase]] = {
 #: :type: Dict[str, Type[ExtractFeatureBase]]
 EXTRACT_CLASSIFY_REGISTRY: Dict[str, Type[ExtractFeatureBase]] = {
     "ExtractDataSetAll": ExtractDataSetAll,
+    "ExtractDataSetProfile": ExtractDataSetProfile,
 }
 
 #: A registry mapping class names (as strings, typically from YAML configuration)
@@ -85,5 +92,6 @@ CLASSIFY_CLASSIFY_REGISTRY: Dict[str, Type[BuildModelBase]] = {
 #: :type: Dict[str, Type[ConcatDatasetsBase]]
 CLASSIFY_CONCAT_REGISTRY: Dict[str, Type[ConcatDatasetsBase]] = {
     "ConcatDataSetAll": ConcatDataSetAll,
+    "ConcatDataSetProfile": ConcatDataSetProfile,
     "ConcatDataSetSuite": ConcatDataSetSuite,
 }

@@ -501,6 +501,21 @@ class ConfigBase(ABC):
         target_value = self.get_target_dict().get(target_name, {})
         return self.is_flag_missing(target_value)
 
+    def get_label_mode(self, target_name: str) -> str:
+        """
+        Return the label mode of a target variable for the profile-level
+        pipeline: ``"binary"`` (default; 1 when any observation of the
+        profile is bad-flagged) or ``"proportion"`` (fraction of
+        bad-flagged observations, in [0, 1]).
+
+        :param target_name: The name of the target variable.
+        :type target_name: str
+        :return: ``"binary"`` or ``"proportion"``.
+        :rtype: str
+        """
+        target_value = self.get_target_dict().get(target_name, {})
+        return target_value.get("label_mode", "binary")
+
     def get_target_file_names(
         self,
         step_name: str,

@@ -29,6 +29,10 @@ class QCPressureIncreasing(QCItemFeatureBase):
 
     item_name: str = "pressure_increasing"
 
+    # level stays "observation": despite the profile-style column name, each
+    # row is compared against its own predecessor / running maximum, so the
+    # flag varies within a profile.
+
     #: Column defining the vertical order of observations within a profile.
     order_column: str = "observation_no"
 

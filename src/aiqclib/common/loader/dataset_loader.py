@@ -163,6 +163,7 @@ def load_step5_extract_dataset(
     selected_profiles: Optional[pl.DataFrame] = None,
     selected_rows: Optional[Dict[str, pl.DataFrame]] = None,
     summary_stats: Optional[pl.DataFrame] = None,
+    observation_rows: Optional[Dict[str, pl.DataFrame]] = None,
 ) -> ExtractFeatureBase:
     """
     Load a :class:`~aiqclib.prepare.step5_extract_features.extract_base.ExtractFeatureBase`-derived
@@ -182,17 +183,29 @@ def load_step5_extract_dataset(
     :type selected_rows: Optional[Dict[str, :class:`polars.DataFrame`]]
     :param summary_stats: A Polars DataFrame containing summary stats for scaling or references.
     :type summary_stats: Optional[:class:`polars.DataFrame`]
+    :param observation_rows: Per-target observation rows produced by a
+                             profile-level locate step, forwarded to extract
+                             classes that aggregate observation-level features.
+                             Defaults to None.
+    :type observation_rows: Optional[Dict[str, :class:`polars.DataFrame`]]
     :returns: An instantiated object that inherits from
               :class:`~aiqclib.prepare.step5_extract_features.extract_base.ExtractFeatureBase`.
     :rtype: :class:`~aiqclib.prepare.step5_extract_features.extract_base.ExtractFeatureBase`
     """
     dataset_class = _get_prepare_class(config, "extract", EXTRACT_DATASET_REGISTRY)
+    # Only the profile-level extract class accepts observation_rows; pass it
+    # solely when the locate step produced them so the observation-level
+    # classes keep their signatures.
+    kwargs = {}
+    if observation_rows is not None:
+        kwargs["observation_rows"] = observation_rows
     return dataset_class(
         config,
         input_data=input_data,
         selected_profiles=selected_profiles,
         selected_rows=selected_rows,
         summary_stats=summary_stats,
+        **kwargs,
     )
 
 

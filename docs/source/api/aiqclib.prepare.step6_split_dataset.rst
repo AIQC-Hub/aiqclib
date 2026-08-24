@@ -25,6 +25,14 @@ aiqclib.prepare.step6\_split\_dataset.dataset\_all module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.step6\_split\_dataset.dataset\_profile module
+-------------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.step6_split_dataset.dataset_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.step6\_split\_dataset.split\_base module
 --------------------------------------------------------
 

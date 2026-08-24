@@ -25,6 +25,7 @@ class QCImpossibleDate(QCItemFeatureBase):
     """
 
     item_name: str = "impossible_date"
+    level: str = "profile"
     default_params: dict = {
         "min_year": 1950,
         "timestamp_column": "profile_timestamp",

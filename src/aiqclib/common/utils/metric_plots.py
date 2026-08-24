@@ -49,6 +49,65 @@ def _finish_axes(ax, loc: str) -> None:
     )
 
 
+def _create_regression_plots(
+    df: pl.DataFrame, target_name: str, output_path: str, group_col: str
+) -> None:
+    """
+    Create and save regression metric plots (predicted vs. actual scatter and
+    residual histogram) as an SVG file.
+
+    Used in place of the ROC / precision-recall panels when the model scores
+    hold a continuous (proportion) label, for which classification curves are
+    undefined. One scatter/histogram series is drawn per group (fold ``k`` or
+    ``method``).
+
+    :param df: Model scores with ``label`` (float), ``score`` and ``group_col``.
+    :type df: pl.DataFrame
+    :param target_name: The target, used in the plot titles.
+    :type target_name: str
+    :param output_path: Where to save the SVG.
+    :type output_path: str
+    :param group_col: The column identifying series (``"k"`` or ``"method"``).
+    :type group_col: str
+    :return: None
+    :rtype: None
+    """
+    groups = df[group_col].unique().sort()
+    has_groups = len(groups) > 1
+
+    plt.rcParams.update({"font.size": 14})
+    fig, (ax_scatter, ax_resid) = plt.subplots(1, 2, figsize=(12, 6))
+
+    for group in groups:
+        group_data = df.filter(pl.col(group_col) == group)
+        y_true = group_data["label"].to_numpy()
+        y_score = group_data["score"].to_numpy()
+        series_label = f"{group_col} {group}" if has_groups else "predictions"
+
+        ax_scatter.scatter(y_true, y_score, alpha=0.5, s=20, label=series_label)
+        ax_resid.hist(y_score - y_true, bins=20, alpha=0.5, label=series_label)
+
+    ax_scatter.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", alpha=0.8)
+    ax_scatter.set_xlim([-0.05, 1.05])
+    ax_scatter.set_ylim([-0.05, 1.05])
+    ax_scatter.set_xlabel("Actual proportion")
+    ax_scatter.set_ylabel("Predicted proportion")
+    ax_scatter.set_title(f"Predicted vs Actual - {target_name}")
+    _finish_axes(ax_scatter, "upper left")
+    ax_scatter.grid(True, alpha=0.3)
+
+    ax_resid.axvline(0.0, linestyle="--", lw=2, color="r", alpha=0.8)
+    ax_resid.set_xlabel("Residual (predicted - actual)")
+    ax_resid.set_ylabel("Count")
+    ax_resid.set_title(f"Residuals - {target_name}")
+    _finish_axes(ax_resid, "upper right")
+    ax_resid.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, format="svg")
+    plt.close(fig)
+
+
 def create_metric_plots(model) -> None:
     """
     Create and save ROC and Precision-Recall plots as an SVG file for a single model.
@@ -87,6 +146,12 @@ def create_metric_plots(model) -> None:
             continue
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # A float label means regression (proportion labels): ROC / PR curves
+        # are undefined, so plot regression panels instead.
+        if df.schema["label"].is_float():
+            _create_regression_plots(df, target_name, output_path, group_col="k")
+            continue
 
         unique_k = df["k"].unique().sort()
         has_folds = len(unique_k) > 1
@@ -269,6 +334,12 @@ def create_multi_method_metric_plots(model) -> None:
             continue
         output_path = model.output_file_names["metric_plot"][target_name]
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        # A float label means regression (proportion labels): ROC / PR curves
+        # are undefined, so plot regression panels instead.
+        if df.schema["label"].is_float():
+            _create_regression_plots(df, target_name, output_path, group_col="method")
+            continue
 
         plt.rcParams.update({"font.size": 14})
         fig, (ax_roc, ax_pr) = plt.subplots(1, 2, figsize=(14, 7))

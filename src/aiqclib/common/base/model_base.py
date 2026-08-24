@@ -34,6 +34,7 @@ class ModelBase(ABC):
     expected_class_name: Optional[str] = None  # Must be overridden by child classes
     short_name: Optional[str] = None  # Must be overridden by child classes
     multi = False  # Must be set to True for model suite class
+    is_regressor = False  # True for regressor models (proportion labels)
 
     def __init__(self, config: ConfigBase) -> None:
         """

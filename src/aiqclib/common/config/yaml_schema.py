@@ -107,6 +107,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
               - flag
@@ -197,9 +200,16 @@ properties:
                   type: string
               stats:
                 type: object
+              agg:
+                type: array
+                items:
+                  type: string
+              params:
+                type: object
+              fail_flag:
+                type: integer
             required:
               - feature
-              - col_names
             additionalProperties: false
       required:
         - name
@@ -522,6 +532,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
               - flag
@@ -747,6 +760,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
             additionalProperties: false
@@ -834,9 +850,16 @@ properties:
                   type: string
               stats:
                 type: object
+              agg:
+                type: array
+                items:
+                  type: string
+              params:
+                type: object
+              fail_flag:
+                type: integer
             required:
               - feature
-              - col_names
             additionalProperties: false
       required:
         - name

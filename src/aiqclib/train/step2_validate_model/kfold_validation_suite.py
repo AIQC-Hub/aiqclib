@@ -10,6 +10,9 @@ import copy
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.constants import (
+    ID_COLUMNS,
+)
 from aiqclib.train.step2_validate_model.validate_base import ValidationBase
 
 
@@ -75,13 +78,7 @@ class KFoldValidationSuite(ValidationBase):
 
         #: The default number of folds if none is specified in the config.
         self.default_k_fold: int = 10
-        self.drop_cols = [
-            "k_fold",
-            "row_id",
-            "platform_code",
-            "profile_no",
-            "observation_no",
-        ]
+        self.drop_cols = ["k_fold"] + ID_COLUMNS
 
         self.base_model.set_enable_shap(False)
 
@@ -138,7 +135,7 @@ class KFoldValidationSuite(ValidationBase):
                 current_fold_model.training_set = (
                     self.training_sets[target_name]
                     .filter(pl.col("k_fold") != (k + 1))
-                    .drop(self.drop_cols)
+                    .drop(self.drop_cols, strict=False)
                 )
                 current_fold_model.build()
                 self.models[comp_key].append(current_fold_model)
@@ -147,7 +144,7 @@ class KFoldValidationSuite(ValidationBase):
                 current_fold_model.test_set = (
                     self.training_sets[target_name]
                     .filter(pl.col("k_fold") == (k + 1))
-                    .drop(self.drop_cols)
+                    .drop(self.drop_cols, strict=False)
                 )
                 current_fold_model.test()
                 reports.append(current_fold_model.report)

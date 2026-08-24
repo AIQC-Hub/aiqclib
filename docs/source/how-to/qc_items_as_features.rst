@@ -198,7 +198,13 @@ LDA, SVM), where collinear inputs make coefficients unstable and hard to read.
 
 Profile-level items (``qc_impossible_date``, ``qc_impossible_location``,
 ``qc_stuck_value``) take one value for every observation in a profile, so they
-carry far less per-row information than their column count suggests.
+carry far less per-row information than their column count suggests. These
+three declare ``level = "profile"`` on their feature classes and are the only
+QC items usable directly in the profile-level pipeline; the others must be
+aggregated per profile via ``agg`` (e.g. ``fail_frac``) — see
+:doc:`profile_level_pipeline`. Note that ``qc_pressure_increasing`` is
+observation-level despite its profile-style column name: its flag varies
+within a profile.
 
 Flag values are codes, not magnitudes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

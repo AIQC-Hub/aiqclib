@@ -25,6 +25,8 @@ class LocationFeat(FeatureBase):
     feature extraction workflow.
     """
 
+    level: str = "profile"
+
     def __init__(
         self,
         target_name: Optional[str] = None,
