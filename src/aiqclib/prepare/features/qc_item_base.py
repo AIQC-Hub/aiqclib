@@ -204,16 +204,42 @@ class QCItemFeatureBase(FeatureBase):
         With :attr:`selected_rows` present (preparation pipeline), the flags
         are joined onto the target's selected rows and keyed by ``row_id``;
         otherwise (NRT QC module) the full flag frame is kept.
+
+        In the profile-level pipeline the selected rows are one per profile
+        (no ``observation_no`` column). Only items whose :attr:`level` is
+        ``"profile"`` can join there: their flags are constant within a
+        profile, so one flag row per profile is joined on the profile keys.
+
+        :raises ValueError: If the selected rows are profile-level but this
+                            item is observation-level (it must be aggregated
+                            via the extract step's ``agg`` mechanism instead).
         """
         flags = self.compute_flags(self.filtered_input)
 
         if self.selected_rows is not None and self.target_name is not None:
-            self.features = (
-                self.selected_rows[self.target_name]
-                .select(["row_id", *OBSERVATION_KEYS])
-                .join(flags, on=OBSERVATION_KEYS, maintain_order="left")
-                .drop(OBSERVATION_KEYS)
-            )
+            selected = self.selected_rows[self.target_name]
+            if "observation_no" in selected.columns:
+                self.features = (
+                    selected.select(["row_id", *OBSERVATION_KEYS])
+                    .join(flags, on=OBSERVATION_KEYS, maintain_order="left")
+                    .drop(OBSERVATION_KEYS)
+                )
+            else:
+                if type(self).level != "profile":
+                    raise ValueError(
+                        f"QC item '{self.item_name}' is observation-level and "
+                        f"cannot be joined onto profile-level rows; aggregate "
+                        f"it via 'agg' in its feature params instead."
+                    )
+                self.features = (
+                    selected.select(["row_id", *PROFILE_KEYS])
+                    .join(
+                        flags.unique(subset=PROFILE_KEYS, keep="first"),
+                        on=PROFILE_KEYS,
+                        maintain_order="left",
+                    )
+                    .drop([*PROFILE_KEYS, "observation_no"], strict=False)
+                )
         else:
             self.features = flags
 

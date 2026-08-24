@@ -270,6 +270,45 @@ def dataset_config_005() -> DataSetConfig:
     return _load_dataset_config("test_dataset_005.yaml")
 
 
+def _make_profile_dataset_config(label_mode: str = "binary") -> DataSetConfig:
+    """Profile-level variant of test_dataset_005.yaml via config mutation.
+
+    Follows the suite-test pattern: load the select-all config, then swap the
+    locate/extract/split step classes for their profile-level variants, add
+    per-profile aggregations to the observation-level features, and set the
+    targets' ``label_mode``.
+    """
+    config = _load_dataset_config("test_dataset_005.yaml")
+    steps = config.data["step_class_set"]["steps"]
+    steps["locate"] = "LocateDataSetProfile"
+    steps["extract"] = "ExtractDataSetProfile"
+    steps["split"] = "SplitDataSetProfile"
+    # min/max/std do not collide with the profile_summary_stats metric names
+    # (mean, median, sd, pct25, pct75) used by test_dataset_005.yaml.
+    for param in config.data["feature_param_set"]["params"]:
+        if param["feature"] in ("basic_values", "flank_up", "flank_down"):
+            param["agg"] = ["min", "max", "std"]
+    if label_mode != "binary":
+        for variable in config.data["target_set"]["variables"]:
+            variable["label_mode"] = label_mode
+    # Only 12 profiles exist in the fixture data; the default 10% test
+    # fraction would round to an empty test set.
+    config.data["step_param_set"]["steps"]["split"]["test_set_fraction"] = 0.25
+    return config
+
+
+@pytest.fixture
+def dataset_config_profile() -> DataSetConfig:
+    """Profile-level prepare config (binary labels)."""
+    return _make_profile_dataset_config()
+
+
+@pytest.fixture
+def dataset_config_profile_proportion() -> DataSetConfig:
+    """Profile-level prepare config (proportion labels)."""
+    return _make_profile_dataset_config("proportion")
+
+
 @pytest.fixture
 def training_config_001() -> TrainingConfig:
     """Selects ``NRT_BO_001`` — 3-target (temp, psal, pres)."""
