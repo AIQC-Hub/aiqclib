@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.12.0] - 2026-08-25
 ### Added
 - Profile-level pipeline: `LocateDataSetProfile` / `ExtractDataSetProfile` / `SplitDataSetProfile` (prepare) and `LocateDataSetProfile` / `ExtractDataSetProfile` / `ConcatDataSetProfile` (classify) produce, train on, and classify one row per profile instead of one per observation
 - Per-target `label_mode`: `binary` (any bad observation, default) or `proportion` (fraction of bad-flagged observations, in [0, 1]) for profile-level labels
