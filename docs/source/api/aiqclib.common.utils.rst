@@ -9,6 +9,14 @@ aiqclib.common.utils package
 Submodules
 ----------
 
+aiqclib.common.utils.aggregations module
+----------------------------------------
+
+.. automodule:: aiqclib.common.utils.aggregations
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.config module
 ----------------------------------
 

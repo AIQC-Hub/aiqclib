@@ -50,6 +50,8 @@ The library is designed around a three-stage machine learning workflow:
 
 In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable.
 
+All three stages run at the **observation level** (one row per observation) by default, or at the **profile level** (one labeled row per profile/cast, with binary or bad-fraction *proportion* labels) via the `profile` step classes and configuration templates (`extension="profile"`) — see the *Profile-Level Pipeline* guide in the documentation.
+
 Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
 
 ## Usage

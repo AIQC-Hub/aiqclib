@@ -21,7 +21,14 @@ Linear & Geometric               **Logistic Regression**           LogisticRegre
 Instance-Based                   **K-Nearest Neighbors**           KNearestNeighbors            KNN          Distance-based
 Probabilistic                    **Gaussian Naive Bayes**          GaussianNaiveBayes           GNB          Probabilistic
 Neural Network                   **Multilayer Perceptron**         MultilayerPerceptron         MLP          Neural Network
+Regression (profile mode)        **XGBoost Regressor**             XGBoostRegressor             XGBR         Ensemble (Boosting)
+\                                **Random Forest Regressor**       RandomForestRegressor        RFR          Ensemble (Bagging)
 ================================ ================================= ============================ ============ ======================
+
+The two regressors exist for the **proportion labels** of the profile-level
+pipeline (see :doc:`profile_level_pipeline`): they predict the fraction of
+bad-flagged observations in a profile rather than a class probability, and
+cannot be mixed with the classifiers in a ``ModelSuite``.
 
 Configuration
 -------------

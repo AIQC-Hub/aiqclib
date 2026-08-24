@@ -25,6 +25,10 @@ Set it under the ``model`` step parameters:
   wherever a model converts scores into labels. It governs the
   ``predicted_label`` column of the user-facing **prediction** files and any
   threshold-dependent metrics in the reports.
+* **Regressors:** for the profile-level regressor models (see
+  :doc:`profile_level_pipeline`) the ``score`` is the predicted bad-fraction
+  of a profile, so the threshold reads as "flag the profile when the
+  predicted proportion of bad observations reaches this value".
 
 How it is applied
 -----------------

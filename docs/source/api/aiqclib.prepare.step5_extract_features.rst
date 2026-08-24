@@ -17,6 +17,14 @@ aiqclib.prepare.step5\_extract\_features.dataset\_a module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.step5\_extract\_features.dataset\_profile module
+----------------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.step5_extract_features.dataset_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.step5\_extract\_features.extract\_base module
 -------------------------------------------------------------
 

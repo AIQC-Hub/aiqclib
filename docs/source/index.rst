@@ -34,7 +34,12 @@ Linear & Geometric               **Logistic Regression**           Logit        
 Instance-Based                   **K-Nearest Neighbors**           KNN          Distance-based
 Probabilistic                    **Gaussian Naive Bayes**          GNB          Probabilistic
 Neural Network                   **Multilayer Perceptron**         MLP          Neural Network
+Regression (profile mode)        **XGBoost Regressor**             XGBR         Ensemble (Boosting)
+\                                **Random Forest Regressor**       RFR          Ensemble (Bagging)
 ================================ ================================= ============ ======================
+
+The regressors train on the proportion labels of the profile-level
+pipeline — see :doc:`how-to/profile_level_pipeline`.
 
 Project links
 ---------------------------------------------
@@ -73,6 +78,7 @@ This section provides practical examples and solutions for common tasks related 
    how-to/gpu_acceleration
    how-to/prediction_threshold
    how-to/classification_labels
+   how-to/profile_level_pipeline
    how-to/nrt_qc
    how-to/qc_items_as_features
    how-to/performance_evaluation

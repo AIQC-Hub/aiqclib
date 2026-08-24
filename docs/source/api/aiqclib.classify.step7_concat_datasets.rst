@@ -25,6 +25,14 @@ aiqclib.classify.step7\_concat\_datasets.dataset\_all module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.classify.step7\_concat\_datasets.dataset\_profile module
+----------------------------------------------------------------
+
+.. automodule:: aiqclib.classify.step7_concat_datasets.dataset_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.classify.step7\_concat\_datasets.dataset\_suite module
 --------------------------------------------------------------
 
