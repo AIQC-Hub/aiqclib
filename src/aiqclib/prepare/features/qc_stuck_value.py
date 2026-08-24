@@ -27,6 +27,7 @@ class QCStuckValue(QCItemFeatureBase):
     """
 
     item_name: str = "stuck_value"
+    level: str = "profile"
     default_params: Dict = {
         "temp": {},
         "psal": {},

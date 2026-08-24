@@ -16,13 +16,18 @@ from typing import Dict, List, Optional, Tuple
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+
+# Re-exported here for backward compatibility; the canonical definitions
+# live in aiqclib.common.constants.
+from aiqclib.common.constants import OBSERVATION_KEYS, PROFILE_KEYS
 from aiqclib.common.utils.qc_flags import FLAG_BAD, FLAG_GOOD
 
-#: Columns identifying a single observation across the pipeline.
-OBSERVATION_KEYS: List[str] = ["platform_code", "profile_no", "observation_no"]
-
-#: Columns identifying a profile.
-PROFILE_KEYS: List[str] = ["platform_code", "profile_no"]
+__all__ = [
+    "OBSERVATION_KEYS",
+    "PROFILE_KEYS",
+    "QCItemFeatureBase",
+    "QCNeighborStencilBase",
+]
 
 
 class QCItemFeatureBase(FeatureBase):

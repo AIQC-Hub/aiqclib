@@ -10,6 +10,11 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.constants import (
+    ID_COLUMNS,
+    LABELED_ID_COLUMNS,
+    existing_columns,
+)
 from aiqclib.train.step4_build_model.build_model_base import BuildModelBase
 
 
@@ -82,16 +87,10 @@ class ClassifyAll(BuildModelBase):
         )
 
         #: Columns to be dropped from the test set before passing to the base model.
-        self.drop_cols = ["row_id", "platform_code", "profile_no", "observation_no"]
+        self.drop_cols = list(ID_COLUMNS)
 
         #: Columns to be selected from the original test set for final prediction output.
-        self.test_cols = [
-            "row_id",
-            "platform_code",
-            "profile_no",
-            "observation_no",
-            "label",
-        ]
+        self.test_cols = list(LABELED_ID_COLUMNS)
 
     def build(self, target_name: str) -> None:
         """
@@ -142,7 +141,9 @@ class ClassifyAll(BuildModelBase):
         self.base_model.skip_evaluation = self.config.get_skip_evaluation(target_name)
 
         self.base_model.target_name = target_name
-        self.base_model.test_set = self.test_sets[target_name].drop(self.drop_cols)
+        self.base_model.test_set = self.test_sets[target_name].drop(
+            self.drop_cols, strict=False
+        )
         self.base_model.test()
 
         # Always register the target (value may be None for label-free targets)
@@ -155,7 +156,9 @@ class ClassifyAll(BuildModelBase):
         predictions = self.base_model.predictions
         self.predictions[target_name] = pl.concat(
             [
-                self.test_sets[target_name].select(self.test_cols),
+                self.test_sets[target_name].select(
+                    existing_columns(self.test_sets[target_name], self.test_cols)
+                ),
                 predictions,
             ],
             how="horizontal",

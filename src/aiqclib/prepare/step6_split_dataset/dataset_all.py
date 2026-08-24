@@ -10,6 +10,7 @@ import numpy as np
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.constants import ID_COLUMNS, existing_columns
 from aiqclib.prepare.step6_split_dataset.split_base import SplitDataSetBase
 
 
@@ -161,13 +162,7 @@ class SplitDataSetAll(SplitDataSetBase):
         training_set = pos_training_set.vstack(neg_training_set)
 
         # The correct way to reorder columns is to explicitly select them.
-        cols_to_front = [
-            "k_fold",
-            "row_id",
-            "platform_code",
-            "profile_no",
-            "observation_no",
-        ]
+        cols_to_front = existing_columns(training_set, ["k_fold"] + ID_COLUMNS)
         self.training_sets[target_name] = training_set.select(
             cols_to_front + [pl.all().exclude(cols_to_front)]
         )
