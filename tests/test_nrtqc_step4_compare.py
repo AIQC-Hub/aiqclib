@@ -144,6 +144,23 @@ class TestItemBreakdown:
             "impossible_date",
         }
 
+    def test_excluded_items_still_reported(self, nrtqc_config_001):
+        """An item left out of the final flag keeps its breakdown rows.
+
+        The breakdown answers "how does this test behave against the
+        existing flags", which is exactly the question asked about an item
+        that is being considered for exclusion. Filtering it out here would
+        remove the evidence needed to make that decision.
+        """
+        by_name = {x["name"]: x for x in nrtqc_config_001.data["qc_item_set"]["items"]}
+        by_name["global_range"]["include_in_final_flag"] = False
+
+        ds = load_nrtqc_step4_compare_dataset(nrtqc_config_001, make_merged_frame())
+        ds.compare_targets()
+
+        breakdown = get_section(ds.reports["temp"], "item_breakdown")
+        assert "global_range" in set(breakdown["item"].unique().to_list())
+
 
 class TestComparableTargets:
     """Skip/error behaviour for the configured variables."""

@@ -9,6 +9,8 @@ The table used throughout is the whitespace-aligned form a maintainer is most
 likely to write by hand.
 """
 
+from dataclasses import replace
+
 import polars as pl
 import pytest
 
@@ -21,10 +23,10 @@ from aiqclib.interface.batch import (
 
 
 TABLE_TEXT = """\
-name       prepare_set_name       training_set_name       classification_set_name
-ar_ar      dataset_ar_ar_0001     training_ar_ar_0001     classification_ar_ar_0001
-bo_bo      dataset_bo_bo_0001     training_bo_bo_0001     classification_bo_bo_0001
-cora_mo    dataset_cora_mo_0001   training_cora_mo_0001   classification_cora_mo_0001
+name       prepare_set_name       training_set_name       classification_set_name     nrt_qc_set_name
+ar_ar      dataset_ar_ar_0001     training_ar_ar_0001     classification_ar_ar_0001   nrt_qc_ar_ar_0001
+bo_bo      dataset_bo_bo_0001     training_bo_bo_0001     classification_bo_bo_0001   nrt_qc_bo_bo_0001
+cora_mo    dataset_cora_mo_0001   training_cora_mo_0001   classification_cora_mo_0001 nrt_qc_cora_mo_0001
 """
 
 
@@ -51,16 +53,15 @@ def calls(monkeypatch):
     monkeypatch.setattr(batch_module, "read_config", fake_read_config)
 
     # Phase is frozen, so the recorders go in by rebuilding the tuple.
+    # ``replace`` rather than positional construction: it carries every other
+    # field over, so a stub cannot silently differ from the real phase (an
+    # earlier version dropped ``in_all`` and quietly put nrt_qc back into
+    # ``mode="all"`` for every test using this fixture).
     monkeypatch.setattr(
         batch_module,
         "PHASES",
         tuple(
-            batch_module.Phase(
-                phase.name,
-                phase.column,
-                phase.config_argument,
-                _make_recorder(log, phase.name),
-            )
+            replace(phase, runner=_make_recorder(log, phase.name))
             for phase in batch_module.PHASES
         ),
     )
@@ -80,6 +81,7 @@ ALL_CONFIGS = {
     "prepare_config": "prepare.yaml",
     "training_config": "train.yaml",
     "classification_config": "classify.yaml",
+    "nrt_qc_config": "nrtqc.yaml",
 }
 
 
@@ -145,8 +147,15 @@ class TestModes:
     """Which phases a mode selects."""
 
     def test_available_modes(self):
-        """Every phase, plus 'all'."""
-        assert available_modes() == ["prepare", "train", "classify", "all"]
+        """Every phase, plus 'all'. nrt_qc is selectable even though 'all'
+        does not include it."""
+        assert available_modes() == [
+            "prepare",
+            "train",
+            "classify",
+            "nrt_qc",
+            "all",
+        ]
 
     @pytest.mark.parametrize(
         "mode, expected",
@@ -154,6 +163,7 @@ class TestModes:
             ("prepare", ["prepare"]),
             ("train", ["train"]),
             ("classify", ["classify"]),
+            ("nrt_qc", ["nrt_qc"]),
             ("all", ["prepare", "train", "classify"]),
         ],
     )
@@ -177,6 +187,99 @@ class TestModes:
             "training_ar_ar_0001",
             "classification_ar_ar_0001",
         ]
+
+
+class TestNRTQCMode:
+    """The NRT QC phase, which is selectable but outside ``mode="all"``.
+
+    NRT QC produces flag columns that are an input to the prepare phase
+    rather than a step of it, so folding it into "all" would redo the QC on
+    every retrain. These tests pin that boundary in both directions.
+    """
+
+    def test_all_never_runs_nrt_qc(self, table_file, calls):
+        """The training pipeline is unchanged by the phase existing."""
+        run_batch(table_file, mode="all", **ALL_CONFIGS)
+        assert "nrt_qc" not in {call[0] for call in calls}
+
+    def test_all_does_not_require_the_nrt_qc_config(self, table_file, calls):
+        """Existing callers of "all" keep working without the new argument."""
+        run_batch(
+            table_file,
+            mode="all",
+            prepare_config="prepare.yaml",
+            training_config="train.yaml",
+            classification_config="classify.yaml",
+        )
+        assert {call[0] for call in calls} == {"prepare", "train", "classify"}
+
+    def test_mode_runs_only_nrt_qc(self, table_file, calls):
+        """One run per dataset, and nothing else."""
+        run_batch(table_file, mode="nrt_qc", **ALL_CONFIGS)
+        assert [call[0] for call in calls] == ["nrt_qc"] * 3
+
+    def test_set_names_come_from_the_nrt_qc_column(self, table_file, calls):
+        """The nrt_qc_set_name column supplies the set per dataset."""
+        run_batch(table_file, mode="nrt_qc", **ALL_CONFIGS)
+        assert [call[2] for call in calls] == [
+            "nrt_qc_ar_ar_0001",
+            "nrt_qc_bo_bo_0001",
+            "nrt_qc_cora_mo_0001",
+        ]
+
+    def test_uses_the_nrt_qc_config_file(self, table_file, calls):
+        """The phase reads its own config file, not another phase's."""
+        run_batch(table_file, mode="nrt_qc", **ALL_CONFIGS)
+        assert {call[1] for call in calls} == {"nrtqc.yaml"}
+
+    def test_missing_config_names_the_argument(self, table_file, calls):
+        """Forgetting the config file says which keyword to pass."""
+        with pytest.raises(ValueError, match="nrt_qc_config"):
+            run_batch(table_file, mode="nrt_qc", prepare_config="prepare.yaml")
+
+    def test_missing_column_names_the_column(self, tmp_path, calls):
+        """A table without the nrt_qc column is rejected for this mode only."""
+        path = tmp_path / "datasets.txt"
+        path.write_text("name  prepare_set_name\nar_ar  dataset_ar_ar_0001\n")
+        with pytest.raises(ValueError, match="nrt_qc_set_name"):
+            run_batch(str(path), mode="nrt_qc", **ALL_CONFIGS)
+
+    def test_other_modes_do_not_need_the_column(self, tmp_path, calls):
+        """A table predating the phase still runs the older modes."""
+        path = tmp_path / "datasets.txt"
+        path.write_text("name  prepare_set_name\nar_ar  dataset_ar_ar_0001\n")
+        run_batch(str(path), mode="prepare", **ALL_CONFIGS)
+        assert [call[0] for call in calls] == ["prepare"]
+
+    def test_blank_cell_skips_the_dataset(self, tmp_path, calls):
+        """A blank nrt_qc cell skips that dataset, as for any phase.
+
+        A .tsv rather than a .txt: a whitespace-separated table cannot carry
+        an empty trailing field, so the blank has to be delimited.
+        """
+        path = tmp_path / "datasets.tsv"
+        path.write_text("name\tnrt_qc_set_name\nar_ar\tnrt_qc_ar_ar_0001\nbo_bo\t\n")
+        summary = run_batch(str(path), mode="nrt_qc", **ALL_CONFIGS)
+        assert [call[2] for call in calls] == ["nrt_qc_ar_ar_0001"]
+        assert summary["status"].to_list() == ["ok", "skipped"]
+
+    def test_without_a_table(self, calls):
+        """Without a table the config file selects its own set."""
+        run_batch(mode="nrt_qc", **ALL_CONFIGS)
+        assert [call[0] for call in calls] == ["nrt_qc"]
+        assert calls[0][2] is None
+
+    def test_runner_is_run_nrt_qc(self):
+        """The phase is wired to the public entry point, not a lookalike.
+
+        Checked against the unstubbed PHASES, since the fixtures above
+        replace every runner with a recorder.
+        """
+        from aiqclib.interface.nrtqc import run_nrt_qc
+
+        phase = next(p for p in batch_module.PHASES if p.name == "nrt_qc")
+        assert phase.runner is run_nrt_qc
+        assert phase.in_all is False
 
 
 class TestConfigSelection:
@@ -357,12 +460,7 @@ class TestFailures:
         monkeypatch.setattr(
             batch_module,
             "PHASES",
-            tuple(
-                batch_module.Phase(
-                    phase.name, phase.column, phase.config_argument, runner
-                )
-                for phase in batch_module.PHASES
-            ),
+            tuple(replace(phase, runner=runner) for phase in batch_module.PHASES),
         )
         return log
 

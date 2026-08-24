@@ -20,7 +20,7 @@ import polars as pl
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from aiqclib.common.base.scikit_learn_model_base import SklearnModelBase
-from aiqclib.common.utils.diagnostics import warn_constant_labels, warn_shap_cost
+from aiqclib.common.utils.diagnostics import report_shap_cost, warn_constant_labels
 
 
 class SklearnRegressorModelBase(SklearnModelBase):
@@ -37,7 +37,7 @@ class SklearnRegressorModelBase(SklearnModelBase):
         """
         Warn (rather than refuse) when the training labels are constant.
 
-        A constant continuous label yields a constant predictor — degenerate
+        A constant continuous label yields a constant predictor: degenerate
         but possible on legitimately clean data, unlike the single-class
         classifier case.
 
@@ -103,8 +103,8 @@ class SklearnRegressorModelBase(SklearnModelBase):
         """
         Compile a regression report over the test predictions.
 
-        Produces one row per metric — ``mae``, ``rmse``, ``r2`` and
-        ``n_samples`` — in the same long-format frame the report writers
+        Produces one row per metric (``mae``, ``rmse``, ``r2`` and
+        ``n_samples``) in the same long-format frame the report writers
         serialize for classification reports.
 
         :raises ValueError: If :attr:`test_set` or :attr:`predictions` are ``None``.
@@ -171,7 +171,7 @@ class SklearnRegressorModelBase(SklearnModelBase):
 
         x_test = self.test_set.select(pl.exclude("label")).to_pandas()
 
-        warn_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
+        report_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
 
         model_name = getattr(self, "expected_class_name", "Unknown")
 

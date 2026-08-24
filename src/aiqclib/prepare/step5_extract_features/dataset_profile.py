@@ -34,7 +34,7 @@ class ExtractDataSetProfile(ExtractFeatureBase):
     - ``"observation"``: the entry must carry an ``agg`` list; the feature
       runs against the target's :attr:`observation_rows` and each feature
       column is aggregated per profile into ``{column}_{agg}`` columns. An
-      observation-level feature without ``agg`` is rejected — this is what
+      observation-level feature without ``agg`` is rejected; this is what
       keeps un-aggregated observation-level NRT QC items out of
       profile-level training.
     """

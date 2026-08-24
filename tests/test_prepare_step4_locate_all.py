@@ -1,6 +1,6 @@
 """Unit tests for the ``LocateDataSetAll`` class.
 
-LocateDataSetAll is the "select-all" variant of LocateDataSetA — for each
+LocateDataSetAll is the "select-all" variant of LocateDataSetA; for each
 target, it keeps all rows of the (select-all) input rather than filtering
 by QC flag values. Used by tests under ``test_dataset_005.yaml``.
 

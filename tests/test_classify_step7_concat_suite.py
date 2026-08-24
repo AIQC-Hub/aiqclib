@@ -69,7 +69,7 @@ def step7_suite_pipeline(suite_classify_config, test_data_file, training_dir):
     attributes. ``classify`` is a ClassifyAllSuite instance with .predictions
     populated, ready for step7 (concat).
 
-    The classify-suite tests use six existing single-method model joblibs —
+    The classify-suite tests use six existing single-method model joblibs,
     one per (method, target). These don't share the multi-method
     ``ModelSuite.fit()`` interface, but read_models() loads them by
     composite key independently, which is enough for testing the concat

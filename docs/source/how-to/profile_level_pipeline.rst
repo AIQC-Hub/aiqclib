@@ -7,7 +7,7 @@ instead produces **one row per profile** (a cast, identified by
 ``platform_code`` + ``profile_no``), so a model flags whole casts rather
 than single observations.
 
-The mode is selected the usual way — by naming the profile-level step
+The mode is selected the usual way, by naming the profile-level step
 classes in ``step_class_sets``. Templates for all three stages exist:
 
 .. code-block:: python
@@ -34,10 +34,10 @@ Each target variable gets an optional ``label_mode`` key:
            neg_flag_values: [ 1 ]
            label_mode: proportion   # or binary (the default)
 
-* ``binary`` (default) — the profile label is ``1`` when **any** observation
+* ``binary`` (default): the profile label is ``1`` when **any** observation
   of the profile carries a positive flag, else ``0``. Trains with the
   existing classifiers.
-* ``proportion`` — the profile label is the **fraction of positive-flagged
+* ``proportion``: the profile label is the **fraction of positive-flagged
   observations** among the observations carrying a valid (positive or
   negative) flag, a float in ``[0, 1]``. Trains with the regressor models
   ``XGBoostRegressor`` (``XGBR``) / ``RandomForestRegressor`` (``RFR``).
@@ -61,14 +61,15 @@ Feature                       Why profile-level
 ``profile_summary_stats``     per-profile statistics by construction
 ``qc_impossible_date``        checks ``profile_timestamp``
 ``qc_impossible_location``    checks longitude/latitude
+``qc_position_on_land``       checks the depth at the profile position
 ``qc_stuck_value``            compares all values of a profile
 ============================ =========================================
 
-All other features — ``basic_values``, ``flank_up``/``flank_down`` and the
-remaining ``qc_*`` items (including ``qc_pressure_increasing``, whose flag
-varies within a profile) — are observation-level. At profile level they
-**must** carry an ``agg`` list naming per-profile aggregations of their
-columns; an observation-level feature without ``agg`` is rejected with an
+All other features are observation-level: ``basic_values``,
+``flank_up``/``flank_down`` and the remaining ``qc_*`` items (including
+``qc_pressure_increasing``, whose flag varies within a profile). At profile
+level they **must** carry an ``agg`` list naming per-profile aggregations of
+their columns; an observation-level feature without ``agg`` is rejected with an
 error naming the feature:
 
 .. code-block:: yaml
@@ -89,22 +90,22 @@ error naming the feature:
            agg: [ fail_frac, fail_any ]
 
 Available aggregations: ``mean``, ``min``, ``max``, ``median``, ``std``,
-``sum``, ``first``, plus two QC-flag-oriented ones — ``fail_frac`` (the
+``sum``, ``first``, plus two QC-flag-oriented ones: ``fail_frac`` (the
 fraction of observations failing the item) and ``fail_any`` (1 when any
 observation fails). Aggregated columns are named ``{column}_{agg}``.
 
 .. note::
 
    Every output column must be unique. ``agg: [mean]`` on ``basic_values``
-   would produce ``temp_mean`` — colliding with the ``temp_mean`` from
-   ``profile_summary_stats`` — and is rejected with an error listing the
+   would produce ``temp_mean`` (colliding with the ``temp_mean`` from
+   ``profile_summary_stats``) and is rejected with an error listing the
    duplicated columns. Pick non-overlapping aggregation and summary
    statistic names.
 
 Preparation
 -----------
 
-Steps 1–3 reuse the observation-level classes; locate, extract, and split
+Steps 1-3 reuse the observation-level classes; locate, extract, and split
 have profile-level variants:
 
 .. code-block:: yaml
@@ -135,7 +136,7 @@ random k-fold assignment.
 Training
 --------
 
-The training stage needs **no profile-specific step classes** — it consumes
+The training stage needs **no profile-specific step classes**; it consumes
 the profile-level train/test files unchanged. Binary profile labels work
 with all nine classifiers. Proportion labels require a regressor model:
 
@@ -165,7 +166,7 @@ for classifier and regressor runs.
 Classification
 --------------
 
-The classify stage mirrors preparation — steps 1–3 and the classify step
+The classify stage mirrors preparation: steps 1-3 and the classify step
 reuse the observation-level classes:
 
 .. code-block:: yaml
@@ -184,7 +185,7 @@ reuse the observation-level classes:
 
 Targets with a QC flag are evaluated against the same binary/proportion
 labels as in preparation; targets without a flag are classified label-free
-(see :doc:`classification_labels`) — every profile is kept with a null
+(see :doc:`classification_labels`); every profile is kept with a null
 label.
 
 The concat step writes ``predictions_profile.parquet`` with **one row per
@@ -206,6 +207,6 @@ Known limitations
 * No positive/negative profile **pairing** (the ``SelectDataSetA``-style
   down-sampling) at profile level yet.
 * The model step class is global per configuration, so one run cannot mix a
-  classifier target with a regressor target — use separate configurations.
+  classifier target with a regressor target; use separate configurations.
 * Only ``XGBoostRegressor`` and ``RandomForestRegressor`` are provided;
   regressor variants of the other methods may follow.

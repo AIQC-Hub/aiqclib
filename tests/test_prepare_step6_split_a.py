@@ -159,7 +159,7 @@ class TestSplitDataSetA:
         """A target with no test rows is refused, and nothing is written.
 
         The fixtures have no ``pres_qc == 4`` rows, so ``pres`` splits to an
-        empty test set — the situation that used to reach the model and fail
+        empty test set; the situation that used to reach the model and fail
         there with a feature-name mismatch.
         """
         ds = SplitDataSetA(

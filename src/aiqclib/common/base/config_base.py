@@ -613,7 +613,7 @@ class ConfigBase(ABC):
 
     #: Steps whose paths are resolved without the dataset folder, i.e. those
     #: the step classes read with ``use_dataset_folder=False``. Only
-    #: :meth:`summary` uses this — the step classes remain the authority on
+    #: :meth:`summary` uses this; the step classes remain the authority on
     #: their own paths, so a subclass listing the wrong steps misreports a
     #: directory rather than changing where anything is written.
     _steps_without_dataset_folder: Tuple[str, ...] = ("input",)
@@ -700,8 +700,8 @@ class ConfigBase(ABC):
         """
         Describe the active row filters of the ``input`` step.
 
-        These are worth surfacing because a filter that matches nothing — a
-        ``keep_years`` naming years the input does not cover, say — empties
+        These are worth surfacing because a filter that matches nothing (a
+        ``keep_years`` naming years the input does not cover, say) empties
         the dataset without any hint in the configuration itself.
 
         :param width: The total line width the summary is formatted to.
@@ -781,7 +781,7 @@ class ConfigBase(ABC):
         """
         Supply subclass-specific summary rows.
 
-        Subclasses override this to report what only they have — the NRT QC
+        Subclasses override this to report what only they have, such as the NRT QC
         items, for instance. Rows are inserted after the features row.
 
         :param width: The total line width the summary is formatted to.
@@ -796,8 +796,8 @@ class ConfigBase(ABC):
         Build a readable summary of what this configuration resolves to.
 
         This is what :meth:`__str__` returns, so ``print(config)`` shows the
-        summary. It reports the source file, the schema status, and — once an
-        entry has been selected — the targets, features, input file, row
+        summary. It reports the source file, the schema status, and, once an
+        entry has been selected, the targets, features, input file, row
         filters, and the class and output directory of every step. Nothing is
         recomputed or cached: the summary reflects :attr:`data` as it stands,
         including any changes made to it since :meth:`select`.

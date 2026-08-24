@@ -25,7 +25,7 @@ class QCTempToPsal(QCItemFeatureBase):
     Temperature-to-salinity flag propagation (observation-level).
 
     Copies the aggregated temperature flag onto salinity when it is 3 or 4
-    (the propagated flag keeps its severity — ``fail_flag`` does not apply
+    (the propagated flag keeps its severity, so ``fail_flag`` does not apply
     to this item). Produces the single column ``psal_qc_temp_to_psal``,
     which is 1 wherever the temperature flag is good or missing.
     """

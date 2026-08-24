@@ -19,6 +19,10 @@ Only the columns of the phases being run have to be present, so a table used
 for ``mode="prepare"`` needs nothing but the name and prepare columns. A blank
 cell skips that phase for that dataset.
 
+The NRT QC module is available the same way, as ``mode="nrt_qc"`` reading an
+``nrt_qc_set_name`` column, but it is not part of ``mode="all"``: see
+:data:`PHASES`.
+
 Every run returns a summary frame, one row per dataset and phase, recording
 whether it succeeded and how long it took. New phases are added by extending
 :data:`PHASES`; nothing else in the module is phase-specific.
@@ -36,6 +40,7 @@ from aiqclib.common.utils.file import expand_path
 from aiqclib.common.utils.progress import PREFIX
 from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
+from aiqclib.interface.nrtqc import run_nrt_qc
 from aiqclib.interface.prepare import create_training_dataset
 from aiqclib.interface.train import train_and_evaluate
 
@@ -53,15 +58,25 @@ class Phase:
     :vartype config_argument: str
     :ivar runner: The entry point to call with the selected configuration.
     :vartype runner: Callable[[ConfigBase, bool], None]
+    :ivar in_all: Whether ``mode="all"`` runs this phase. Defaults to
+                  :obj:`True`.
+    :vartype in_all: bool
     """
 
     name: str
     column: str
     config_argument: str
     runner: Callable[[ConfigBase, bool], None]
+    in_all: bool = True
 
 
 #: The phases a batch can run, in the order ``mode="all"`` runs them.
+#:
+#: ``nrt_qc`` is deliberately outside ``mode="all"``. The other three chain
+#: together, each consuming what the previous one wrote, whereas NRT QC
+#: produces flag columns that are an *input* to the prepare phase rather than
+#: a step of it. Running it inside ``"all"`` would redo the QC on every
+#: retrain, so it is available on demand as ``mode="nrt_qc"``.
 PHASES: Tuple[Phase, ...] = (
     Phase("prepare", "prepare_set_name", "prepare_config", create_training_dataset),
     Phase("train", "training_set_name", "training_config", train_and_evaluate),
@@ -70,6 +85,13 @@ PHASES: Tuple[Phase, ...] = (
         "classification_set_name",
         "classification_config",
         classify_dataset,
+    ),
+    Phase(
+        "nrt_qc",
+        "nrt_qc_set_name",
+        "nrt_qc_config",
+        run_nrt_qc,
+        in_all=False,
     ),
 )
 
@@ -94,6 +116,9 @@ def available_modes() -> List[str]:
     """
     Return the accepted ``mode`` values.
 
+    Every phase can be named individually, including the ones ``"all"``
+    leaves out (see :data:`PHASES`).
+
     :return: Each phase name, followed by ``"all"``.
     :rtype: List[str]
     """
@@ -104,6 +129,9 @@ def _resolve_phases(mode: str) -> Tuple[Phase, ...]:
     """
     Map a mode onto the phases it runs.
 
+    ``"all"`` resolves to the phases marked :attr:`Phase.in_all`, not to
+    every phase: see :data:`PHASES` for why ``nrt_qc`` is excluded.
+
     :param mode: A phase name or ``"all"``.
     :type mode: str
     :raises ValueError: If the mode is not one of :func:`available_modes`.
@@ -111,7 +139,7 @@ def _resolve_phases(mode: str) -> Tuple[Phase, ...]:
     :rtype: Tuple[Phase, ...]
     """
     if mode == ALL_MODE:
-        return PHASES
+        return tuple(phase for phase in PHASES if phase.in_all)
     for phase in PHASES:
         if phase.name == mode:
             return (phase,)
@@ -311,6 +339,7 @@ def run_batch(
     prepare_config: Optional[str] = None,
     training_config: Optional[str] = None,
     classification_config: Optional[str] = None,
+    nrt_qc_config: Optional[str] = None,
     names: Optional[Sequence[str]] = None,
     verbose: bool = False,
     continue_on_error: bool = False,
@@ -333,7 +362,9 @@ def run_batch(
                   ``None`` runs each phase once without naming a set.
     :type table: Optional[Union[str, polars.DataFrame]]
     :param mode: Which phases to run: a phase name from :func:`available_modes`
-                 or ``"all"``. Defaults to ``"all"``.
+                 or ``"all"``. Defaults to ``"all"``, which runs prepare,
+                 train and classify. ``"nrt_qc"`` is run on demand only and
+                 is never part of ``"all"`` (see :data:`PHASES`).
     :type mode: str
     :param prepare_config: The configuration file for the prepare phase.
     :type prepare_config: Optional[str]
@@ -341,6 +372,8 @@ def run_batch(
     :type training_config: Optional[str]
     :param classification_config: The configuration file for the classify phase.
     :type classification_config: Optional[str]
+    :param nrt_qc_config: The configuration file for the NRT QC phase.
+    :type nrt_qc_config: Optional[str]
     :param names: Run only these datasets, instead of every row. Requires a
                   table, since there are no names to choose from without one.
     :type names: Optional[Sequence[str]]
@@ -379,6 +412,7 @@ def run_batch(
         "prepare_config": prepare_config,
         "training_config": training_config,
         "classification_config": classification_config,
+        "nrt_qc_config": nrt_qc_config,
     }
     _resolve_config_files(phases, config_files)
 

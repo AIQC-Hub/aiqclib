@@ -31,7 +31,7 @@ The package is available on PyPI.
 pip install aiqclib
 ```
 
-**Using conda:** *(not published yet — the conda-forge recipe submission is still in progress; use pip or uv for now)*
+**Using conda:** *(not published yet: the conda-forge recipe submission is still in progress; use pip or uv for now)*
 ```bash
 conda install -c conda-forge aiqclib
 ```
@@ -50,7 +50,7 @@ The library is designed around a three-stage machine learning workflow:
 
 In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable.
 
-All three stages run at the **observation level** (one row per observation) by default, or at the **profile level** (one labeled row per profile/cast, with binary or bad-fraction *proportion* labels) via the `profile` step classes and configuration templates (`extension="profile"`) — see the *Profile-Level Pipeline* guide in the documentation.
+All three stages run at the **observation level** (one row per observation) by default, or at the **profile level** (one labeled row per profile/cast, with binary or bad-fraction *proportion* labels) via the `profile` step classes and configuration templates (`extension="profile"`); see the *Profile-Level Pipeline* guide in the documentation.
 
 Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease.
 
@@ -147,8 +147,9 @@ This workflow processes a dataset using a trained model and generates:
 
 ### Running several datasets at once
 
-`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`) or `"all"` of
-them over a table of dataset names, returning a summary of every run:
+`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`, `"nrt_qc"`) or
+`"all"` of the first three over a table of dataset names, returning a summary of
+every run:
 
 ```python
 import aiqclib as aq
@@ -162,6 +163,10 @@ summary = aq.run_batch(
     verbose=True,
 )
 ```
+
+NRT QC is run the same way, with `mode="nrt_qc"` and `nrt_qc_config=...`. It is
+deliberately not part of `"all"`, because its flags are an input to the prepare
+phase rather than a step of it.
 
 See the batch guide in the documentation for the table format and options.
 

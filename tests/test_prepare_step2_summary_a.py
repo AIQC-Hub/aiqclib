@@ -10,7 +10,7 @@ Exercises:
 - Empty-state ValueErrors for observation and profile creators
 
 Refactored from the original which:
-- Was named ``TestSelectDataSetA`` — a clear copy-paste from step3 that
+- Was named ``TestSelectDataSetA``, a clear copy-paste from step3 that
   tested SummaryDataSetA. Renamed to ``TestSummaryDataSetA`` so
   ``pytest -k Summary`` filters it correctly.
 - Used ad-hoc ``_setup_configs()`` and ``_setup_input_datasets()`` helpers

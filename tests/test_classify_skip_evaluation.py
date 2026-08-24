@@ -137,13 +137,13 @@ class TestSkipEvaluationStep4:
         )
         ds.process_targets()
 
-        # temp: label-free — all rows, flag and label fully null.
+        # temp: label-free; all rows, flag and label fully null.
         temp = ds.selected_rows["temp"]
         assert temp.shape == (2456, 9)
         assert temp["flag"].null_count() == 2456
         assert temp["label"].null_count() == 2456
 
-        # psal: still labelled — labels present (0/1), no nulls.
+        # psal: still labelled; labels present (0/1), no nulls.
         psal = ds.selected_rows["psal"]
         assert psal["label"].null_count() == 0
         assert set(psal["label"].unique().to_list()) <= {0, 1}
@@ -180,8 +180,8 @@ def skip_pipeline(test_data_file, classify_yaml_001):
     """Prepare pipeline for classify_001 with skip_evaluation forced on.
 
     The override is injected *before* the pipeline runs so step4 also takes the
-    label-free path and null labels propagate through to the extracted test set
-    — the true end-to-end skip scenario.
+    label-free path and null labels propagate through to the extracted test set,
+    the true end-to-end skip scenario.
     """
 
     def _enable_skip(config):

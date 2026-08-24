@@ -3,7 +3,7 @@
 load_feature_class is the factory that turns a feature-param dict (one
 entry from ``config.data["feature_param_set"]["params"]``) into a concrete
 feature object. The first entry in ``test_dataset_001.yaml``'s
-feature_param_set defines a ``LocationFeat``-class feature — the tests
+feature_param_set defines a ``LocationFeat``-class feature; the tests
 verify the loader returns the right instance for that entry and raises
 ValueError when given an invalid feature name.
 

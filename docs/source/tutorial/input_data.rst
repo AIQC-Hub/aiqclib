@@ -98,7 +98,7 @@ The required columns are:
 Alongside these, you need the measurement columns you intend to model
 (``temp``, ``psal``) and their QC flag columns (``temp_qc``, ``psal_qc``),
 which supply the labels. ``pres`` is needed too, as an input feature and to
-order observations within a profile, but it is not modelled — see
+order observations within a profile, but it is not modelled; see
 :ref:`choosing-targets`.
 
 .. important::

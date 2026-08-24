@@ -20,7 +20,7 @@ def expand_path(file_name: str) -> str:
     Paths reach the library from two directions: arguments passed to the public
     functions, and ``base_path`` values read out of a YAML configuration. A user
     writing either one reasonably expects ``~/aiqc_project`` to mean their home
-    directory, but nothing expands it on their behalf — YAML is not a shell, and
+    directory, but nothing expands it on their behalf: YAML is not a shell, and
     ``os.path.join`` treats ``~`` as an ordinary directory name. Left alone, a
     path like that resolves relative to the current working directory, so output
     lands in a literal ``~`` folder wherever the interpreter happened to start.

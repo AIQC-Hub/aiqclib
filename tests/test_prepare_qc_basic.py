@@ -1,10 +1,11 @@
 """Unit tests for the basic NRT QC item feature classes.
 
-Covers the Phase 3 items (impossible date, impossible location, global
-range, regional range, stuck value) and the shared ``QCItemFeatureBase``
-plumbing: parameter resolution, ``fail_flag`` handling, full-frame vs
-selected-rows output, and registry entries. All tests use small synthetic
-profiles so expectations can be verified row by row.
+Covers the Phase 3 items (impossible date, impossible location, position on
+land, global range, regional range, stuck value) and the shared
+``QCItemFeatureBase`` plumbing: parameter resolution, ``fail_flag``
+handling, full-frame vs selected-rows output, and registry entries. All
+tests use small synthetic profiles so expectations can be verified row by
+row.
 """
 
 from datetime import datetime
@@ -16,6 +17,7 @@ from aiqclib.common.loader.feature_registry import FEATURE_REGISTRY
 from aiqclib.prepare.features.qc_global_range import QCGlobalRange
 from aiqclib.prepare.features.qc_impossible_date import QCImpossibleDate
 from aiqclib.prepare.features.qc_impossible_location import QCImpossibleLocation
+from aiqclib.prepare.features.qc_position_on_land import QCPositionOnLand
 from aiqclib.prepare.features.qc_regional_range import QCRegionalRange
 from aiqclib.prepare.features.qc_stuck_value import QCStuckValue
 
@@ -124,6 +126,117 @@ class TestImpossibleLocation:
         df = make_profile([5.0], longitude=longitude, latitude=latitude)
         flags = run_item(QCImpossibleLocation, df)
         assert flags["qc_impossible_location"].to_list() == [4]
+
+
+# ---------------------------------------------------------------------------
+# RTQC4: position on land
+# ---------------------------------------------------------------------------
+
+
+def with_depth(
+    df: pl.DataFrame, depths: list, column: str = "bathymetry"
+) -> pl.DataFrame:
+    """Attach an externally computed sea floor depth column to a profile."""
+    return df.with_columns(pl.Series(column, depths, dtype=pl.Float64))
+
+
+class TestPositionOnLand:
+    """RTQC4 position on land test, read from a depth column."""
+
+    def test_ocean_depth_passes(self):
+        df = with_depth(make_profile([5.0, 6.0]), [120.0, 3500.0])
+        flags = run_item(QCPositionOnLand, df)
+        assert flags["qc_position_on_land"].to_list() == [1, 1]
+
+    @pytest.mark.parametrize("depth", [-5.0, -0.1, 0.0])
+    def test_land_and_sea_level_fail(self, depth):
+        """Above sea level is land, and sea level itself is the shoreline."""
+        df = with_depth(make_profile([5.0]), [depth])
+        flags = run_item(QCPositionOnLand, df)
+        assert flags["qc_position_on_land"].to_list() == [4]
+
+    def test_negative_convention_inverts_the_test(self):
+        """With positive_depth False, the ocean is below zero instead."""
+        df = with_depth(make_profile([5.0, 6.0, 7.0]), [-120.0, 0.0, 5.0])
+        flags = run_item(
+            QCPositionOnLand,
+            df,
+            {"params": {"positive_depth": False}},
+        )
+        assert flags["qc_position_on_land"].to_list() == [1, 4, 4]
+
+    def test_same_data_flips_with_the_convention(self):
+        """The convention is not cosmetic: reading it wrong inverts the verdict."""
+        df = with_depth(make_profile([5.0, 6.0]), [120.0, -30.0])
+        as_positive = run_item(QCPositionOnLand, df)
+        as_negative = run_item(
+            QCPositionOnLand, df, {"params": {"positive_depth": False}}
+        )
+        assert as_positive["qc_position_on_land"].to_list() == [1, 4]
+        assert as_negative["qc_position_on_land"].to_list() == [4, 1]
+
+    def test_custom_depth_column(self):
+        """``bath`` is what the production CTD input actually calls it."""
+        df = with_depth(make_profile([5.0, 6.0]), [120.0, -5.0], column="bath")
+        flags = run_item(
+            QCPositionOnLand,
+            df,
+            {"params": {"depth_column": "bath"}},
+        )
+        assert flags["qc_position_on_land"].to_list() == [1, 4]
+
+    def test_default_column_is_not_depth(self):
+        """The default names the sea floor, not the measurement depth.
+
+        A column called ``depth`` must not satisfy this item: the two mean
+        different things, and silently reading one as the other would flag
+        every shallow observation as being on land.
+        """
+        df = with_depth(make_profile([5.0]), [120.0], column="depth")
+        with pytest.raises(ValueError, match="'bathymetry'"):
+            run_item(QCPositionOnLand, df)
+
+    def test_missing_column_raises(self):
+        """An absent depth column is an error, never a silent pass."""
+        df = make_profile([5.0])
+        with pytest.raises(
+            ValueError, match="needs the sea floor depth column 'bathymetry'"
+        ):
+            run_item(QCPositionOnLand, df)
+
+    def test_missing_custom_column_names_it(self):
+        """The message names the column configured, not the default."""
+        df = with_depth(make_profile([5.0]), [120.0])
+        with pytest.raises(ValueError, match="'bath'"):
+            run_item(QCPositionOnLand, df, {"params": {"depth_column": "bath"}})
+
+    def test_null_depth_passes(self):
+        """Unknown bathymetry is not evidence of land."""
+        df = with_depth(make_profile([5.0, 6.0]), [None, -5.0])
+        flags = run_item(QCPositionOnLand, df)
+        assert flags["qc_position_on_land"].to_list() == [1, 4]
+        assert flags["qc_position_on_land"].null_count() == 0
+
+    def test_fail_flag_override(self):
+        df = with_depth(make_profile([5.0]), [-5.0])
+        flags = run_item(QCPositionOnLand, df, {"fail_flag": 3})
+        assert flags["qc_position_on_land"].to_list() == [3]
+
+    def test_is_profile_level(self):
+        """No variable-specific columns: one flag column for the profile."""
+        df = with_depth(make_profile([5.0, 6.0]), [-5.0, -5.0])
+        ds = QCPositionOnLand(feature_info=None, filtered_input=df)
+        ds.extract_features()
+        assert ds.get_variables() == []
+        assert ds.flag_column_name() == "qc_position_on_land"
+        assert [
+            c for c in ds.features.columns if c.startswith(("temp_", "psal_"))
+        ] == []
+
+    def test_flags_are_int64(self):
+        df = with_depth(make_profile([5.0, 6.0]), [120.0, -5.0])
+        flags = run_item(QCPositionOnLand, df)
+        assert flags["qc_position_on_land"].dtype == pl.Int64
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +424,7 @@ class TestQCItemPlumbing:
         expected = {
             "qc_impossible_date": QCImpossibleDate,
             "qc_impossible_location": QCImpossibleLocation,
+            "qc_position_on_land": QCPositionOnLand,
             "qc_global_range": QCGlobalRange,
             "qc_regional_range": QCRegionalRange,
             "qc_stuck_value": QCStuckValue,

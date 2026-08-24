@@ -74,7 +74,7 @@ class TestLocateDataSetAll:
         )
         ds.process_targets()
 
-        # No QC filtering on classify side — every target gets all rows.
+        # No QC filtering on classify side; every target gets all rows.
         for tgt in TARGETS_NONEMPTY:
             assert isinstance(ds.selected_rows[tgt], pl.DataFrame)
             assert ds.selected_rows[tgt].shape[0] == 2456

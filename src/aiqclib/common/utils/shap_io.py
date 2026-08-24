@@ -3,7 +3,7 @@ Utilities for importing the SHAP score files produced by ``aiqclib``.
 
 During the testing (training) and classification phases, ``aiqclib`` can write
 per-instance SHAP values to a Parquet file. Each such file has three metadata
-columns — ``label``, ``predicted_label`` and ``score`` — followed by one column
+columns (``label``, ``predicted_label`` and ``score``) followed by one column
 per feature, each suffixed with ``_shap`` (e.g. ``temp_mean_shap``,
 ``longitude_shap``).
 

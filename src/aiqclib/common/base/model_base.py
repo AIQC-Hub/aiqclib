@@ -10,9 +10,10 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any, Self
 
 import polars as pl
-from joblib import dump, load
+from joblib import dump
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.utils.model_version import load_model_file, stamp_model_version
 
 
 class ModelBase(ABC):
@@ -160,7 +161,11 @@ class ModelBase(ABC):
         if not os.path.exists(file_name):
             raise FileNotFoundError(f"File '{file_name}' does not exist.")
 
-        self.model = load(file_name)
+        # Not plain joblib.load: XGBoost complains about a model pickled by
+        # another version from inside pickle, naming no file, and whether that
+        # matters depends on which version wrote this one.
+        self.model = load_model_file(file_name)
+
         expected_class = self._get_model_class()
 
         if not isinstance(self.model, expected_class):
@@ -178,10 +183,16 @@ class ModelBase(ABC):
         """
         Save or serialize the current model to the provided file path.
 
+        The XGBoost version writing the file is recorded on the model first,
+        so that loading it elsewhere can tell a harmless version difference
+        from one that changes predictions. See
+        :mod:`aiqclib.common.utils.model_version`.
+
         :param file_name: The path indicating where the model will be saved.
         :type file_name: str
         """
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
+        stamp_model_version(self.model)
         dump(self.model, file_name)
 
     def update_model_score(self) -> None:

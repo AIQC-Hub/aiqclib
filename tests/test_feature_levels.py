@@ -15,6 +15,7 @@ PROFILE_LEVEL_FEATURES = {
     "profile_summary_stats",
     "qc_impossible_date",
     "qc_impossible_location",
+    "qc_position_on_land",
     "qc_stuck_value",
 }
 

@@ -19,7 +19,7 @@ from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
 from aiqclib.common.utils.diagnostics import (
     check_labels_not_single_class,
-    warn_shap_cost,
+    report_shap_cost,
     warn_single_class_labels,
 )
 
@@ -232,7 +232,7 @@ class SklearnModelBase(ModelBase):
         # Say so before spending the time, not after. SHAP is off by default,
         # so reaching here is always a deliberate choice -- but the cost of
         # that choice is invisible until the phase has already run long.
-        warn_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
+        report_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
 
         def background_data() -> pd.DataFrame:
             """Reference distribution for the explainers that need one.

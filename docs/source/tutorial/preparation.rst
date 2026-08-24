@@ -41,7 +41,7 @@ First, use ``aiqclib`` to generate a boilerplate configuration template. This fi
 
 .. note::
 
-   The output directory must already exist — writing into a missing directory
+   The output directory must already exist. Writing into a missing directory
    is refused so that a mistyped path is reported instead of silently creating
    folders. If you skipped the directory setup in :doc:`./input_data`, pass
    ``create_dirs=True`` to create it as part of the call. A leading ``~`` is
@@ -61,7 +61,7 @@ You will primarily focus on updating the following sections:
 *   **path_info_sets**: Define your input and output directories.
 *   **target_sets**: Specify your prediction targets and their quality control
     flags. The template labels from ``temp_qc`` / ``psal_qc``, which are
-    near-real-time QC flags rather than delayed-mode ones — see
+    near-real-time QC flags rather than delayed-mode ones; see
     :ref:`which-qc-flags` for what that means for your model.
 *   **summary_stats_sets**: Provide settings for summary statistics.
 *   **feature_sets & feature_param_sets**: List the feature engineering methods and their parameters.

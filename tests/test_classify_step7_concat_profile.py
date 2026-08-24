@@ -1,8 +1,8 @@
 """Unit tests for the ``ConcatDataSetProfile`` class.
 
 ConcatDataSetProfile merges per-profile predictions into one row per profile
-(joined on the profile keys, no ``observation_no``), or — with the
-``broadcast_to_observations`` step parameter — onto every observation of
+(joined on the profile keys, no ``observation_no``), or, with the
+``broadcast_to_observations`` step parameter, onto every observation of
 each profile.
 """
 

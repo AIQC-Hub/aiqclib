@@ -10,7 +10,7 @@ Refactored from the original which:
   ``_setup_classify_all_suite(test_obj)`` to inject ModelSuite settings and
   then run the full prepare pipeline (replaced here by a ``mutate_config``
   callback passed to ``run_classify_prepare_pipeline`` in conftest)
-- Used ``TEST_COUNT = 1`` but kept three configs available — preserved here
+- Used ``TEST_COUNT = 1`` but kept three configs available; preserved here
   (the ``classify_suite_pipeline_first`` fixture uses only config 001).
 - Triplicated per-target paths/assertions in every test (replaced with
   per-TARGETS loops)
@@ -108,7 +108,7 @@ def suite_model_files(training_dir):
     The original's comment noted: each composite key maps to the existing
     single-model fixture for that algorithm. ``xgb_*`` keys point at
     ``model_*_xgb.joblib``, ``dt_*`` at ``model_*_dt.joblib``. This works
-    because read_models loads by composite-key path independently — there's
+    because read_models loads by composite-key path independently; there's
     no requirement that all six files contain coherent multi-method data.
     """
     return {
@@ -190,7 +190,7 @@ class TestClassifyAllSuite:
     """Pipeline-driven tests against ClassifyAllSuite.
 
     The original parametrized these over ``idx ∈ range(TEST_COUNT)`` with
-    TEST_COUNT=1 — effectively a single test per method. Preserved as
+    TEST_COUNT=1, effectively a single test per method. Preserved as
     single-config tests (no parametrize needed).
     """
 

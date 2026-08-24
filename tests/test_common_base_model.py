@@ -11,24 +11,31 @@ Coverage:
 - The SHAP flag (``calculate_shap``) propagates from config to ``enable_shap``
 - ``update_model_score`` validates required member variables and
   correctly accumulates per-fold model_scores rows
+- ``save_model`` stamps the writing XGBoost version and ``load_model`` reports
+  through it (the reporting itself lives in
+  ``test_common_utils_model_version.py``)
 
 Refactored from a ``unittest.TestCase`` class. The three module-level mock
 subclasses (ModelBaseWithEmptyName, ModelBaseWithExpectedName,
 ModelBaseWithWrongName) stay at module level.
 
 Fix to original: the file's top-level docstring claimed this tested
-"DataSetBase in aiqclib.common.base.model_base" — a copy-paste error.
+"DataSetBase in aiqclib.common.base.model_base", a copy-paste error.
 This file tests ``ModelBase`` (which lives in ``aiqclib.common.base.model_base``).
 """
 
+import warnings
 from typing import Self
 
+import joblib
 import polars as pl
 import pytest
 import xgboost as xgb
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
+from aiqclib.common.utils import model_version
+from aiqclib.common.utils.model_version import read_model_stamp
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +44,7 @@ from aiqclib.common.base.model_base import ModelBase
 
 
 class ModelBaseWithEmptyName(ModelBase):
-    """Subclass with no ``expected_class_name`` — used to test the
+    """Subclass with no ``expected_class_name``, used to test the
     NotImplementedError path in ModelBase's constructor."""
 
     def __init__(self, config: ConfigBase) -> None:
@@ -82,7 +89,7 @@ class ModelBaseWithExpectedName(ModelBase):
 
 class ModelBaseWithWrongName(ModelBase):
     """Subclass whose ``expected_class_name`` ("XGBoostZ") doesn't match
-    any registered model class — triggers the ValueError path."""
+    any registered model class, triggers the ValueError path."""
 
     expected_class_name: str = "XGBoostZ"
 
@@ -139,7 +146,7 @@ class TestModelBaseMethods:
     def test_load_model_success(self, training_config_001, training_dir):
         """load_model loads a joblib whose class matches ``_get_model_class()``.
 
-        Uses ``model_temp_xgb.joblib`` — a temp-target XGBoost fixture.
+        Uses ``model_temp_xgb.joblib``, a temp-target XGBoost fixture.
         """
         ds = ModelBaseWithExpectedName(training_config_001)
         ds.load_model(str(training_dir / "model_temp_xgb.joblib"))
@@ -156,6 +163,19 @@ class TestModelBaseMethods:
         with pytest.raises(ValueError, match="Inconsistent class instances"):
             ds.load_model(str(training_dir / "model_temp_mlp.joblib"))
 
+    def test_load_model_of_a_matching_version_is_silent(
+        self, training_config_001, training_dir
+    ):
+        """An ordinary load raises nothing, so the clarifier adds no noise.
+
+        The fixture models are regenerated against the pinned XGBoost, so
+        this is the path every user on a matching environment takes.
+        """
+        ds = ModelBaseWithExpectedName(training_config_001)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.load_model(str(training_dir / "model_temp_xgb.joblib"))
+
     # ----- SHAP flag -----
 
     def test_shap_flag(self, training_config_001):
@@ -163,7 +183,7 @@ class TestModelBaseMethods:
 
         Unset == False; True propagates as True; explicit False propagates as False.
         Contrast with KFoldValidationSuite, which suppresses SHAP regardless
-        of config — that override happens at the step level, not on
+        of config; that override happens at the step level, not on
         ModelBase itself.
         """
         model = ModelBaseWithExpectedName(training_config_001)
@@ -259,3 +279,69 @@ class TestModelBaseMethods:
         k1_rows = model.model_score.filter(pl.col("k") == 1)
         assert k1_rows.shape == (2, 4)
         assert k1_rows["score"].to_list() == [0.8, 0.3]
+
+
+class TestModelVersionWiring:
+    """``ModelBase`` is where the version stamp is written and read.
+
+    The reporting itself is covered in ``test_common_utils_model_version.py``;
+    these cover the two connections, which are the parts that can silently
+    come undone. The mismatch is provoked by replacing the loader rather than
+    by shipping a stale model file: pinning a fixture to an XGBoost old enough
+    to trigger the real warning would make the test expire the next time the
+    pin moves.
+    """
+
+    def test_save_model_stamps_the_writing_version(
+        self, training_config_001, training_dir, tmp_path
+    ):
+        """Without this at save time there is nothing to read at load time."""
+        ds = ModelBaseWithExpectedName(training_config_001)
+        ds.model = joblib.load(str(training_dir / "model_temp_xgb.joblib"))
+
+        path = str(tmp_path / "models" / "model_temp.joblib")
+        ds.save_model(path)
+
+        assert read_model_stamp(joblib.load(path)) == xgb.__version__
+
+    def test_load_model_reports_through_the_stamp(
+        self, monkeypatch, training_config_001, training_dir, capsys
+    ):
+        """A stamped older model is a note, and the model still loads."""
+        real_model = joblib.load(str(training_dir / "model_temp_xgb.joblib"))
+        real_model._aiqclib_xgboost_version = "0.0.1"
+
+        def fake_load(file_name):
+            warnings.warn(
+                "WARNING: If you are loading a serialized model or "
+                "configuration generated by an older version of XGBoost [...]",
+                UserWarning,
+            )
+            return real_model
+
+        monkeypatch.setattr(model_version, "load", fake_load)
+        model_version._reported.clear()
+        try:
+            ds = ModelBaseWithExpectedName(training_config_001)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                ds.load_model(str(training_dir / "model_temp_xgb.joblib"))
+        finally:
+            model_version._reported.clear()
+
+        out = capsys.readouterr().out
+        assert "model_temp_xgb.joblib" in out
+        assert isinstance(ds.model, xgb.XGBClassifier)
+
+    def test_load_model_of_a_matching_version_is_silent(
+        self, training_config_001, training_dir
+    ):
+        """An ordinary load reports nothing at all.
+
+        The fixture models are regenerated against the pinned XGBoost, so
+        this is the path every user on a matching environment takes.
+        """
+        ds = ModelBaseWithExpectedName(training_config_001)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ds.load_model(str(training_dir / "model_temp_xgb.joblib"))

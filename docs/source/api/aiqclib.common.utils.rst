@@ -65,6 +65,14 @@ aiqclib.common.utils.metric\_plots module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.common.utils.model\_version module
+------------------------------------------
+
+.. automodule:: aiqclib.common.utils.model_version
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.normalization module
 -----------------------------------------
 

@@ -94,7 +94,7 @@ def regenerate_negx5() -> None:
     """Regenerate the negx5 XGBoost models used by TestClassifyDataSetNegX5."""
     config = TrainingConfig(str(NEGX5_CONFIG))
     config.select("NRT_BO_001")
-    # negx5 only uses XGBoost — no algorithm fan-out here
+    # negx5 only uses XGBoost, no algorithm fan-out here
     config.data["step_class_set"]["steps"]["model"] = "XGBoost"
 
     input_file_names = {

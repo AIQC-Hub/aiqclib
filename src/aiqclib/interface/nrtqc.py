@@ -4,8 +4,8 @@ pipeline.
 
 This module provides the main entry point for executing the NRT QC pipeline:
 reading the input data, applying the configured QC items, aggregating the
-per-item flags into final NRT flags, and — when the input already carries
-NRT QC flags — comparing the existing and newly computed flags.
+per-item flags into final NRT flags, and, when the input already carries
+NRT QC flags, comparing the existing and newly computed flags.
 """
 
 from aiqclib.common.base.config_base import ConfigBase

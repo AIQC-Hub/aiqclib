@@ -51,7 +51,7 @@ class TestTrainingConfig:
         """After select(), each top-level data section has the expected key count.
 
         Training configs don't have feature_set or feature_param_set
-        sections — features are extracted at the prepare stage, not at
+        sections; features are extracted at the prepare stage, not at
         training time.
         """
         ds = TrainingConfig(str(training_yaml_001))
@@ -90,7 +90,7 @@ class TestTrainingConfigTemplate:
         """Files placed in 'input' resolve under the 'training' subfolder.
 
         Like prepare-stage's split→training mapping, training's 'input'
-        physically lives under the 'training' folder — the logical step
+        physically lives under the 'training' folder; the logical step
         name and the physical folder name are decoupled by the template.
         """
         ds = TrainingConfig(str(template_path))

@@ -1,4 +1,4 @@
-# Profile-Level Mode — Implementation Plan
+# Profile-Level Mode: Implementation Plan
 
 Step-by-step plan for implementing the profile-level mode specified in
 `PROFILE_spec.md`. Each phase is a separate `feature/*` branch off
@@ -9,13 +9,13 @@ phase starts, so the library stays releasable throughout.
 
 | Phase | Branch | Deliverable | Depends on |
 |-------|--------|-------------|------------|
-| 1 | `feature/profile-constants` | Shared id/key constants, feature `level` metadata, level-tolerant drops, schema keys | — |
-| 2 | `feature/profile-prepare` | Prepare steps 4–6 profile classes, aggregation registry, template | 1 |
+| 1 | `feature/profile-constants` | Shared id/key constants, feature `level` metadata, level-tolerant drops, schema keys | none |
+| 2 | `feature/profile-prepare` | Prepare steps 4-6 profile classes, aggregation registry, template | 1 |
 | 3 | `feature/profile-regressors` | Regressor model base + XGBR/RFR wrappers, regression reports/plots | 1 |
 | 4 | `feature/profile-classify` | Classify steps 4/5/7 profile classes, template | 2, 3 |
-| 5 | `feature/profile-docs` | Sphinx docs, CHANGELOG | 2–4 |
+| 5 | `feature/profile-docs` | Sphinx docs, CHANGELOG | 2-4 |
 
-## Phase 1 — Shared constants and level metadata (pure refactor)
+## Phase 1: Shared constants and level metadata (pure refactor)
 
 - New `common/constants.py`: `PROFILE_KEYS`, `OBSERVATION_KEYS` (moved
   from `prepare/features/qc_item_base.py`, re-exported there for
@@ -39,7 +39,7 @@ phase starts, so the library stays releasable throughout.
 - Tests: `test_feature_levels.py` pins every registry entry's level; the
   full suite must stay green (zero behavior change).
 
-## Phase 2 — Prepare pipeline profile mode
+## Phase 2: Prepare pipeline profile mode
 
 - `prepare/step4_select_rows/dataset_profile.py::LocateDataSetProfile`:
   valid-flagged `observation_rows` per target + one-row-per-profile
@@ -58,7 +58,7 @@ phase starts, so the library stays releasable throughout.
 - Tests: step 4/5/6 unit tests, `test_dataset_profile_001/002.yaml`
   fixtures, end-to-end prepare→train (binary, XGB).
 
-## Phase 3 — Regressor models
+## Phase 3: Regressor models
 
 - `common/base/scikit_learn_regressor_base.py::SklearnRegressorModelBase`
   (`is_regressor = True`): clipped `predict`, regression report
@@ -75,7 +75,7 @@ phase starts, so the library stays releasable throughout.
   `test_training_models_regressor.py`, end-to-end proportion
   prepare→train.
 
-## Phase 4 — Classify pipeline profile mode
+## Phase 4: Classify pipeline profile mode
 
 - `classify/step4_select_rows/dataset_profile.py::LocateDataSetProfile`:
   every profile, label or null (`skip_evaluation`).
@@ -92,7 +92,7 @@ phase starts, so the library stays releasable throughout.
   end-to-end classify covering classifier/binary, regressor/proportion,
   and a label-free target; suite variant via config mutation.
 
-## Phase 5 — Docs and changelog
+## Phase 5: Docs and changelog
 
 - New `docs/source/how-to/profile_level_pipeline.rst`; updates to
   configuration pages, `qc_items_as_features.rst`,

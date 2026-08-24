@@ -16,12 +16,12 @@ Set it under the ``model`` step parameters:
        model:
          predicted_label_threshold: 0.5    # default if omitted
 
-* **Default:** ``0.5``, applied silently when the field is absent — existing
+* **Default:** ``0.5``, applied silently when the field is absent; existing
   configurations need no change.
 * **Range:** any float in ``[0, 1]``. A higher threshold makes positive
   predictions more conservative (fewer ``1``\ s); a lower threshold makes them
   more liberal.
-* **Scope:** applies to every phase — validation, build/test, and classify —
+* **Scope:** applies to every phase (validation, build/test, and classify)
   wherever a model converts scores into labels. It governs the
   ``predicted_label`` column of the user-facing **prediction** files and any
   threshold-dependent metrics in the reports.
@@ -44,7 +44,7 @@ There are three consequences worth understanding.
    **The threshold is not stored in the saved model file.** Model files
    (``*.joblib``) contain only the trained estimator, not the threshold. When a
    saved model is loaded for the classify phase, the threshold comes from the
-   *classify* configuration in effect at that time — not from whatever was used
+   *classify* configuration in effect at that time, not from whatever was used
    during training.
 
 **It is config-driven, not a runtime property.**
@@ -63,7 +63,7 @@ Relationship to model-scores files
 -----------------------------------
 
 The model-scores files described in :doc:`performance_evaluation` are
-unaffected by this setting — they store raw ``score`` values, so you can
+unaffected by this setting: they store raw ``score`` values, so you can
 evaluate performance across all thresholds regardless of which one is
 configured for label generation. The threshold only affects where the library
 draws the line when it must emit a concrete ``predicted_label``.

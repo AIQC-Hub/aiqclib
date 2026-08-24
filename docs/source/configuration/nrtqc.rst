@@ -74,13 +74,14 @@ softens a failing test to "probably bad".
 
 For what each item checks, rather than how it is configured, see
 :ref:`nrt-qc-items` in the how-to guide. The same items can be used as model
-input features — see :doc:`../how-to/qc_items_as_features`.
+input features; see :doc:`../how-to/qc_items_as_features`.
 
 ================================ ======= ============ =========================================
 Item                             RTQC    Level        Output column(s)
 ================================ ======= ============ =========================================
 ``impossible_date``              RTQC2   profile      ``qc_impossible_date``
 ``impossible_location``          RTQC3   profile      ``qc_impossible_location``
+``position_on_land``             RTQC4   profile      ``qc_position_on_land``
 ``global_range``                 RTQC6   observation  ``{var}_qc_global_range``
 ``regional_range``               RTQC7   observation  ``{var}_qc_regional_range``
 ``pressure_increasing``          RTQC8   observation  ``qc_pressure_increasing``
@@ -89,7 +90,7 @@ Item                             RTQC    Level        Output column(s)
 ``digit_rollover``               RTQC12  observation  ``{var}_qc_digit_rollover``
 ``stuck_value``                  RTQC13  profile      ``{var}_qc_stuck_value``
 ``density_inversion``            RTQC14  observation  ``temp_qc_...`` and ``psal_qc_...``
-``temp_to_psal``                 —       observation  ``psal_qc_temp_to_psal``
+``temp_to_psal``                 n/a     observation  ``psal_qc_temp_to_psal``
 ================================ ======= ============ =========================================
 
 .. code-block:: yaml
@@ -123,8 +124,23 @@ Item                             RTQC    Level        Output column(s)
 
 Notes:
 
-*   **regional_range** has no built-in defaults — supply your region's
+*   **regional_range** has no built-in defaults; supply your region's
     ranges, or the item raises an error (no silent pass).
+*   **position_on_land** is **not in the template**, because it needs a
+    column that most inputs do not carry. Add it by name to enable it:
+
+    .. code-block:: yaml
+
+       - name: position_on_land
+         params: { depth_column: bathymetry, positive_depth: true }
+
+    ``depth_column`` (default ``bathymetry``) names the column holding the
+    **sea floor depth at the profile position**, computed externally before
+    the workflow runs. This is not the depth of the measurement, which is
+    why the default is not ``depth``: an input may well carry both, and
+    reading one as the other would flag every shallow observation as being
+    on land. ``positive_depth`` (default :obj:`True`) says whether larger
+    values mean deeper. A missing column is an error, not a silent pass.
 *   **spike** / **gradient** use the ``shallow`` threshold below
     ``depth_threshold`` (in decibars) and ``deep`` at or beyond it.
 *   **density_inversion** computes the potential density anomaly sigma-0
@@ -133,6 +149,45 @@ Notes:
 *   **temp_to_psal** propagates the final temperature flag onto salinity
     (see the :doc:`../how-to/nrt_qc` guide); omit it for independently
     measured salinity.
+
+.. _nrtqc-final-flag-items:
+
+Choosing which items decide the final flag
+""""""""""""""""""""""""""""""""""""""""""
+
+Every item feeds the aggregated ``{variable}_nrt_flag`` by default. Set
+``include_in_final_flag: false`` on an item to keep running it while leaving
+it out of that aggregation:
+
+.. code-block:: yaml
+
+   qc_item_sets:
+     - name: qc_item_set_1
+       items:
+         - name: global_range
+         - name: spike
+         - name: stuck_value
+           include_in_final_flag: false    # column kept, does not decide
+         - name: digit_rollover
+           include_in_final_flag: false
+
+The excluded item still runs, and its flag column is still written to the
+output, so the set of columns is the same either way. Only the final flag
+changes. This separates *did this test fail* from *does this test decide the
+verdict*, which is what you want for a test that is informative but too
+aggressive to gate on, or one you are still evaluating.
+
+.. note::
+
+   ``temp_to_psal`` reads the aggregated ``temp_nrt_flag`` rather than the
+   raw item columns, so excluding an item from **temperature** also removes
+   it from what propagates to salinity. Excluding ``temp_to_psal`` itself
+   still writes ``psal_qc_temp_to_psal``, but leaves ``psal_nrt_flag``
+   untouched.
+
+The comparison report of step 4 covers every item regardless, so an excluded
+item keeps its ``item_breakdown`` rows. That is deliberate: those rows are
+the evidence for deciding whether to exclude it in the first place.
 
 `step_class_sets`
 ^^^^^^^^^^^^^^^^^

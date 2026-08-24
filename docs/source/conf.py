@@ -29,6 +29,12 @@ autodoc_typehints = "description"
 templates_path = ['_templates']
 exclude_patterns = []
 
+# Drop the dash transform from smartquotes (the default is "qDe"). Sphinx would
+# otherwise render "--" as an en dash and "---" as an em dash, putting back in
+# the HTML exactly what this project keeps out of its sources. Quotes ("q") and
+# ellipses ("e") are unaffected.
+smartquotes_action = "qe"
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 

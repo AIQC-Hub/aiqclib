@@ -18,7 +18,7 @@ Normalization methods
      - Values come from
    * - ``raw`` (default)
      - no scaling
-     - —
+     - not applicable
    * - ``min_max``
      - ``(x - min) / (max - min)``
      - values you enter in ``feature_stats_sets``

@@ -198,7 +198,7 @@ class ClassifyAllSuite(BuildModelBase):
 
             # model_score already carries (method, k, label, score) with the
             # correct lowercase method tag set by update_model_score in the
-            # base class — collect it as-is. No manual method-tagging needed,
+            # base class, so collect it as-is. No manual method-tagging needed,
             # and predicted_label no longer exists in this frame.
             if current_model.model_score is not None:
                 target_model_scores.append(current_model.model_score)

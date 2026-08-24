@@ -1,7 +1,7 @@
 """Unit tests for the regressor model wrappers and their base class.
 
 The regressors (XGBoostRegressor, RandomForestRegressor) train on proportion
-labels — floats in [0, 1] produced by the profile-level pipeline's
+labels: floats in [0, 1] produced by the profile-level pipeline's
 ``label_mode: proportion``. Structural wrapper tests mirror
 ``test_training_models.py`` via ``REGRESSOR_CASES``; the functional tests
 exercise the ``SklearnRegressorModelBase`` lifecycle on a small synthetic

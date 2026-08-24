@@ -5,9 +5,9 @@ The NRT QC module applies the automated real-time QC tests recommended for
 temperature and salinity profiles (Argo/CTD RTQC tests) to an input dataset
 and writes the original parquet enriched with:
 
-* **one flag column per QC item** — e.g. ``temp_qc_spike``,
-  ``qc_impossible_date`` — usable directly as training features, and
-* **a final NRT flag per variable** — ``temp_nrt_flag`` / ``psal_nrt_flag``,
+* **one flag column per QC item**, e.g. ``temp_qc_spike`` or
+  ``qc_impossible_date``, usable directly as training features, and
+* **a final NRT flag per variable**: ``temp_nrt_flag`` / ``psal_nrt_flag``,
   the most severe flag among the variable's applicable item columns.
 
 Flags follow the IOC/Argo scheme: 1 (good), 3 (probably bad), 4 (bad).
@@ -46,6 +46,38 @@ every observation in it:
    Latitude must lie within [-90, 90] and longitude within [-180, 180]. A
    missing position fails.
 
+``position_on_land`` (RTQC4)
+   The position must be in the ocean. The recommendation checks it against a
+   bathymetry grid; this implementation instead reads a column already
+   present in the input, holding the sea floor depth at the position, which
+   is what such a lookup would have produced. **Computing that column is
+   your job**, done upstream where the input is assembled.
+
+   ``depth_column`` names the column, ``bathymetry`` by default. It is
+   deliberately not ``depth``: this is the depth of the sea floor, not of
+   the measurement, and an input may carry both. Reading a measurement
+   depth as bathymetry would flag every shallow observation as being on
+   land, so the two are kept apart by name.
+
+   ``positive_depth`` says which sign means deeper: with :obj:`True` (the
+   default) the ocean is ``depth > 0``, and with :obj:`False` it is
+   ``depth < 0``. Sea level itself counts as land under both conventions.
+   Get this wrong and the test inverts completely, so check your data
+   before enabling the item.
+
+   A null depth passes, since unknown bathymetry is not evidence of land,
+   but a **missing column is an error**: an input without the column cannot
+   run this test, and silently passing every row would be worse than saying
+   so.
+
+   The item is **not in the configuration template**, because most inputs
+   carry no such column. Add it by name to enable it:
+
+   .. code-block:: yaml
+
+      - name: position_on_land
+        params: { depth_column: bath, positive_depth: false }
+
 ``stuck_value`` (RTQC13)
    All non-null measurements of a variable being identical indicates a stuck
    sensor, so the variable is flagged throughout the profile. Profiles with
@@ -62,7 +94,7 @@ Observation-level tests produce one result per measurement:
 
 ``regional_range`` (RTQC7)
    The same check against the tighter ranges of the configuration file's
-   region. There are **no built-in defaults** — supply your region's bounds
+   region. There are **no built-in defaults**; supply your region's bounds
    or the item raises an error rather than silently passing everything.
 
 ``pressure_increasing`` (RTQC8)
@@ -112,6 +144,36 @@ file per region** (e.g. Arctic, Baltic, Mediterranean): the files share the
 same structure and differ only in region-dependent parameters such as the
 regional ranges or the density inversion threshold.
 
+Choosing which items decide the final flag
+------------------------------------------
+
+By default every enabled item feeds the aggregated
+``{variable}_nrt_flag``. An item can be kept running while being left out of
+that aggregation:
+
+.. code-block:: yaml
+
+   qc_item_sets:
+     - name: qc_item_set_1
+       items:
+         - name: spike
+         - name: stuck_value
+           include_in_final_flag: false
+
+The item still runs and ``{variable}_qc_stuck_value`` is still written, so
+the output columns are unchanged; only ``{variable}_nrt_flag`` differs. Use
+it when a test is worth recording but too aggressive to gate on, or when you
+want to measure a test's behaviour (via the comparison report, which still
+covers every item) before letting it affect the verdict.
+
+Two consequences are worth knowing. Excluding an item from **temperature**
+also removes it from what ``temp_to_psal`` propagates, because that item
+reads the aggregated ``temp_nrt_flag`` rather than the raw columns. And
+excluding ``temp_to_psal`` itself still writes ``psal_qc_temp_to_psal``
+while leaving ``psal_nrt_flag`` alone.
+
+See :ref:`nrtqc-final-flag-items` for the reference entry.
+
 Temperature-to-salinity propagation
 -----------------------------------
 
@@ -119,7 +181,9 @@ When salinity is computed from temperature and conductivity, a temperature
 flagged 4 (or 3) corrupts the salinity too. Enabling the ``temp_to_psal``
 item propagates the final temperature flag onto salinity with its severity,
 recorded in its own ``psal_qc_temp_to_psal`` column so the propagation stays
-traceable. Datasets with independently measured salinity simply omit the item.
+traceable. Datasets with independently measured salinity simply omit the item
+entirely, or keep it for traceability with
+``include_in_final_flag: false``.
 
 Comparing against existing flags
 --------------------------------
@@ -140,7 +204,7 @@ give each variable its ``flag`` column in the ``qc_variable_sets`` section:
 ``run_nrt_qc`` then writes one comparison report per variable
 (``nrt_qc_flag_comparison_{variable}.tsv``) containing a contingency table
 of existing vs new flag values, binary agreement metrics (accuracy,
-precision, recall — only when the pos/neg flag values are given), and a
+precision, recall; only when the pos/neg flag values are given), and a
 per-item breakdown showing which items drive the disagreements. Variables
 without a ``flag`` are skipped; omit all flags to skip the comparison step
 entirely.
@@ -152,6 +216,26 @@ their own row in the contingency table, so they stay visible instead of being
 folded into a real flag value; the agreement metrics count only the values
 listed in ``pos_flag_values`` / ``neg_flag_values``. The input's flag columns
 are written to the output unchanged, whatever type they use.
+
+Running several regions at once
+-------------------------------
+
+``run_batch`` drives NRT QC over a table of datasets the same way it drives
+the other workflows:
+
+.. code-block:: python
+
+   summary = aq.run_batch(
+       "datasets.txt",
+       mode="nrt_qc",
+       nrt_qc_config="nrt_qc_config.yaml",
+       verbose=True,
+   )
+
+Each row's ``nrt_qc_set_name`` names the set to select, so one configuration
+file holding one entry per region replaces the per-region files suggested
+above. Note that ``mode="all"`` does **not** include NRT QC: see
+:ref:`batch-nrt-qc` for why, and for the ordering that follows from it.
 
 Using QC items as training features
 -----------------------------------
