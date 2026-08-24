@@ -1,6 +1,6 @@
 """Unit tests for the ``SplitDataSetAll`` class.
 
-SplitDataSetAll is the "select-all" variant of SplitDataSetA — it takes the
+SplitDataSetAll is the "select-all" variant of SplitDataSetA; it takes the
 ``target_features`` produced by ExtractDataSetAll (which keeps every input
 row per target) and splits each target's frame into train/test sets.
 

@@ -9,20 +9,20 @@ For general development setup, tests, and linting, see
 Follow these steps in order when cutting a new version. Steps marked *if
 necessary* only apply when the relevant code has changed since the last release.
 
-1. **Lint and format** *(if necessary)* — run Ruff over any changed code:
+1. **Lint and format** *(if necessary)*. Run Ruff over any changed code:
    ```bash
    uv run ruff check src tests
    uv run ruff format src tests
    ```
-2. **Update API documentation** *(if necessary)* — regenerate the Sphinx API
+2. **Update API documentation** *(if necessary)*. Regenerate the Sphinx API
    docs when the public API has changed. See [Building Docs Locally](#building-docs-locally).
-3. **Update `CHANGELOG.md`** — record the changes for the new version.
-4. **Bump the version** — update `version` in `pyproject.toml`, then sync the
+3. **Update `CHANGELOG.md`**. Record the changes for the new version.
+4. **Bump the version**. Update `version` in `pyproject.toml`, then sync the
    lockfile so `uv.lock` records the new project version:
    ```bash
    uv sync
    ```
-5. **Commit, then create the release** — once merged, creating a new release on
+5. **Commit, then create the release**. Once merged, creating a new release on
    GitHub triggers the PyPI publish (see [Deployment](#deployment)).
 
 ## Building Docs Locally
@@ -48,7 +48,7 @@ The package is published to [PyPI](https://pypi.org/project/aiqclib/) automatica
 
 ### conda-forge (Automatic)
 
-> **Status:** `aiqclib` is not on conda-forge yet — there is no
+> **Status:** `aiqclib` is not on conda-forge yet: there is no
 > `conda-forge/aiqclib-feedstock`, so nothing below runs automatically. The
 > steps apply once the recipe is accepted via [Initial upload](#initial-upload).
 

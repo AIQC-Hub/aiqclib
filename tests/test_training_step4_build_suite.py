@@ -3,7 +3,7 @@
 BuildModelSuite is the multi-model variant of BuildModel: it uses a
 ``ModelSuite`` as its base model and runs *several* methods in parallel
 (here just XGB and DT, to keep tests fast). Composite keys are used
-throughout — ``xgb_temp``, ``dt_temp``, etc. — instead of just ``temp``,
+throughout (``xgb_temp``, ``dt_temp``, etc.) instead of just ``temp``,
 because each target has multiple trained models.
 
 Refactored from the original which:
@@ -332,7 +332,7 @@ class TestBuildModelSuite:
         """All five aggregated output kinds write per-target files.
 
         The original wrote 15 paths (5 kinds × 3 targets) by hand, then
-        asserted existence for all 15, then removed all 15 — ~90 lines.
+        asserted existence for all 15, then removed all 15, ~90 lines.
         Same coverage here, ~15 lines via nested loops.
         """
         training_config_001_suite.data["step_param_set"]["steps"]["model"][

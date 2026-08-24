@@ -24,7 +24,7 @@ def _read(config, test_data_file, file_type=None, read_file_options=None):
     """Build an InputDataSetA, optionally override step params, read, return df.
 
     Previously duplicated verbatim across three TestCase classes. Kept as a
-    plain function at module scope — it's pure logic with no test state.
+    plain function at module scope; it's pure logic with no test state.
     """
     ds = InputDataSetA(config)
     ds.input_file_name = str(test_data_file)
@@ -110,7 +110,7 @@ class TestInputDataSetA:
         """``read_file_options={'n_rows': 100}`` caps the read at 100 rows.
 
         100 is below the reduced fixture size so this assertion should be
-        stable across fixture changes — but bump the cap if the fixture ever
+        stable across fixture changes, but bump the cap if the fixture ever
         drops below 100 rows.
         """
         df = _read(

@@ -16,3 +16,11 @@ aiqclib.classify.step5\_extract\_features.dataset\_all module
    :members:
    :show-inheritance:
    :undoc-members:
+
+aiqclib.classify.step5\_extract\_features.dataset\_profile module
+-----------------------------------------------------------------
+
+.. automodule:: aiqclib.classify.step5_extract_features.dataset_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:

@@ -9,6 +9,14 @@ aiqclib.common.utils package
 Submodules
 ----------
 
+aiqclib.common.utils.aggregations module
+----------------------------------------
+
+.. automodule:: aiqclib.common.utils.aggregations
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.config module
 ----------------------------------
 
@@ -53,6 +61,14 @@ aiqclib.common.utils.metric\_plots module
 -----------------------------------------
 
 .. automodule:: aiqclib.common.utils.metric_plots
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.common.utils.model\_version module
+------------------------------------------
+
+.. automodule:: aiqclib.common.utils.model_version
    :members:
    :show-inheritance:
    :undoc-members:

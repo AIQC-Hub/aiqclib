@@ -6,29 +6,34 @@ back full of 1.0 scores and the metric plots have no curve. The tests verify
 that the situation is detected, that the message says what to check, and that
 ordinary two-class data stays silent.
 
-``warn_shap_cost`` is the odd one out: it reports a cost rather than a defect,
-so what matters is that it stays quiet on small data, fires once rather than
-per target, and names the setting that turns SHAP off.
+``report_shap_cost`` is the odd one out: it reports a cost rather than a
+defect, so what matters is that it stays quiet on small data, fires once rather
+than per target, names the setting that turns SHAP off, and reaches the user
+without going through :mod:`warnings` at all.
+
+The model file version reporting lives in ``common.utils.model_version`` and is
+tested in ``test_common_utils_model_version.py``.
 """
 
+import io
 import warnings
 
 import polars as pl
 import pytest
 
-from aiqclib.common.utils import diagnostics
+from aiqclib.common.utils import diagnostics, progress
 from aiqclib.common.utils.diagnostics import (
     SHAP_ROW_WARNING_THRESHOLD,
     check_dataset_not_empty,
     check_labels_not_single_class,
-    warn_shap_cost,
+    report_shap_cost,
     warn_single_class_labels,
 )
 
 
 @pytest.fixture
 def unwarned():
-    """Reset the once-per-process SHAP warning flag around a test.
+    """Reset the once-per-process SHAP notice flag around a test.
 
     The flag is module state by design, so without this the first test to
     trigger it would silence every test after it -- and the order would decide
@@ -196,42 +201,67 @@ class TestCheckLabelsNotSingleClass:
             check_labels_not_single_class(labels, "pres")
 
 
-class TestWarnShapCost:
+class TestReportShapCost:
     """The heads-up that SHAP is about to dominate the run."""
+
+    @staticmethod
+    def _report(*args, **kwargs) -> tuple:
+        """Call the reporter with its own stream, returning result and text."""
+        stream = io.StringIO()
+        result = report_shap_cost(*args, stream=stream, **kwargs)
+        return result, stream.getvalue()
 
     def test_small_dataset_is_silent(self, unwarned):
         """Below the threshold SHAP is cheap enough not to mention."""
+        result, text = self._report(SHAP_ROW_WARNING_THRESHOLD - 1)
+        assert result is False
+        assert text == ""
+
+    def test_large_dataset_is_reported(self, unwarned):
+        """At the threshold the cost is worth saying out loud."""
+        result, text = self._report(SHAP_ROW_WARNING_THRESHOLD, "temp")
+        assert result is True
+        assert "temp" in text
+        assert f"{SHAP_ROW_WARNING_THRESHOLD:,}" in text
+
+    def test_it_is_a_notice_not_a_warning(self, unwarned):
+        """Nothing is wrong, so nothing goes through :mod:`warnings`.
+
+        The message used to be a ``UserWarning``, which printed it under a
+        line number inside this library and left the reader to work out that
+        the run was healthy. Turning any warning into an error proves the
+        notice reaches stdout without one.
+        """
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            assert warn_shap_cost(SHAP_ROW_WARNING_THRESHOLD - 1) is False
+            _, text = self._report(500_000, "temp")
+        assert text.startswith(f"{progress.PREFIX} note:")
 
-    def test_large_dataset_warns(self, unwarned):
-        """At the threshold the cost is worth saying out loud."""
-        with pytest.warns(UserWarning, match="SHAP values") as record:
-            assert warn_shap_cost(SHAP_ROW_WARNING_THRESHOLD, "temp") is True
-        message = str(record[0].message)
-        assert "temp" in message
-        assert f"{SHAP_ROW_WARNING_THRESHOLD:,}" in message
+    def test_it_does_not_depend_on_verbose(self, unwarned, capsys):
+        """No reporter is involved, so a quiet run still gets the message.
+
+        The cost is worth knowing about precisely when nothing else is being
+        printed, which is when a long silence is otherwise unexplained.
+        """
+        assert report_shap_cost(500_000, "temp") is True
+        assert "SHAP values" in capsys.readouterr().out
 
     def test_message_names_the_setting_that_turns_it_off(self, unwarned):
-        """A warning with no remedy in it is just noise."""
-        with pytest.warns(UserWarning, match="calculate_shap"):
-            warn_shap_cost(500_000, "temp")
+        """A notice with no remedy in it is just noise."""
+        _, text = self._report(500_000, "temp")
+        assert "calculate_shap" in text
 
-    def test_warns_only_once_per_process(self, unwarned):
+    def test_reported_only_once_per_process(self, unwarned):
         """The message is about the setting, not about any one target."""
-        with pytest.warns(UserWarning):
-            assert warn_shap_cost(500_000, "temp") is True
-        with warnings.catch_warnings():
-            warnings.simplefilter("error")
-            assert warn_shap_cost(500_000, "psal") is False
+        assert self._report(500_000, "temp")[0] is True
+        result, text = self._report(500_000, "psal")
+        assert result is False
+        assert text == ""
 
     def test_fold_is_named_when_given(self, unwarned):
         """Same context convention as the other diagnostics."""
-        with pytest.warns(UserWarning, match="fold 2"):
-            warn_shap_cost(500_000, "temp", k=2)
+        assert "fold 2" in self._report(500_000, "temp", k=2)[1]
 
     def test_target_name_is_optional(self, unwarned):
         """Callers without a target still get a usable message."""
-        with pytest.warns(UserWarning, match="this target"):
-            warn_shap_cost(500_000)
+        assert "this target" in self._report(500_000)[1]

@@ -77,7 +77,7 @@ class TestDataSetConfig:
 
 # Module-level list of template files. All three templates resolve the same
 # folder paths; tests parametrize over idx. Note that ``test_input_folder``
-# only iterates over the first two — the third uses a different default
+# only iterates over the first two; the third uses a different default
 # input file name, preserved from the original test.
 _TEMPLATE_FILENAMES = (
     "config_data_set_full_template.yaml",
@@ -98,7 +98,7 @@ class TestDataSetConfigTemplate:
     def test_input_folder(self, idx, template_paths):
         """Input file path resolves correctly under the first two templates.
 
-        Original only parametrized over range(2) — the third template uses
+        Original only parametrized over range(2); the third template uses
         a different input_file_name. Preserving that scope.
         """
         ds = DataSetConfig(str(template_paths[idx]))
@@ -126,7 +126,7 @@ class TestDataSetConfigTemplate:
         """Files placed in 'split' resolve under the 'training' folder.
 
         Note: split is mapped to the 'training' physical subfolder by the
-        default template path_info — these names are decoupled by design.
+        default template path_info; these names are decoupled by design.
         """
         ds = DataSetConfig(str(template_paths[idx]))
         ds.select("dataset_0001")

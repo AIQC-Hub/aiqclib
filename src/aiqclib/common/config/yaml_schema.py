@@ -107,6 +107,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
               - flag
@@ -197,9 +200,16 @@ properties:
                   type: string
               stats:
                 type: object
+              agg:
+                type: array
+                items:
+                  type: string
+              params:
+                type: object
+              fail_flag:
+                type: integer
             required:
               - feature
-              - col_names
             additionalProperties: false
       required:
         - name
@@ -522,6 +532,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
               - flag
@@ -747,6 +760,9 @@ properties:
                 type: array
               neg_flag_values:
                 type: array
+              label_mode:
+                type: string
+                enum: [binary, proportion]
             required:
               - name
             additionalProperties: false
@@ -834,9 +850,16 @@ properties:
                   type: string
               stats:
                 type: object
+              agg:
+                type: array
+                items:
+                  type: string
+              params:
+                type: object
+              fail_flag:
+                type: integer
             required:
               - feature
-              - col_names
             additionalProperties: false
       required:
         - name
@@ -1083,7 +1106,9 @@ def get_nrtqc_config_schema() -> str:
     step_class_sets, step_param_sets, and nrt_qc_sets. QC variables need
     only a ``name`` (``flag`` and the pos/neg flag values are optional and
     used solely by the flag comparison step), while QC items need a ``name``
-    plus optional free-form ``params`` and a ``fail_flag`` override.
+    plus optional free-form ``params``, a ``fail_flag`` override, and an
+    ``include_in_final_flag`` switch controlling whether the item feeds the
+    aggregated ``{variable}_nrt_flag``.
 
     :return: A YAML string representing the JSON schema for NRT QC configurations.
     :rtype: str
@@ -1197,6 +1222,8 @@ properties:
               fail_flag:
                 type: integer
                 enum: [3, 4]
+              include_in_final_flag:
+                type: boolean
             required:
               - name
             additionalProperties: false

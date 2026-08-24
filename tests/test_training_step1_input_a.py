@@ -26,7 +26,7 @@ from tests.conftest import TARGETS
 def _build_input_file_names(training_dir):
     """Build the ``input_file_names`` dict pointing at tests/data/training/.
 
-    Same shape as the legacy setUp's self.input_file_names — keyed by
+    Same shape as the legacy setUp's self.input_file_names, keyed by
     ``"train"``/``"test"`` then by target name.
     """
     return {

@@ -1,4 +1,4 @@
-# NRT QC Module — Specification
+# NRT QC Module Specification
 
 Specification for the new **Near-Real Time Quality Control (NRT QC)** module of
 `aiqclib`, derived from the RTQC recommendations in `NRTQC_doc.md`. Target data:
@@ -71,9 +71,9 @@ whole profile, or the profile's date/position metadata.
 | 8 | Digit rollover test | RTQC12 | observation | temp, psal |
 | 9 | Stuck value test | RTQC13 | profile | temp, psal |
 | 10 | Density inversion | RTQC14 | observation | temp + psal jointly |
-| — | Temp→salinity propagation | §3 intro | observation | psal (from temp) |
+| n/a | Temp→salinity propagation | §3 intro | observation | psal (from temp) |
 
-### 4.1 RTQC2 — Impossible date test
+### 4.1 RTQC2: Impossible date test
 
 `profile_timestamp` must be sensible: year > 1950 and not in the future
 (timestamp ≤ processing time). Because the input column is already a parsed
@@ -83,7 +83,7 @@ represented; they surface as **null** timestamps, which also fail the test.
 - Fail → the profile's date is flagged: all rows of the profile get the fail
   flag in the item column.
 
-### 4.2 RTQC3 — Impossible location test
+### 4.2 RTQC3: Impossible location test
 
 - Latitude in range −90 to 90
 - Longitude in range −180 to 180
@@ -91,7 +91,7 @@ represented; they surface as **null** timestamps, which also fail the test.
 
 Fail → the profile's position is flagged (all rows of the profile).
 
-### 4.3 RTQC6 — Global range test
+### 4.3 RTQC6: Global range test
 
 Gross filter on observed values:
 
@@ -107,11 +107,11 @@ independently; both may fail at the same depth.
 > range, or the global bounds must be configurable. Ranges are config-driven
 > (defaults above), so both options are available.
 
-### 4.4 RTQC7 — Regional range test
+### 4.4 RTQC7: Regional range test
 
 Region-specific ranges for `temp` and `psal`. **One configuration file is
 prepared per region** (Arctic, Baltic, Mediterranean), so region membership is
-decided by which config is used — no polygon / point-in-polygon test is
+decided by which config is used; no polygon / point-in-polygon test is
 needed. The item works exactly like the global range test but with the ranges
 of the config's region; it is structurally the same check with different
 bounds.
@@ -122,13 +122,13 @@ Reference values to seed each region's config:
 |--------|-----------|------|--------|
 | Mediterranean Sea | 10.0 to 40.0 | 2.0 to 40.0 | `NRTQC_doc.md` |
 | Arctic Sea | −1.92 to 25.0 | 2.0 to 40.0 | `NRTQC_doc.md` |
-| Baltic Sea | placeholder (permissive) | placeholder (permissive) | not in `NRTQC_doc.md` — to be tuned later |
+| Baltic Sea | placeholder (permissive) | placeholder (permissive) | not in `NRTQC_doc.md`, to be tuned later |
 
 All ranges are plain config values, so the Baltic entry can start permissive
 and be tightened later without code changes. Fail → the individual value is
 flagged.
 
-### 4.5 RTQC8 — Pressure increasing test
+### 4.5 RTQC8: Pressure increasing test
 
 Within a profile ordered from smallest to largest pressure, pressures must be
 monotonically increasing:
@@ -139,7 +139,7 @@ monotonically increasing:
 
 Fail → the affected rows are flagged for all variables (pressure is shared).
 
-### 4.6 RTQC9 — Spike test
+### 4.6 RTQC9: Spike test
 
 For each interior observation V2 with neighbours V1 (above) and V3 (below):
 
@@ -155,7 +155,7 @@ test_value = |V2 − (V3 + V1)/2| − |(V3 − V1)/2|
 Fail → V2 is flagged. First/last observations of a profile are not testable
 (flag stays 1).
 
-### 4.7 RTQC11 — Gradient test
+### 4.7 RTQC11: Gradient test
 
 Same V1/V2/V3 stencil:
 
@@ -170,7 +170,7 @@ test_value = |V2 − (V3 + V1)/2|
 
 Fail → V2 is flagged.
 
-### 4.8 RTQC12 — Digit rollover test
+### 4.8 RTQC12: Digit rollover test
 
 Difference between vertically adjacent observations:
 
@@ -179,19 +179,19 @@ Difference between vertically adjacent observations:
 
 Fail → the value is flagged.
 
-### 4.9 RTQC13 — Stuck value test
+### 4.9 RTQC13: Stuck value test
 
 All measurements of a variable in a profile are identical (profiles with a
 single observation are exempt). Fail → **all** values of that variable in the
 profile are flagged.
 
-### 4.10 RTQC14 — Density inversion
+### 4.10 RTQC14: Density inversion
 
 Compute potential density σ₀ from `temp`, `psal`, `pres` per observation using
 the UNESCO 1983 (EOS-80) algorithm. Compare consecutive levels in both
 directions with a single configurable threshold Δσ (default 0.03 kg/m³).
 Because configuration files are per-region, a region-specific threshold is
-simply a different value in that region's config — no extra mechanism needed.
+simply a different value in that region's config; no extra mechanism needed.
 
 - Top→bottom: σ₀ at greater pressure < σ₀ at lesser pressure − Δσ → fail.
 - Bottom→top: σ₀ at lesser pressure > σ₀ at greater pressure + Δσ → fail.
@@ -212,7 +212,7 @@ salinity at the same observation to `4` (or `3`).
 Applied as the **last step of aggregation**: if the final `temp` NRT flag of an
 observation is worse than the final `psal` NRT flag, the `psal` flag is raised
 to match. Recorded in its own item column so the propagation is traceable.
-Like every other item, it runs only when listed in the active `qc_item_set` —
+Like every other item, it runs only when listed in the active `qc_item_set`;
 datasets with independently measured salinity simply omit it from their
 configuration.
 
@@ -221,7 +221,6 @@ configuration.
 | Item | Reason |
 |------|--------|
 | RTQC1 Platform identification | GTS/Argo-specific (WMO/ptt matching) |
-| RTQC4 Position on land | Requires external bathymetry (ETOPO2); candidate for a later version |
 | RTQC5 Impossible speed | Argo/GTS drift-specific |
 | RTQC10 Bottom spike | XBT only |
 | RTQC15 Grey list | Argo DAC infrastructure |
@@ -234,22 +233,39 @@ configuration.
 The output parquet = **all original input columns** plus:
 
 1. **One column per enabled QC item.** Naming pattern (configurable):
-   - Variable-specific items: `{variable}_qc_{item}` — e.g.
+   - Variable-specific items: `{variable}_qc_{item}`, e.g.
      `temp_qc_global_range`, `psal_qc_spike`.
-   - Profile-level, variable-independent items: `qc_{item}` — e.g.
+   - Profile-level, variable-independent items: `qc_{item}`, e.g.
      `qc_impossible_date`, `qc_impossible_location`, and the shared
      `qc_pressure_increasing`.
    - Values: the flag scheme of §3 (integer; 1 = pass). Never null for enabled
      items, so the columns can be consumed directly as model features.
-2. **Final NRT flag per variable**: `temp_nrt_flag`, `psal_nrt_flag` — the
+2. **Final NRT flag per variable**: `temp_nrt_flag`, `psal_nrt_flag`, the
    worst (most severe) flag among all item columns applicable to that
    variable (variable-specific items + profile-level items), after the
    temp→salinity propagation of §4.11.
 
 Item short names (used in column names and config): `impossible_date`,
-`impossible_location`, `global_range`, `regional_range`,
+`impossible_location`, `position_on_land`, `global_range`, `regional_range`,
 `pressure_increasing`, `spike`, `gradient`, `digit_rollover`, `stuck_value`,
 `density_inversion`, `temp_to_psal`.
+
+**RTQC4 was originally excluded** as needing external bathymetry (ETOPO2).
+It is implemented instead against a column already present in the input,
+holding the sea floor depth at the profile position, which is what a
+bathymetry lookup would have produced. That keeps the dependency out of the
+library and pushes the lookup upstream, where the input is assembled. The
+item is deliberately absent from the configuration templates, since most
+inputs carry no such column, and a missing column raises rather than
+passing every row.
+
+The column defaults to `bathymetry`, **not** `depth`. An input may carry a
+measurement depth as well, and the two are not interchangeable: reading a
+measurement depth as bathymetry would flag every shallow observation as
+land. The `positive_depth` parameter is the second half of the same
+hazard, since the sign convention inverts the test outright. The CTD test
+fixture happens to carry `bath`, real bathymetry that is negative below sea
+level, which is what the step 2 tests exercise both conventions against.
 
 ### 6.1 Flag comparison report
 
@@ -259,14 +275,14 @@ summary report comparing the existing flags with the newly computed
 `{variable}_nrt_flag`. Per variable:
 
 1. **Contingency table** of existing flag value × new NRT flag value with
-   counts and percentages — works with any existing flag scheme (0–9), no
+   counts and percentages; works with any existing flag scheme (0-9), no
    value mapping required.
 2. **Agreement metrics** (optional): when `pos_flag_values` /
    `neg_flag_values` are given for the variable (same convention as the other
    modules), existing flags are binarised and accuracy / precision / recall of
    the new flags against the existing ones are reported.
 3. **Per-item breakdown**: for each enabled QC item, the count of
-   observations the item flagged, split by existing-flag value — shows which
+   observations the item flagged, split by existing-flag value; shows which
    items drive agreement or disagreement.
 
 Output: one TSV per variable, `nrt_qc_flag_comparison_{variable}.tsv`
@@ -394,7 +410,7 @@ src/aiqclib/nrtqc/
   `qc_item_set` via the feature registry, instantiates each class, and joins
   the produced columns back onto the data.
 - All computations are vectorised polars expressions over
-  (`platform_code`, `profile_no`) windows — no per-profile Python loops.
+  (`platform_code`, `profile_no`) windows, with no per-profile Python loops.
 - No stdout/stderr output from the library (consumers surface warnings).
 - Interface: `aiqclib.interface` gets the matching high-level entry points
   (mirroring the existing per-module functions) plus a config template/schema
@@ -415,7 +431,7 @@ src/aiqclib/nrtqc/
 ## 10. Resolved decisions
 
 1. **Regional handling**: one configuration file per region (Arctic, Baltic,
-   Mediterranean) — region membership is decided by config choice, not by
+   Mediterranean); region membership is decided by config choice, not by
    coordinates, so RTQC7 needs no polygon test. Baltic ranges are not yet
    available; start with permissive placeholders and tune later (see §4.4,
    incl. the Baltic low-salinity conflict with the global range minimum).
@@ -424,6 +440,6 @@ src/aiqclib/nrtqc/
 3. **Fail flag severity**: default `4` for all items, with a per-item
    `fail_flag` config override so individual tests can be softened to `3`
    where appropriate.
-4. **Temp→psal propagation**: controlled purely by the configuration —
+4. **Temp→psal propagation**: controlled purely by the configuration.
    `temp_to_psal` is an ordinary item enabled by listing it in the
    `qc_item_set`. No platform-metadata conditioning.

@@ -15,10 +15,13 @@ from aiqclib.prepare.step3_select_profiles.dataset_all import SelectDataSetAll
 from aiqclib.prepare.step3_select_profiles.select_base import ProfileSelectionBase
 from aiqclib.prepare.step4_select_rows.dataset_a import LocateDataSetA
 from aiqclib.prepare.step4_select_rows.dataset_all import LocateDataSetAll
+from aiqclib.prepare.step4_select_rows.dataset_profile import LocateDataSetProfile
 from aiqclib.prepare.step4_select_rows.locate_base import LocatePositionBase
 from aiqclib.prepare.step5_extract_features.dataset_a import ExtractDataSetA
+from aiqclib.prepare.step5_extract_features.dataset_profile import ExtractDataSetProfile
 from aiqclib.prepare.step5_extract_features.extract_base import ExtractFeatureBase
 from aiqclib.prepare.step6_split_dataset.dataset_a import SplitDataSetA
+from aiqclib.prepare.step6_split_dataset.dataset_profile import SplitDataSetProfile
 from aiqclib.prepare.step6_split_dataset.dataset_all import SplitDataSetAll
 from aiqclib.prepare.step6_split_dataset.split_base import SplitDataSetBase
 
@@ -54,6 +57,7 @@ SELECT_DATASET_REGISTRY: Dict[str, Type[ProfileSelectionBase]] = {
 LOCATE_DATASET_REGISTRY: Dict[str, Type[LocatePositionBase]] = {
     "LocateDataSetA": LocateDataSetA,
     "LocateDataSetAll": LocateDataSetAll,
+    "LocateDataSetProfile": LocateDataSetProfile,
 }
 
 #: A registry mapping class names (used in YAML config) to their corresponding
@@ -62,6 +66,7 @@ LOCATE_DATASET_REGISTRY: Dict[str, Type[LocatePositionBase]] = {
 #: :type: Dict[str, Type[ExtractFeatureBase]]
 EXTRACT_DATASET_REGISTRY: Dict[str, Type[ExtractFeatureBase]] = {
     "ExtractDataSetA": ExtractDataSetA,
+    "ExtractDataSetProfile": ExtractDataSetProfile,
 }
 
 #: A registry mapping class names (used in YAML config) to their corresponding
@@ -71,4 +76,5 @@ EXTRACT_DATASET_REGISTRY: Dict[str, Type[ExtractFeatureBase]] = {
 SPLIT_DATASET_REGISTRY: Dict[str, Type[SplitDataSetBase]] = {
     "SplitDataSetA": SplitDataSetA,
     "SplitDataSetAll": SplitDataSetAll,
+    "SplitDataSetProfile": SplitDataSetProfile,
 }

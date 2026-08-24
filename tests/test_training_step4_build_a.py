@@ -6,7 +6,7 @@ Exercises:
   SHAP), BuildModel honours the flag because SHAP is computed at the testing
   stage. ``test_shap_flag`` defends that invariant.
 - Default-config XGBoost path: ``test_train_with_xgboost``,
-  ``test_train_final_model_with_xgboost``, ``test_read_models`` — these
+  ``test_train_final_model_with_xgboost``, ``test_read_models``; these
   verify the default config (model=XGBoost) produces XGBoost instances and
   that on-disk model files load correctly.
 - Distinct-object invariants: ``test_model_objects``,
@@ -31,20 +31,20 @@ Refactored from the original which had:
   by MODEL_CASES)
 - A latent **bug** in the original: each per-model class had a
   ``test_base_model`` that checked ``KFoldValidation`` (step2's class) rather
-  than ``BuildModel`` (step4's class) — copy-paste from step2. The refactor
+  than ``BuildModel`` (step4's class), copy-paste from step2. The refactor
   fixes this to check ``BuildModel``, which is what the test name claims.
 
 Note on config selection (NRT_BO_002 instead of NRT_BO_001):
 This file uses ``training_config_001_bo002`` and ``training_input_001_bo002``,
 which select the ``NRT_BO_002`` entry of test_training_001.yaml. That entry
-uses ``target_set_1_2`` — a 2-target set (temp + psal) that excludes pres.
+uses ``target_set_1_2``, a 2-target set (temp + psal) that excludes pres.
 The reduced test fixtures have zero pres test rows, which breaks any test
 that touches ``ds.test_sets["pres"]`` or its derivatives; excluding pres
 from the config makes the per-target dicts have only the two valid keys
 and the tests can iterate over ``TARGETS_NONEMPTY`` uniformly.
 
 When the library handles zero-row test data, switch back to NRT_BO_001
-and TARGETS — see the conftest comment on TARGETS_NONEMPTY for the
+and TARGETS; see the conftest comment on TARGETS_NONEMPTY for the
 migration story.
 """
 
@@ -100,7 +100,7 @@ def _run_test_with_trained_model(ds: BuildModel) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Core BuildModel tests (default config — XGBoost path)
+# Core BuildModel tests (default config, XGBoost path)
 # ---------------------------------------------------------------------------
 
 
@@ -216,8 +216,8 @@ class TestBuildModel:
         """Fitting on one class is refused instead of producing a dead model.
 
         XGBoost fits single-class labels happily and then predicts that class
-        for every row at one constant score, so nothing downstream — not even
-        a prediction_threshold — can tell the model is useless. The refusal
+        for every row at one constant score, so nothing downstream (not even
+        a prediction_threshold) can tell the model is useless. The refusal
         names the target.
         """
         training_sets = dict(training_input_001_bo002.training_sets)

@@ -8,9 +8,16 @@ they live here as a durable record of *why* and *how* a feature was built.
 
 | File | What it is |
 | --- | --- |
-| [`NRTQC_doc.md`](NRTQC_doc.md) | RTQC recommendation reference — the source material the module was based on. |
+| [`NRTQC_doc.md`](NRTQC_doc.md) | RTQC recommendation reference: the source material the module was based on. |
 | [`NRTQC_spec.md`](NRTQC_spec.md) | Module specification: QC items, flag scheme, config layout, outputs. |
 | [`NRTQC_plan.md`](NRTQC_plan.md) | The 8-phase implementation plan followed to build the module. |
+
+## Profile-level mode
+
+| File | What it is |
+| --- | --- |
+| [`PROFILE_spec.md`](PROFILE_spec.md) | Mode specification: profile labels (binary/proportion), feature levels, aggregation, config keys, outputs. |
+| [`PROFILE_plan.md`](PROFILE_plan.md) | The 5-phase implementation plan followed to build the mode. |
 
 ## GPU acceleration
 

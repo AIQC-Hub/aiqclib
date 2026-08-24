@@ -19,7 +19,7 @@ from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.base.model_base import ModelBase
 from aiqclib.common.utils.diagnostics import (
     check_labels_not_single_class,
-    warn_shap_cost,
+    report_shap_cost,
     warn_single_class_labels,
 )
 
@@ -68,6 +68,22 @@ class SklearnModelBase(ModelBase):
         """
         pass
 
+    def _check_training_labels(self, labels: pl.Series) -> None:
+        """
+        Validate the labels a model is about to be fitted on.
+
+        Refused here rather than at evaluation: fitting on one class succeeds
+        and yields a model that flags nothing, which is not visible in the
+        model file afterwards. Regressor subclasses override this with a
+        warning, since a constant continuous label is degenerate but not
+        structurally broken.
+
+        :param labels: The training labels.
+        :type labels: pl.Series
+        :raises ValueError: If fewer than two classes are present.
+        """
+        check_labels_not_single_class(labels, self.target_name, self.k or 0)
+
     def build(self) -> None:
         """
         Train the classifier using the assigned training set.
@@ -85,12 +101,7 @@ class SklearnModelBase(ModelBase):
         if self.training_set is None:
             raise ValueError("Member variable 'training_set' must not be empty.")
 
-        # Refused here rather than at evaluation: fitting on one class succeeds
-        # and yields a model that flags nothing, which is not visible in the
-        # model file afterwards.
-        check_labels_not_single_class(
-            self.training_set["label"], self.target_name, self.k or 0
-        )
+        self._check_training_labels(self.training_set["label"])
 
         x_train = self.training_set.select(pl.exclude("label")).to_pandas()
         if not self.allow_na:
@@ -221,7 +232,7 @@ class SklearnModelBase(ModelBase):
         # Say so before spending the time, not after. SHAP is off by default,
         # so reaching here is always a deliberate choice -- but the cost of
         # that choice is invisible until the phase has already run long.
-        warn_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
+        report_shap_cost(x_test.shape[0], target_name=self.target_name, k=self.k or 0)
 
         def background_data() -> pd.DataFrame:
             """Reference distribution for the explainers that need one.

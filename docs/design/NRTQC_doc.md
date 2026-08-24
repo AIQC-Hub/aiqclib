@@ -38,8 +38,8 @@ The test requires that the observation date and time from the profile data are s
 
 The test requires that the observation latitude and longitude from the profile data be sensible.
 
-  - Latitude in range –90 to 90
-  - Longitude in range –180 to 180
+  - Latitude in range -90 to 90
+  - Longitude in range -180 to 180
 
 **Action:** If either latitude or longitude fails, the position should be flagged as bad data.
 
@@ -78,17 +78,17 @@ This test applies only to certain regions of the world where conditions can be f
 
 #### North Western Shelves
 
-  - Temperature in range –2.0°C to 24.0°C
+  - Temperature in range -2.0°C to 24.0°C
   - Salinity in range 0.0 to 37.0
 
 #### South West Shelves
 
-  - Temperature in range –2.0°C to 30.0°C
+  - Temperature in range -2.0°C to 30.0°C
   - Salinity in range 0.0 to 38.0
 
 #### Arctic Sea
 
-  - Temperature in range –1.92°C to 25.0°C
+  - Temperature in range -1.92°C to 25.0°C
   - Salinity in range 2.0 to 40.0
 
 ### RTQC8: Pressure increasing test
@@ -101,7 +101,7 @@ This test requires that the profile has pressures that are monotonically increas
 
 A large difference between sequential measurements, where one measurement is quite different from adjacent ones, is a spike in both size and gradient. The test does not consider the differences in depth, but assumes a sampling that adequately reproduces the temperature and salinity changes with depth. The algorithm is used on both the temperature and salinity profiles:
 
-  Test value = | V2 – (V3 + V1)/2 | – | (V3 – V1) / 2 |
+  Test value = | V2 - (V3 + V1)/2 | - | (V3 - V1) / 2 |
 
 where V2 is the measurement being tested as a spike, and V1 and V3 are the values above and below.
 
@@ -129,7 +129,7 @@ This is a special version of the spike test, which compares the measurements at 
 
 This test is failed when the difference between vertically adjacent measurements is too steep. The test does not consider the differences in depth, but assumes a sampling that adequately reproduces the temperature and salinity changes with depth. The algorithm is used on both the temperature and salinity profiles:
 
-  Test value = | V2 – (V3 + V1)/2 |
+  Test value = | V2 - (V3 + V1)/2 |
 
 where V2 is the measurement being tested as a spike, and V1 and V3 are the values above and below.
 
@@ -198,8 +198,8 @@ This test can detect an instrument that reproduces the same profile (with very s
 
   B. Subtract the two resulting profiles for temperature and salinity to get absolute difference profiles:
 
-    - deltaT = abs(Tprof – T_previous_prof)
-    - deltaS = abs(Sprof – S_previous_prof)
+    - deltaT = abs(Tprof - T_previous_prof)
+    - deltaS = abs(Sprof - S_previous_prof)
 
   C. Derive the maximum, minimum and mean of the absolute differences for temperature and salinity:
 

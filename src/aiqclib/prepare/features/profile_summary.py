@@ -24,6 +24,8 @@ class ProfileSummaryStats(FeatureBase):
     for multi-stage scaling.
     """
 
+    level: str = "profile"
+
     def __init__(
         self,
         target_name: Optional[str] = None,

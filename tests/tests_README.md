@@ -2,7 +2,7 @@
 
 This document is the short version. The Phase 1 example files
 (`test_common_utils_config.py`, `test_prepare_step1_input_a.py`,
-`test_training_step2_validate_a.py`) are the long version — read them when
+`test_training_step2_validate_a.py`) are the long version; read them when
 in doubt about a pattern.
 
 ## Quick start
@@ -61,7 +61,7 @@ Pytest expands this into 9 cases, with ids like `[XGBoost]`,
 
 ## Per-target loops
 
-Three targets — `temp`, `psal`, `pres` — almost always appear together.
+Three targets (`temp`, `psal`, `pres`) almost always appear together.
 Loop over `TARGETS` (imported from conftest) rather than writing the same
 block three times:
 

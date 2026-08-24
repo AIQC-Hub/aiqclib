@@ -3,8 +3,8 @@ Performance Evaluation
 
 Each phase that runs a model writes a per-target **model-scores** file: a
 long-format table with one row per scored prediction. These files are intended
-for performance evaluation — computing ROC curves, Precision-Recall curves,
-confusion matrices at a chosen threshold, AUC, and so on — including in
+for performance evaluation (computing ROC curves, Precision-Recall curves,
+confusion matrices at a chosen threshold, AUC, and so on), including in
 external tools such as R.
 
 Schema
@@ -35,14 +35,14 @@ Schema
      - Model probability for the positive class, in ``[0, 1]``.
 
 The target variable (``temp``, ``psal``) is encoded in the *file
-name*, not in a column — each file holds a single target.
+name*, not in a column: each file holds a single target.
 
 .. note::
 
    These files intentionally do **not** contain a ``predicted_label`` column.
    A predicted label is simply ``score >= threshold``, so storing it would bake
    in a single threshold and make the file less useful for sweeping the
-   threshold — which is exactly what ROC and Precision-Recall analysis does.
+   threshold, which is exactly what ROC and Precision-Recall analysis does.
    Derive labels yourself at whatever threshold you need:
 
    * Python / Polars: ``predicted = (df["score"] >= t).cast(pl.Int64)``

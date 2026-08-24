@@ -113,6 +113,14 @@ aiqclib.prepare.features.qc\_item\_base module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.qc\_position\_on\_land module
+------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.qc_position_on_land
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.qc\_pressure\_increasing module
 --------------------------------------------------------
 

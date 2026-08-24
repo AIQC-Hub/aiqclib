@@ -5,7 +5,7 @@ Exercises:
 - shap_flag forwarding (ClassifyAll honours the flag, like BuildModel does)
 - Default-XGBoost classification path: read default models, test_targets,
   write reports/model-scores tables/SHAP values/predictions, create metric
-  plots — plus all their empty-state ValueError counterparts.
+  plots, plus all their empty-state ValueError counterparts.
 - Per-config behaviour: the three test_classify_*.yaml configs are exercised
   in parallel via the ``idx`` parametrize; ``test_n_jobs`` verifies each
   config's configured thread count is honoured.
@@ -86,7 +86,7 @@ def classify_pipeline_first(test_data_file, classify_yaml_001):
 def default_model_files(training_dir):
     """Default XGBoost model fixture paths used by TestClassifyAll tests.
 
-    These are the unsuffixed ``model_{tgt}.joblib`` files — the default
+    These are the unsuffixed ``model_{tgt}.joblib`` files, the default
     XGBoost variant. Per-model tests in TestModels use suffixed files
     constructed from ``case.joblib_suffix``.
     """
@@ -259,7 +259,7 @@ class TestClassifyAll:
 
         The single-class refusal belongs to training, where it would produce a
         model that flags nothing. Here the model already exists and is only
-        being applied, so this must keep working — a QC run over data that
+        being applied, so this must keep working; a QC run over data that
         happens to be entirely good is a normal thing to do.
         """
         extracts = classify_pipeline_all.extracts[0].target_features

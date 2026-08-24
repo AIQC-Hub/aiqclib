@@ -32,7 +32,7 @@ def update_file(file_path: pathlib.Path, prompt: str, client: genai.Client, mode
         file_path.write_text(resp.text, encoding="utf-8")
         print(f"✅ Updated: {file_path}")
     except Exception as e:
-        print(f"❌ Failed: {file_path} — {e}")
+        print(f"❌ Failed: {file_path}: {e}")
 
 def main():
     parser = argparse.ArgumentParser()

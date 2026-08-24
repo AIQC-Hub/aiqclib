@@ -28,6 +28,7 @@ from typing import Any, Dict, Optional, Tuple, Type
 import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as SklearnLDA
 from sklearn.ensemble import RandomForestClassifier as SklearnRF
+from sklearn.ensemble import RandomForestRegressor as SklearnRFR
 from sklearn.linear_model import LogisticRegression as SklearnLR
 from sklearn.naive_bayes import GaussianNB as SklearnGNB
 from sklearn.neighbors import KNeighborsClassifier as SklearnKNN
@@ -42,8 +43,10 @@ from aiqclib.train.models.linear_discriminant_analysis import LinearDiscriminant
 from aiqclib.train.models.logistic_regression import LogisticRegression
 from aiqclib.train.models.multilayer_perceptron import MultilayerPerceptron
 from aiqclib.train.models.random_forest import RandomForest
+from aiqclib.train.models.random_forest_regressor import RandomForestRegressor
 from aiqclib.train.models.support_vector_machine import SupportVectorMachine
 from aiqclib.train.models.xgboost import XGBoost
+from aiqclib.train.models.xgboost_regressor import XGBoostRegressor
 
 
 @dataclass(frozen=True)
@@ -152,5 +155,29 @@ MODEL_CASES: list[ModelCase] = [
         sklearn_cls=SklearnMLP,
         defaults={"hidden_layer_sizes": (50,), "activation": "relu"},
         override={"hidden_layer_sizes": (50, 50), "learning_rate_init": 0.01},
+    ),
+]
+
+
+# The regressor wrappers used for proportion labels (profile-level mode).
+# Kept apart from MODEL_CASES: classifier tests (predict_proba, classification
+# reports) do not apply to them.
+REGRESSOR_CASES: list[ModelCase] = [
+    ModelCase(
+        config_name="XGBoostRegressor",
+        wrapper_cls=XGBoostRegressor,
+        joblib_suffix="xgbr",
+        sklearn_cls=xgb.XGBRegressor,
+        defaults={"n_estimators": 100, "n_jobs": -1, "eval_metric": "rmse"},
+        override={"max_depth": 5, "n_jobs": 4},
+        missing=("scale_pos_weight",),
+    ),
+    ModelCase(
+        config_name="RandomForestRegressor",
+        wrapper_cls=RandomForestRegressor,
+        joblib_suffix="rfr",
+        sklearn_cls=SklearnRFR,
+        defaults={"n_estimators": 100, "n_jobs": -1},
+        override={"n_estimators": 50, "max_features": "log2"},
     ),
 ]

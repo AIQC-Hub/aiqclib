@@ -9,6 +9,13 @@ most severe flag among that variable's item columns plus the profile-level
 propagation item runs afterwards, on the aggregated temperature flag, and
 raises the salinity flag where needed. The output parquet holds all
 original input columns, every item column, and the final NRT flags.
+
+Items configured with ``include_in_final_flag: false`` are left out of that
+aggregation. They still run and still write their own flag column, so the
+output keeps the same set of columns either way; only the final flag
+changes. This separates "did this test fail" from "does this test decide
+the verdict", which matters for tests that are informative but too
+aggressive to gate on.
 """
 
 import os
@@ -64,11 +71,14 @@ class ConcatFlagsBase(DataSetBase):
 
     def _flag_columns_for(self, df: pl.DataFrame, variable: str) -> List[str]:
         """
-        Return the item flag columns applicable to a variable.
+        Return the item flag columns that feed a variable's final flag.
 
         These are the variable's own item columns
         (``{variable}_qc_{item}``) plus the profile-level columns
-        (``qc_{item}``), restricted to enabled items present in the frame.
+        (``qc_{item}``), restricted to the items included in the final flag
+        and present in the frame. Items excluded via
+        ``include_in_final_flag: false`` are skipped here but their columns
+        remain in the frame.
 
         :param df: The flag frame.
         :type df: pl.DataFrame
@@ -78,7 +88,7 @@ class ConcatFlagsBase(DataSetBase):
         :rtype: List[str]
         """
         columns = []
-        for item_name in self.config.get_qc_item_names():
+        for item_name in self.config.get_final_flag_item_names():
             for candidate in (f"{variable}_qc_{item_name}", f"qc_{item_name}"):
                 if candidate in df.columns:
                     columns.append(candidate)
@@ -90,8 +100,9 @@ class ConcatFlagsBase(DataSetBase):
 
         For every configured variable, ``{variable}_nrt_flag`` is the most
         severe flag among its applicable item columns (or good when no
-        item produced a column for it). Deferred propagation items run
-        last, on the aggregated flags.
+        item produced a column for it). Items excluded from the final flag
+        contribute nothing here, though their columns stay in the frame.
+        Deferred propagation items run last, on the aggregated flags.
 
         :raises ValueError: If :attr:`qc_data` is empty.
         """
@@ -123,12 +134,17 @@ class ConcatFlagsBase(DataSetBase):
         ``psal_qc_temp_to_psal``), and the target's ``{variable}_nrt_flag``
         is raised to the propagated severity where needed.
 
+        The item still runs when it is excluded from the final flag, because
+        its column is the only record that the propagation happened; only
+        the raising of ``{variable}_nrt_flag`` is skipped.
+
         :param df: The frame with the aggregated NRT flags.
         :type df: pl.DataFrame
         :param item: A resolved item entry from
                      :meth:`NRTQCConfig.get_qc_items`.
         :type item: Dict
-        :return: The frame with the propagation column and updated flag.
+        :return: The frame with the propagation column and, when the item is
+                 included in the final flag, the updated flag.
         :rtype: pl.DataFrame
         :raises ValueError: If the item has no registered feature class.
         """
@@ -153,6 +169,9 @@ class ConcatFlagsBase(DataSetBase):
         (target_variable,) = ds.get_variables()
         propagated_column = ds.flag_column_name(target_variable)
         final_column = f"{target_variable}_nrt_flag"
+
+        if not item["include_in_final_flag"]:
+            return df
 
         flag_columns = [propagated_column]
         if final_column in df.columns:

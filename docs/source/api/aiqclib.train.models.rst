@@ -73,6 +73,14 @@ aiqclib.train.models.random\_forest module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.train.models.random\_forest\_regressor module
+-----------------------------------------------------
+
+.. automodule:: aiqclib.train.models.random_forest_regressor
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.train.models.support\_vector\_machine module
 ----------------------------------------------------
 
@@ -85,6 +93,14 @@ aiqclib.train.models.xgboost module
 -----------------------------------
 
 .. automodule:: aiqclib.train.models.xgboost
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.train.models.xgboost\_regressor module
+----------------------------------------------
+
+.. automodule:: aiqclib.train.models.xgboost_regressor
    :members:
    :show-inheritance:
    :undoc-members:

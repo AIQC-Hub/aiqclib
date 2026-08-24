@@ -14,11 +14,11 @@ Coverage:
 
 Refactored from a ``unittest.TestCase`` class. The two "valid config" tests
 collapse into one parametrize with 4 (config_name, expected_class) cases.
-The 5 error tests stay as separate methods — each exercises a distinct
+The 5 error tests stay as separate methods; each exercises a distinct
 error path on ModelBase.
 
 Note: the 5 error tests at the bottom are duplicated in
-``test_common_loaders_single_model.py`` — both files call ``load_model_class``
+``test_common_loaders_single_model.py``; both files call ``load_model_class``
 with the default config (which yields XGBoost) and exercise the same error
 paths. Preserving both for maximum regression coverage.
 """

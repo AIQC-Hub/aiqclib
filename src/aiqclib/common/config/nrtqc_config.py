@@ -93,9 +93,12 @@ class NRTQCConfig(ConfigBase):
         Return the enabled QC items with their resolved parameters.
 
         Each returned item is a dictionary with the keys ``name``, ``params``,
-        and ``fail_flag``. Parameters given in the configuration override the
-        built-in defaults supplied via ``default_params`` (a shallow, per-key
-        merge). ``fail_flag`` defaults to 4 (bad data) when not set.
+        ``fail_flag``, and ``include_in_final_flag``. Parameters given in the
+        configuration override the built-in defaults supplied via
+        ``default_params`` (a shallow, per-key merge). ``fail_flag`` defaults
+        to 4 (bad data) when not set, and ``include_in_final_flag`` defaults
+        to :obj:`True`, so an item feeds the aggregated flag unless it is
+        explicitly opted out.
 
         :param default_params: Built-in default parameters keyed by item name,
                                typically supplied by the QC item registry.
@@ -115,6 +118,7 @@ class NRTQCConfig(ConfigBase):
                     "name": name,
                     "params": params,
                     "fail_flag": item.get("fail_flag", 4),
+                    "include_in_final_flag": item.get("include_in_final_flag", True),
                 }
             )
         return items
@@ -123,10 +127,32 @@ class NRTQCConfig(ConfigBase):
         """
         Return the names of all enabled QC items, in configuration order.
 
+        Every enabled item is returned, including those excluded from the
+        final flag: they still run and still write their own flag column.
+        Use :meth:`get_final_flag_item_names` for the aggregation subset.
+
         :return: List of enabled QC item names.
         :rtype: List[str]
         """
         return [x["name"] for x in self.data["qc_item_set"]["items"]]
+
+    def get_final_flag_item_names(self) -> List[str]:
+        """
+        Return the items that feed the aggregated ``{variable}_nrt_flag``.
+
+        This is :meth:`get_qc_item_names` minus the items configured with
+        ``include_in_final_flag: false``. Those items still run and still
+        write their own flag column, so excluding one changes the final
+        flag without changing the set of columns in the output.
+
+        :return: Names of the included items, in configuration order.
+        :rtype: List[str]
+        """
+        return [
+            x["name"]
+            for x in self.data["qc_item_set"]["items"]
+            if x.get("include_in_final_flag", True)
+        ]
 
     def _summary_extra(self, width: int) -> List[Tuple[str, List[str]]]:
         """
@@ -134,8 +160,10 @@ class NRTQCConfig(ConfigBase):
 
         The QC items are to an NRT QC configuration what the feature set is to
         a dataset configuration, so they take the same place in the summary.
-        A non-default ``fail_flag`` is shown alongside the item name, since it
-        changes what the item writes when it fails.
+        Two things are shown alongside the item name because they change what
+        the item contributes: a non-default ``fail_flag``, which changes what
+        the item writes when it fails, and exclusion from the final flag,
+        which is otherwise invisible until the output is compared by hand.
 
         :param width: The total line width the summary is formatted to.
         :type width: int
@@ -147,12 +175,16 @@ class NRTQCConfig(ConfigBase):
         if not items:
             return []
 
-        names = [
-            f"{x['name']} (flag {x['fail_flag']})"
-            if x.get("fail_flag", 4) != 4
-            else x["name"]
-            for x in items
-        ]
+        names = []
+        for item in items:
+            notes = []
+            if item.get("fail_flag", 4) != 4:
+                notes.append(f"flag {item['fail_flag']}")
+            if not item.get("include_in_final_flag", True):
+                notes.append("not in final flag")
+            names.append(
+                f"{item['name']} ({', '.join(notes)})" if notes else item["name"]
+            )
         return [("qc items", self._wrap(", ".join(names), width))]
 
     def get_variable_flag(self, target_name: str) -> Optional[str]:

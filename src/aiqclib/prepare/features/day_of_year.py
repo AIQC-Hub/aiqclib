@@ -26,6 +26,8 @@ class DayOfYearFeat(FeatureBase):
     a sinusoidal transformation for cyclical encoding.
     """
 
+    level: str = "profile"
+
     def __init__(
         self,
         target_name: Optional[str] = None,

@@ -25,6 +25,14 @@ aiqclib.prepare.step4\_select\_rows.dataset\_all module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.step4\_select\_rows.dataset\_profile module
+-----------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.step4_select_rows.dataset_profile
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.step4\_select\_rows.locate\_base module
 -------------------------------------------------------
 

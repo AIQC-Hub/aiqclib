@@ -30,7 +30,7 @@ from aiqclib.classify.step1_read_input.dataset_all import InputDataSetAll
 def _read_input(config, test_data_file, *, file_type=None, read_file_options=None):
     """Construct InputDataSetAll, set the input file + options, read, return data.
 
-    Pure helper — no test state. Used by the read-time tests that vary
+    Pure helper, no test state. Used by the read-time tests that vary
     file_type and read_file_options in the config.
     """
     ds = InputDataSetAll(config)

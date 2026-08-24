@@ -7,7 +7,7 @@ populate ``selected_profiles``; tests verify both entry points.
 
 Refactored from a ``unittest.TestCase`` class. Renamed
 ``TestSelectDataSetA`` → ``TestSelectDataSetAll`` (the original was a
-copy-paste from another test file — it tests SelectDataSetAll, not
+copy-paste from another test file; it tests SelectDataSetAll, not
 SelectDataSetA). ``pytest -k SelectDataSetAll`` filters will now match.
 """
 
@@ -22,7 +22,7 @@ from aiqclib.classify.step3_select_profiles.dataset_all import SelectDataSetAll
 class TestSelectDataSetAll:
     """Tests for SelectDataSetAll's profile-selection and file output.
 
-    Renamed from ``TestSelectDataSetA`` — the original was a copy-paste
+    Renamed from ``TestSelectDataSetA``; the original was a copy-paste
     from the prepare-side equivalent. This file tests classify-side
     SelectDataSetAll.
     """

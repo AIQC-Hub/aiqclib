@@ -67,13 +67,19 @@ This powerful section allows you to define the core components of your training 
 .. note::
    ``aiqclib`` integrates multiple ML algorithms, and it is easy to switch between them by setting the ``model`` key. For more details, see the dedicated :doc:`../how-to/algorithm_selection` page.
 
+.. note::
+   Profile-level datasets with ``label_mode: proportion`` need a regressor
+   model, either ``XGBoostRegressor`` (``XGBR``) or ``RandomForestRegressor``
+   (``RFR``); binary profile labels train with the regular classifiers. See
+   :doc:`../how-to/profile_level_pipeline`.
+
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^
 This section provides detailed parameters for the classes defined in your chosen ``step_class_sets``. This allows you to fine-tune the behavior of each step, such as specifying the number of folds for cross-validation or providing hyperparameters for your machine learning model.
 
 *   **steps.input**: Parameters for the input data loading step (often empty or simple flags).
 *   **steps.validate.k_fold**: For ``KFoldValidation``, specifies the number of folds for cross-validation.
-*   **steps.model.calculate_shap**: This is used to control SHAP value calculation. It defaults to ``False``, and enabling it is normally the largest single change to how long a training run takes — see :ref:`shap-cost`.
+*   **steps.model.calculate_shap**: This is used to control SHAP value calculation. It defaults to ``False``, and enabling it is normally the largest single change to how long a training run takes; see :ref:`shap-cost`.
 *   **steps.model.model_params.scale_pos_weight**: This is used to address imbalanced datasets by weighting the positive class. For example, ``200`` indicates a ratio of negative to positive records of 200:1.
 *   **steps.model.model_params.n_jobs**: The number of threads used by XGBoost. It tries to use all available CPU cores if it is set to `-1`.
 *   **steps.build**: Parameters for the final model building step (often empty or simple flags for saving).

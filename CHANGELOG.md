@@ -6,18 +6,40 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
-## [0.11.0] - 2026-08-15
+## [0.12.0] - 2026-08-25
 ### Added
-- Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap` — it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
-- The SHAP how-to has a "What It Costs" section with measured shares, how the cost scales, and why turning it off is a bigger lever than a GPU
-- `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
-- New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does — fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin — a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting, and why `GPUTreeExplainer` is not used — 28x on `RandomForest`, but slower than the ordinary explainer for XGBoost and absent from every published `shap` wheel
+- Profile-level pipeline: `LocateDataSetProfile` / `ExtractDataSetProfile` / `SplitDataSetProfile` (prepare) and `LocateDataSetProfile` / `ExtractDataSetProfile` / `ConcatDataSetProfile` (classify) produce, train on, and classify one row per profile instead of one per observation
+- Per-target `label_mode`: `binary` (any bad observation, default) or `proportion` (fraction of bad-flagged observations, in [0, 1]) for profile-level labels
+- Regressor models `XGBoostRegressor` (`XGBR`) and `RandomForestRegressor` (`RFR`) for proportion labels, with regression reports (MAE/RMSE/R²) and predicted-vs-actual metric plots; `ModelSuite` rejects mixed classifier/regressor method sets
+- Feature classes declare a `level` (`observation`/`profile`); observation-level features aggregate per profile via a new `agg` feature-param key (`mean`, `min`, `max`, `median`, `std`, `sum`, `first`, `fail_frac`, `fail_any`), and un-aggregated observation-level features are rejected at profile level
+- Configuration templates and stages `prepare_profile`, `train_profile`, `classify_profile`; how-to guide `profile_level_pipeline`
+- Shared identity-column constants (`aiqclib.common.constants`) replace six duplicated `drop_cols`/`test_cols` lists in the train/classify steps
+- New NRT QC item `position_on_land` (RTQC4), flagging profiles whose position is not in the ocean. It reads an externally computed sea floor depth column already in the input (`depth_column`, default `bathymetry`, deliberately not `depth`, which is the measurement depth) rather than an external bathymetry grid, with `positive_depth` (default `true`) saying which sign means deeper. Absent from the config templates, and a missing column raises rather than passing every row
+- `run_batch` accepts `mode="nrt_qc"`, running the NRT QC module over a table of datasets from an `nrt_qc_set_name` column and an `nrt_qc_config` file. It is not part of `mode="all"`, which still runs prepare, train and classify: NRT QC flags are an input to the prepare phase rather than a step of it
+- NRT QC items accept `include_in_final_flag` (default `true`): an item set to `false` still runs and still writes its flag column, but no longer feeds the aggregated `{variable}_nrt_flag`, so a test can be recorded without deciding the verdict
+
+### Changed
+- The SHAP cost heads-up is now a `[aiqclib] note:` line instead of a `UserWarning`, so it no longer reads as a fault in the library. Same message, still once per run and still printed whether or not `verbose` is set
+- Saved models record the XGBoost version that wrote them, and loading one compares it. XGBoost's own warning fires on any version difference, down to the patch release and in both directions, from inside `pickle` and naming no file; only one direction matters, so loading into the same version or newer is now a `[aiqclib] note:` needing no action, and loading into an older one is a warning naming both versions. Model files written before this carry no version and keep a warning saying the direction cannot be checked
+- The GPU how-to documents the XGBoost version mismatch, with measured predictions for one model loaded under six releases: loading into an older XGBoost than trained the model moved scores by up to 0.076 and flipped 21 of 2,000 labels, while loading into a newer one reproduced them bitwise
+- Em and en dashes removed throughout the docs, docstrings and comments, replaced with ordinary punctuation; the rule is recorded in `CLAUDE.md`
+- Sphinx `smartquotes_action` set to `"qe"`, so `--` and `---` are no longer rendered as dashes in the HTML
 
 ### Fixed
-- The `ModelSuite` example in the algorithm-selection guide set `calculate_shap: True`, contradicting the default and the config templates — and a suite is the most expensive place to enable it, since `SVM`, `KNN`, `GNB` and `MLP` route through `KernelExplainer`
+- The configuration schema rejected the documented QC-item feature keys `params` and `fail_flag`, and required `col_names` even though QC items derive their variables from `params`
+
+## [0.11.0] - 2026-08-15
+### Added
+- Computing SHAP values over more than 100,000 rows now warns once per run, naming `calculate_shap`; it is normally the largest cost in a run (~half of a training phase, ~99% of a classification phase) and nothing in the output attributed the time to it
+- The SHAP how-to has a "What It Costs" section with measured shares, how the cost scales, and why turning it off is a bigger lever than a GPU
+- `model_params` may mix shared parameters with per-model sections: a key naming a model (long or short form) applies only to that model, plain keys apply to all, and a model's own section overrides the shared value
+- New how-to page on GPU acceleration: which parts of the pipeline can use one (everything XGBoost does: fitting, prediction and SHAP), the `device: cuda` setting for single models and for `ModelSuite`, why saved models stay usable on CPU-only machines, what to check before running in a container, and why an older GPU may need an `xgboost` version pin, since a wheel carries code only for the GPU generations it was built for, and a too-new one fails at fit time with `This program was not compiled for SM 60`. Includes a measured comparison: 1.93x on a train phase, with the whole saving coming from SHAP rather than fitting, and why `GPUTreeExplainer` is not used: 28x on `RandomForest`, but slower than the ordinary explainer for XGBoost and absent from every published `shap` wheel
+
+### Fixed
+- The `ModelSuite` example in the algorithm-selection guide set `calculate_shap: True`, contradicting the default and the config templates, and a suite is the most expensive place to enable it, since `SVM`, `KNN`, `GNB` and `MLP` route through `KernelExplainer`
 - SHAP for tree models no longer converts the whole training set to pandas to build background data it never uses; the conversion is now made only by the explainers that need one
-- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored — they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
-- A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`) — making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
+- The algorithm-selection guide put hyperparameters directly under the `model` step (`model: { learning_rate: 0.01 }`), where they are silently ignored; they belong under `model_params`. The suite example no longer tells users to give every method an empty entry, and both places now warn that a shared parameter must be one every listed model accepts
+- A `model_params` section keyed by a model name was also handed to every other model, whose constructors rejected it (`unexpected keyword argument 'XGBoost'`), making per-model parameters unusable in `ModelSuite`. Unnamed models now receive only the shared parameters
 - `MODEL_REGISTRY` aliased `SINGLE_MODEL_REGISTRY` instead of copying it, so importing it added `ModelSuite` to the single-model registry, letting a suite list itself among its own methods
 - A non-mapping value under a model name now raises `ValueError` naming the model, instead of an unpacking `TypeError`
 
@@ -29,7 +51,7 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ### Changed
 - `repr(config)` now names the concrete config class and the selected entry, instead of always reporting `ConfigBase` and the section alone
-- The built-in templates live in one registry shared by the config classes and the interface, so the default `prepare` template is now reachable as `template:data_sets_all` — previously it was the one variant `write_config_template` could write but no config class could load
+- The built-in templates live in one registry shared by the config classes and the interface, so the default `prepare` template is now reachable as `template:data_sets_all`; previously it was the one variant `write_config_template` could write but no config class could load
 
 ## [0.9.1] - 2026-08-10
 ### Fixed
@@ -38,7 +60,7 @@ As this project is still in active development, it does not yet strictly adhere 
 ## [0.9.0] - 2026-08-10
 ### Added
 - The NRT QC guide lists all eleven QC items with what each one flags, grouped by profile- and observation-level
-- New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls — circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
+- New how-to page on using the QC items as model input features: configuration, the `params` / `col_names` / `fail_flag` settings, and the pitfalls: circularity when labelling from NRT flags, items that never fire, collinear columns, and flag values read as magnitudes by non-tree models
 
 ### Changed
 - A training, validation, test or classification dataset with no rows now raises an error naming the target and the likely cause, instead of reaching the model and failing there as a feature-name mismatch. Splits are checked before any are written, so a failure leaves no partial output
@@ -46,7 +68,7 @@ As this project is still in active development, it does not yet strictly adhere 
 - `pres` is no longer a target in the config templates or documentation examples: `pres_qc` rarely carries bad flags, so it trained a model that could flag nothing. Pressure remains an input feature and profile ordering column
 
 ### Fixed
-- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round — the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
+- The `target_sets` reference had `pos_flag_values` / `neg_flag_values` described the wrong way round: the positive class is the bad observations (flagged 4, 6, 7), which is what the model detects
 
 ## [0.8.0] - 2026-08-10
 ### Fixed

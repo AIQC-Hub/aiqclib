@@ -95,6 +95,7 @@ def create_training_dataset(config: ConfigBase, verbose: bool = False) -> None:
             ds_select.selected_profiles,
             ds_locate.selected_rows,
             ds_summary.summary_stats,
+            observation_rows=getattr(ds_locate, "observation_rows", None),
         )
         ds_extract.process_targets()
         ds_extract.write_target_features()

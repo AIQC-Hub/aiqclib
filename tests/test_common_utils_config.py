@@ -6,7 +6,7 @@ when the path doesn't exist.
 
 This is a "pure logic" test file: it exercises ``read_config`` itself rather
 than the data pipeline. The only fixture it touches is a path to an existing
-test YAML — the content of that YAML doesn't matter beyond having the
+test YAML; the content of that YAML doesn't matter beyond having the
 expected top-level keys.
 """
 

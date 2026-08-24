@@ -15,7 +15,7 @@ The library is designed around a three-stage machine learning workflow:
 2.  **Training & Evaluation:** Train machine learning models and evaluate their performance using cross-validation.
 3.  **Classification:** Apply a trained model to classify new, unseen data.
 
-In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable — see the :doc:`how-to/nrt_qc` guide.
+In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable; see the :doc:`how-to/nrt_qc` guide.
 
 Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease. To run these workflows over several datasets in one call, see the :doc:`how-to/batch_processing` guide.
 
@@ -34,7 +34,12 @@ Linear & Geometric               **Logistic Regression**           Logit        
 Instance-Based                   **K-Nearest Neighbors**           KNN          Distance-based
 Probabilistic                    **Gaussian Naive Bayes**          GNB          Probabilistic
 Neural Network                   **Multilayer Perceptron**         MLP          Neural Network
+Regression (profile mode)        **XGBoost Regressor**             XGBR         Ensemble (Boosting)
+\                                **Random Forest Regressor**       RFR          Ensemble (Bagging)
 ================================ ================================= ============ ======================
+
+The regressors train on the proportion labels of the profile-level
+pipeline; see :doc:`how-to/profile_level_pipeline`.
 
 Project links
 ---------------------------------------------
@@ -73,6 +78,7 @@ This section provides practical examples and solutions for common tasks related 
    how-to/gpu_acceleration
    how-to/prediction_threshold
    how-to/classification_labels
+   how-to/profile_level_pipeline
    how-to/nrt_qc
    how-to/qc_items_as_features
    how-to/performance_evaluation

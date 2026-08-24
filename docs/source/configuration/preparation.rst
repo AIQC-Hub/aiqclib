@@ -54,7 +54,7 @@ This section defines the critical file system locations for both your raw input 
 This section specifies the target variables that your machine learning model will predict. For each target variable, you must also define its corresponding quality control (QC) flag column, and which of that column's values mark each class.
 
 ``pos_flag_values`` lists the flags of the **positive class**, which is the one
-the model is being trained to detect — the bad observations, flagged 4, 6 or 7
+the model is being trained to detect: the bad observations, flagged 4, 6 or 7
 by default. ``neg_flag_values`` lists the flags of the negative class, the good
 observations, flagged 1 by default. Rows whose flag is in neither list are left
 out of the dataset entirely.
@@ -74,6 +74,11 @@ out of the dataset entirely.
    written as ``4`` or as ``"4"``; both sides are read as whole numbers. See
    :ref:`qc-flag-columns` for the full table.
 
+A variable may also carry an optional ``label_mode`` key (``binary``, the
+default, or ``proportion``), which controls the per-profile label in the
+**profile-level pipeline**; see :doc:`../how-to/profile_level_pipeline`.
+The observation-level pipeline ignores it.
+
 .. _choosing-targets:
 
 Choosing which variables to model
@@ -88,8 +93,8 @@ such a model, raising an error that names the target.
 
 Pressure is the usual example. ``pres_qc`` rarely carries bad flags in practice,
 so ``pres`` is **not** included as a target in the templates or these examples.
-It remains an input feature — it appears in ``col_names`` in the feature sets
-and orders observations within a profile — it is simply not something a
+It remains an input feature: it appears in ``col_names`` in the feature sets
+and orders observations within a profile. It is simply not something a
 classifier is trained for.
 
 Before adding a target, check that its flags include the positive class:
@@ -166,6 +171,11 @@ These two interconnected sections are dedicated to configuring your feature engi
            stats_set: { type: raw }
            col_names: [ temp, psal, pres ]
 
+.. note::
+   In the **profile-level pipeline**, observation-level features additionally
+   carry an ``agg`` key listing per-profile aggregations (e.g.
+   ``agg: [ min, max, std ]``); see :doc:`../how-to/profile_level_pipeline`.
+
 `feature_stats_sets`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 (**Advanced Use**)
@@ -197,6 +207,12 @@ This section allows you to define and reference custom Python classes that imple
          locate: LocateDataSetAll
          extract: ExtractDataSetA
          split: SplitDataSetAll
+
+For the profile-level pipeline (one labeled row per profile instead of one
+per observation), set ``locate: LocateDataSetProfile``,
+``extract: ExtractDataSetProfile`` and ``split: SplitDataSetProfile``; see
+:doc:`../how-to/profile_level_pipeline` and the ``prepare`` / ``profile``
+configuration template.
 
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^

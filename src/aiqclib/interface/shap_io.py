@@ -25,7 +25,7 @@ def read_shap_scores(
     (``label``, ``predicted_label``, ``score``) followed by one ``<feature>_shap``
     column per feature. This function reads such a file into a Polars DataFrame
     and, by default, strips the ``_shap`` suffix so each feature column is named
-    by its feature — convenient for downstream SHAP plots.
+    by its feature, which is convenient for downstream SHAP plots.
 
     :param file_name: Path to the SHAP score file.
     :type file_name: str

@@ -48,3 +48,11 @@ aiqclib.common.base.scikit\_learn\_model\_base module
    :members:
    :show-inheritance:
    :undoc-members:
+
+aiqclib.common.base.scikit\_learn\_regressor\_base module
+---------------------------------------------------------
+
+.. automodule:: aiqclib.common.base.scikit_learn_regressor_base
+   :members:
+   :show-inheritance:
+   :undoc-members:

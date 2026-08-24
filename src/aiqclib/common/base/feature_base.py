@@ -31,6 +31,11 @@ class FeatureBase(ABC):
     :ivar features: Polars DataFrame containing the processed features.
     """
 
+    #: The level this feature produces values at: ``"observation"`` (one
+    #: value per observation, the default) or ``"profile"`` (one value per
+    #: profile, usable directly in the profile-level pipeline).
+    level: str = "observation"
+
     def __init__(
         self,
         target_name: Optional[str] = None,

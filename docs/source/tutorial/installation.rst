@@ -25,7 +25,7 @@ packages, and either ``conda`` or ``mamba`` can install from it.
 
 .. note::
 
-   ``aiqclib`` is **not on conda-forge yet** — the recipe submission is still in
+   ``aiqclib`` is **not on conda-forge yet**: the recipe submission is still in
    progress, so the commands below will not find the package. Install with
    ``pip`` or ``uv`` for now.
 

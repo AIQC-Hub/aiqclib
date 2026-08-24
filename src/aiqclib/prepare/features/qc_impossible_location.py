@@ -21,6 +21,7 @@ class QCImpossibleLocation(QCItemFeatureBase):
     """
 
     item_name: str = "impossible_location"
+    level: str = "profile"
     default_params: dict = {
         "lat_min": -90.0,
         "lat_max": 90.0,

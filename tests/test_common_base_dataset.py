@@ -45,7 +45,7 @@ class TestDatasetBaseMethods:
     def test_common_base_path(self, dataset_config_001):
         """Direct instantiation of DataSetBase raises NotImplementedError.
 
-        DataSetBase is abstract — subclasses must define
+        DataSetBase is abstract; subclasses must define
         ``expected_class_name``. Constructing it directly should fail before
         the constructor reaches any data validation.
         """

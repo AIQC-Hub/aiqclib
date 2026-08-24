@@ -13,6 +13,11 @@ from typing import Optional, Dict
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
+from aiqclib.common.constants import (
+    ID_COLUMNS,
+    LABELED_ID_COLUMNS,
+    existing_columns,
+)
 from aiqclib.train.step4_build_model.build_model_base import BuildModelBase
 from aiqclib.common.utils.metric_plots import create_multi_method_metric_plots
 from aiqclib.common.loader.single_model_loader import (
@@ -60,14 +65,8 @@ class ClassifyAllSuite(BuildModelBase):
                 "(e.g., ModelSuite), but received a standard model class."
             )
 
-        self.drop_cols = ["row_id", "platform_code", "profile_no", "observation_no"]
-        self.test_cols = [
-            "row_id",
-            "platform_code",
-            "profile_no",
-            "observation_no",
-            "label",
-        ]
+        self.drop_cols = list(ID_COLUMNS)
+        self.test_cols = list(LABELED_ID_COLUMNS)
 
         # Consolidated files per target for data, but unique files per model/method
         self.default_file_names: Dict[str, str] = {
@@ -150,7 +149,7 @@ class ClassifyAllSuite(BuildModelBase):
         :param target_name: The name of the target variable to be tested.
         :type target_name: str
         """
-        test_set = self.test_sets[target_name].drop(self.drop_cols)
+        test_set = self.test_sets[target_name].drop(self.drop_cols, strict=False)
 
         target_reports = []
         target_predictions = []
@@ -181,7 +180,9 @@ class ClassifyAllSuite(BuildModelBase):
             # Append method column to predictions and standardize prediction types
             pred_df = pl.concat(
                 [
-                    self.test_sets[target_name].select(self.test_cols),
+                    self.test_sets[target_name].select(
+                        existing_columns(self.test_sets[target_name], self.test_cols)
+                    ),
                     current_model.predictions,
                 ],
                 how="horizontal",
@@ -197,7 +198,7 @@ class ClassifyAllSuite(BuildModelBase):
 
             # model_score already carries (method, k, label, score) with the
             # correct lowercase method tag set by update_model_score in the
-            # base class — collect it as-is. No manual method-tagging needed,
+            # base class, so collect it as-is. No manual method-tagging needed,
             # and predicted_label no longer exists in this frame.
             if current_model.model_score is not None:
                 target_model_scores.append(current_model.model_score)

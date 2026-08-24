@@ -88,6 +88,10 @@ class ExtractFeatureBase(DataSetBase):
 
         #: A dict of Polars DataFrames, one per target, indicating rows to be used.
         self.selected_rows: Optional[Dict[str, pl.DataFrame]] = selected_rows
+        #: Per-target observation rows used by the profile-level extract step
+        #: to aggregate observation-level features; None elsewhere (set by
+        #: subclasses that accept them, e.g. ``ExtractDataSetProfile``).
+        self.observation_rows: Optional[Dict[str, pl.DataFrame]] = None
         #: A Polars DataFrame presenting summary stats for optional use in scaling features.
         self.summary_stats: Optional[pl.DataFrame] = summary_stats
         #: A dictionary specifying feature extraction parameters from the config.

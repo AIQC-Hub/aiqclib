@@ -169,6 +169,13 @@ This section defines the specific Python classes that implement the logic for ea
          classify: ClassifyAll
          concat: ConcatDataSetAll
 
+For classifying **one row per profile** with models from the profile-level
+training stage, set ``locate: LocateDataSetProfile``,
+``extract: ExtractDataSetProfile`` and ``concat: ConcatDataSetProfile``
+(the ``concat`` step parameter ``broadcast_to_observations: true``
+repeats each profile's prediction on every observation instead); see
+:doc:`../how-to/profile_level_pipeline`.
+
 `step_param_sets`
 ^^^^^^^^^^^^^^^^^
 This section provides general parameters for the workflow processes defined in ``step_class_sets``. These parameters control the behavior of various pipeline steps during classification.
@@ -179,12 +186,12 @@ This section provides general parameters for the workflow processes defined in `
     .. warning::
        If ``keep_years`` names years the input does not cover, every row is
        filtered out and the run stops with an error naming the target and the
-       empty dataset. Check the years present in the input before setting it —
+       empty dataset. Check the years present in the input before setting it;
        a product whose data ends in 2021 classifies nothing under
        ``keep_years: [2023]``.
 
 *   **steps.input.rename_dict**: Dictionary for renaming columns during input processing.
-*   **steps.model.calculate_shap**: This is used to control SHAP value calculation. It defaults to ``False``. Enabling it dominates a classification run more than any other setting — classification does no fitting, so almost all of its time goes into explaining. See :ref:`shap-cost`.
+*   **steps.model.calculate_shap**: This is used to control SHAP value calculation. It defaults to ``False``. Enabling it dominates a classification run more than any other setting: classification does no fitting, so almost all of its time goes into explaining. See :ref:`shap-cost`.
 *   **steps.model.skip_evaluation**: An optional boolean to classify data without label columns. When enabled, the pipeline predicts every row but skips label creation and performance evaluation. If omitted, it is auto-detected per target from whether a QC ``flag`` is set. See the :doc:`../how-to/classification_labels` guide for details.
 *   **steps.model.model_params.n_jobs**: The number of threads used by XGBoost. It tries to use all available CPU cores if it is set to `-1`.
 *   Parameters for other steps (``summary``, ``select``, ``locate``, ``extract``, ``classify``, ``concat``) are also defined here, often left empty if default behavior is sufficient or if parameters are handled by the model itself.
