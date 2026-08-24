@@ -31,6 +31,7 @@ _STAGE_TEMPLATES: Dict[str, Tuple[str, Type[ConfigBase]]] = {
     "train_profile": ("template:training_sets_profile", TrainingConfig),
     "classify_": ("template:classification_sets", ClassificationConfig),
     "classify_full": ("template:classification_sets_full", ClassificationConfig),
+    "classify_profile": ("template:classification_sets_profile", ClassificationConfig),
     "nrt_qc_": ("template:nrt_qc_sets", NRTQCConfig),
 }
 

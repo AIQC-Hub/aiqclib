@@ -361,6 +361,40 @@ def training_config_003_bo002() -> TrainingConfig:
     return _load_training_config("test_training_003.yaml", select="NRT_BO_002")
 
 
+def _make_profile_classify_config(label_mode: str = "binary") -> ClassificationConfig:
+    """Profile-level variant of test_classify_003.yaml via config mutation.
+
+    Mirrors ``_make_profile_dataset_config``: swaps the locate/extract/concat
+    step classes for their profile-level variants, adds per-profile
+    aggregations to the observation-level features, and sets the targets'
+    ``label_mode``.
+    """
+    config = _load_classify_config("test_classify_003.yaml")
+    steps = config.data["step_class_set"]["steps"]
+    steps["locate"] = "LocateDataSetProfile"
+    steps["extract"] = "ExtractDataSetProfile"
+    steps["concat"] = "ConcatDataSetProfile"
+    for param in config.data["feature_param_set"]["params"]:
+        if param["feature"] in ("basic_values", "flank_up", "flank_down"):
+            param["agg"] = ["min", "max", "std"]
+    if label_mode != "binary":
+        for variable in config.data["target_set"]["variables"]:
+            variable["label_mode"] = label_mode
+    return config
+
+
+@pytest.fixture
+def classify_config_profile() -> ClassificationConfig:
+    """Profile-level classification config (binary labels)."""
+    return _make_profile_classify_config()
+
+
+@pytest.fixture
+def classify_config_profile_proportion() -> ClassificationConfig:
+    """Profile-level classification config (proportion labels)."""
+    return _make_profile_classify_config("proportion")
+
+
 @pytest.fixture
 def classify_config_001() -> ClassificationConfig:
     return _load_classify_config("test_classify_001.yaml")

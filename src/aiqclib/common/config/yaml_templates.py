@@ -1155,6 +1155,95 @@ nrt_qc_sets:
 """
 
 
+def _get_classify_step_class_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level classification step
+    class sets.
+
+    Steps 1-3 and the classify step reuse the observation-level classes; the
+    locate, extract, and concat steps use their profile-level variants. The
+    model must match the one the profiles were trained with (a regressor for
+    ``label_mode: proportion``).
+
+    :returns: A string containing the YAML template for profile classification
+              step class sets.
+    :rtype: str
+    """
+    return """
+step_class_sets:
+  - name: data_set_step_set_1
+    steps:
+      input: InputDataSetAll
+      summary: SummaryDataSetAll
+      select: SelectDataSetAll
+      locate: LocateDataSetProfile
+      extract: ExtractDataSetProfile
+      model: XGBoost  # EDIT: XGBoostRegressor for proportion-label models
+      classify: ClassifyAll
+      concat: ConcatDataSetProfile
+
+"""
+
+
+def _get_classify_step_param_sets_profile() -> str:
+    """
+    Retrieves a YAML template string for profile-level classification step
+    parameter sets.
+
+    :returns: A string containing the YAML template for profile classification
+              step parameter sets.
+    :rtype: str
+    """
+    return """
+step_param_sets:
+  - name: data_set_param_set_1
+    steps:
+      input: { sub_steps: { rename_columns: false,
+                            filter_rows: true },
+               rename_dict: { },
+               filter_method_dict: { remove_years: [ ],
+                                     keep_years: [ 2023 ] } }
+      summary: { }
+      select: { }
+      locate: { }
+      extract: { }
+      # skip_evaluation: True classifies unlabeled data (no QC flag) and skips
+      # performance evaluation. Omit it to auto-detect per target from `flag`.
+      model: { calculate_shap: False }
+      classify: { }
+      # broadcast_to_observations: true joins each profile's prediction onto
+      # every observation of the profile instead of one row per profile.
+      concat: { broadcast_to_observations: false }
+
+"""
+
+
+def get_config_classify_set_profile_template() -> str:
+    """
+    Retrieve a YAML template string for profile-level classification.
+
+    Classifies one row per profile using models trained by the profile-level
+    training stage: profile-native features are used directly, and
+    observation-level features carry the same ``agg`` aggregations as at
+    preparation time. Targets keep ``label_mode`` for evaluation; targets
+    without a flag are classified label-free.
+
+    :returns: A string containing the YAML template.
+    :rtype: str
+    """
+    return (
+        _get_classify_path_info_sets()
+        + _get_dataset_target_sets_profile()
+        + _get_dataset_summary_stats_sets()
+        + _get_dataset_feature_sets_profile()
+        + _get_dataset_feature_param_sets_profile()
+        + _get_dataset_feature_stats_sets()
+        + _get_classify_step_class_sets_profile()
+        + _get_classify_step_param_sets_profile()
+        + _get_classification_sets()
+    )
+
+
 def get_config_nrtqc_template() -> str:
     """
     Retrieve a YAML template string for NRT QC configurations.
@@ -1198,6 +1287,7 @@ _TEMPLATES = {
     "template:training_sets_profile": get_config_train_set_profile_template,
     "template:classification_sets": get_config_classify_set_template,
     "template:classification_sets_full": get_config_classify_set_full_template,
+    "template:classification_sets_profile": get_config_classify_set_profile_template,
     "template:nrt_qc_sets": get_config_nrtqc_template,
 }
 
