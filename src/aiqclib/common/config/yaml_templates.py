@@ -730,6 +730,77 @@ training_sets:
     return yaml_template
 
 
+def get_config_train_set_profile_template() -> str:
+    """
+    Retrieve a YAML template string for profile-level training configurations.
+
+    Mirrors :func:`get_config_train_set_template` but reads the profile-level
+    prepare output (one row per profile) and shows both label modes:
+    ``binary`` profile labels train with any classifier, while
+    ``proportion`` labels require a regressor model (``XGBoostRegressor`` /
+    ``RandomForestRegressor``). For a regressor, ``predicted_label_threshold``
+    means "flag the profile when the predicted bad fraction reaches the
+    threshold".
+
+    :returns: A string containing the YAML template.
+    :rtype: str
+    """
+    yaml_template = """
+---
+path_info_sets:
+  - name: data_set_1
+    common:
+      base_path: /path/to/data # EDIT: Root output directory
+    input:
+      step_folder_name: training
+
+target_sets:
+  - name: target_set_1
+    variables:
+      - name: temp
+        flag: temp_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: proportion  # EDIT: binary or proportion
+      - name: psal
+        flag: psal_qc
+        pos_flag_values: [ 4, 6, 7 ]
+        neg_flag_values: [ 1 ]
+        label_mode: proportion  # EDIT: binary or proportion
+
+step_class_sets:
+  - name: training_step_set_1
+    steps:
+      input: InputTrainingSetA
+      validate: KFoldValidation
+      # EDIT: proportion labels need a regressor (XGBoostRegressor or
+      # RandomForestRegressor); binary labels use any classifier.
+      model: XGBoostRegressor
+      build: BuildModel
+
+step_param_sets:
+  - name: training_param_set_1
+    steps:
+      input: { }
+      # Profile-level datasets are much smaller than observation-level ones;
+      # keep k_fold modest and match the k_fold used at preparation time.
+      validate: { k_fold: 5 }
+      model: { calculate_shap: False,
+               predicted_label_threshold: 0.5,
+               model_params: { n_jobs: -1 } }
+      build: { }
+
+training_sets:
+  - name: training_0001  # EDIT: Your training name
+    dataset_folder_name: dataset_0001  # EDIT: Your output folder
+    path_info: data_set_1
+    target_set: target_set_1
+    step_class_set: training_step_set_1
+    step_param_set: training_param_set_1
+"""
+    return yaml_template
+
+
 def _get_classify_path_info_sets() -> str:
     """
     Retrieves a YAML template string for classification path information sets.
@@ -1124,6 +1195,7 @@ _TEMPLATES = {
     "template:data_sets_full": get_config_data_set_full_template,
     "template:data_sets_profile": get_config_data_set_profile_template,
     "template:training_sets": get_config_train_set_template,
+    "template:training_sets_profile": get_config_train_set_profile_template,
     "template:classification_sets": get_config_classify_set_template,
     "template:classification_sets_full": get_config_classify_set_full_template,
     "template:nrt_qc_sets": get_config_nrtqc_template,

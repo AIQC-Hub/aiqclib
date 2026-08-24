@@ -32,8 +32,12 @@ def _wire_prepare(config, test_output_dir, input_dir):
     }
 
 
-def _load_train_config(test_output_dir):
-    """Training config (temp+psal, XGBoost) reading the profile split output."""
+def _load_train_config(test_output_dir, model_class=None):
+    """Training config (temp+psal) reading the profile split output.
+
+    Defaults to the fixture's XGBoost classifier; pass ``model_class`` (e.g.
+    ``"XGBoostRegressor"``) to train a regressor on proportion labels.
+    """
     config = TrainingConfig(str(CONFIG_DIR / "test_training_001.yaml"))
     config.select("NRT_BO_002")
     config.data["dataset_folder_name"] = PROFILE_FOLDER
@@ -42,6 +46,8 @@ def _load_train_config(test_output_dir):
         "common": {"base_path": str(test_output_dir)},
         "input": {"base_path": str(test_output_dir), "step_folder_name": "split"},
     }
+    if model_class is not None:
+        config.data["step_class_set"]["steps"]["model"] = model_class
     return config
 
 
@@ -93,14 +99,14 @@ class TestCreateTrainingDataSetProfile:
             ).exists()
             assert (output_folder / "build" / f"test_report_{tgt}.tsv").exists()
 
-    def test_proportion_prepare(
+    def test_proportion_prepare_and_train(
         self,
         dataset_config_profile_proportion,
         test_output_dir,
         input_dir,
         cleanup_profile_folder,
     ):
-        """Proportion labels flow through prepare as floats in [0, 1]."""
+        """Proportion labels flow through prepare as floats and train a regressor."""
         _wire_prepare(dataset_config_profile_proportion, test_output_dir, input_dir)
         create_training_dataset(dataset_config_profile_proportion)
 
@@ -112,3 +118,23 @@ class TestCreateTrainingDataSetProfile:
             assert train_set["label"].dtype == pl.Float64
             assert (train_set["label"] >= 0.0).all()
             assert (train_set["label"] <= 1.0).all()
+
+        train_config = _load_train_config(
+            test_output_dir, model_class="XGBoostRegressor"
+        )
+        train_and_evaluate(train_config)
+
+        for tgt in TARGETS_NONEMPTY:
+            assert (output_folder / "model" / f"model_{tgt}.joblib").exists()
+            report = pl.read_csv(
+                output_folder / "build" / f"test_report_{tgt}.tsv", separator="\t"
+            )
+            assert set(report["metric_type"].to_list()) == {
+                "mae",
+                "rmse",
+                "r2",
+                "n_samples",
+            }
+            # The regression metric plots (predicted-vs-actual + residuals)
+            # are produced through the same writer as the classifier plots.
+            assert (output_folder / "validate" / f"metric_plots_{tgt}.svg").exists()

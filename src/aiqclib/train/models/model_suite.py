@@ -71,6 +71,20 @@ class ModelSuite(ModelBase):
             m: self._load_model_class_with_method_name(config, m) for m in self.methods
         }
 
+        # A suite must be homogeneous: classifier scores (probabilities) and
+        # regressor scores (predicted proportions) are not comparable in the
+        # aggregated model-scores files and metric plots.
+        regressor_flags = {
+            m: getattr(obj, "is_regressor", False)
+            for m, obj in self.method_objs.items()
+        }
+        if len(set(regressor_flags.values())) > 1:
+            raise ValueError(
+                f"ModelSuite methods mix classifiers and regressors: "
+                f"{regressor_flags}. Use separate configurations for "
+                f"classifier and regressor runs."
+            )
+
     def _load_model_class_with_method_name(
         self, config: ConfigBase, method: str
     ) -> Any:

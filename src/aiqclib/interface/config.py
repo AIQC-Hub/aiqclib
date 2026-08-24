@@ -28,6 +28,7 @@ _STAGE_TEMPLATES: Dict[str, Tuple[str, Type[ConfigBase]]] = {
     "prepare_reduced": ("template:data_sets", DataSetConfig),
     "prepare_profile": ("template:data_sets_profile", DataSetConfig),
     "train_": ("template:training_sets", TrainingConfig),
+    "train_profile": ("template:training_sets_profile", TrainingConfig),
     "classify_": ("template:classification_sets", ClassificationConfig),
     "classify_full": ("template:classification_sets_full", ClassificationConfig),
     "nrt_qc_": ("template:nrt_qc_sets", NRTQCConfig),

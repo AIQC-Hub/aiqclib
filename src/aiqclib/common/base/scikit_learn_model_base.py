@@ -68,6 +68,22 @@ class SklearnModelBase(ModelBase):
         """
         pass
 
+    def _check_training_labels(self, labels: pl.Series) -> None:
+        """
+        Validate the labels a model is about to be fitted on.
+
+        Refused here rather than at evaluation: fitting on one class succeeds
+        and yields a model that flags nothing, which is not visible in the
+        model file afterwards. Regressor subclasses override this with a
+        warning, since a constant continuous label is degenerate but not
+        structurally broken.
+
+        :param labels: The training labels.
+        :type labels: pl.Series
+        :raises ValueError: If fewer than two classes are present.
+        """
+        check_labels_not_single_class(labels, self.target_name, self.k or 0)
+
     def build(self) -> None:
         """
         Train the classifier using the assigned training set.
@@ -85,12 +101,7 @@ class SklearnModelBase(ModelBase):
         if self.training_set is None:
             raise ValueError("Member variable 'training_set' must not be empty.")
 
-        # Refused here rather than at evaluation: fitting on one class succeeds
-        # and yields a model that flags nothing, which is not visible in the
-        # model file afterwards.
-        check_labels_not_single_class(
-            self.training_set["label"], self.target_name, self.k or 0
-        )
+        self._check_training_labels(self.training_set["label"])
 
         x_train = self.training_set.select(pl.exclude("label")).to_pandas()
         if not self.allow_na:

@@ -189,6 +189,47 @@ def warn_single_class_labels(
     return True
 
 
+def warn_constant_labels(
+    labels: pl.Series,
+    target_name: Optional[str] = None,
+    k: int = 0,
+) -> bool:
+    """
+    Warn when a regression target's labels hold a single constant value.
+
+    Fitting a regressor on a constant label succeeds and yields a model that
+    predicts that constant everywhere. Unlike the single-class classifier
+    case (see :func:`check_labels_not_single_class`) this is degenerate but
+    not structurally broken — the proportion labels of a profile-level run
+    can legitimately be constant in small or clean datasets — so it warns
+    rather than refuses.
+
+    :param labels: The labels the regressor is about to be trained on.
+    :type labels: polars.Series
+    :param target_name: The target being trained, used in the message.
+    :type target_name: Optional[str]
+    :param k: The fold number; 0 means a single, unfolded fit.
+    :type k: int
+    :return: True when a warning was issued.
+    :rtype: bool
+    """
+    present = labels.drop_nulls().unique().to_list()
+    if len(present) > 1:
+        return False
+
+    where = _context(target_name, k)
+    found = f"the constant label {present[0]}" if present else "no labelled rows"
+    warnings.warn(
+        f"Training data for {where} has {found} ({labels.len()} rows), so the "
+        f"fitted regressor will predict a constant value everywhere. Check "
+        f"'pos_flag_values' / 'neg_flag_values' against the flag values "
+        f"actually present in the input.",
+        UserWarning,
+        stacklevel=3,
+    )
+    return True
+
+
 #: Row count above which computing SHAP values is worth warning about. A rough
 #: threshold, not a cliff: the real cost is rows x trees x depth^2, so a deep
 #: forest can be slow well below this and a shallow one fast well above it.
