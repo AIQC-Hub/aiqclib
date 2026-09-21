@@ -6,6 +6,21 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-22
+### Added
+- `derived_values` feature: sigma-0, depth and potential temperature computed from the measured variables, or passed through when the input already carries them.
+- `stratification` feature: the vertical density gradient, N squared, its magnitude and an unstable-layer flag.
+- `profile_smooth` feature: Savitzky-Golay smoothed value, first and second derivative, residual, robust z-score of the residual, curvature-to-residual ratio, Argo spike index, and the window fractions of outliers and high curvature.
+- `neighbor_diff` feature: differences against the levels above and below at configurable lags, plus the window fraction of large differences.
+- `regime_flags` feature: in-mixed-layer, in-gradient-layer (thermocline or halocline) and normalized depth to the peak gradient.
+- `geo_context` feature: bathymetry and coast distance read as input columns (no GEBCO or GSHHG reader), plus normalized depth, distance to bottom and a deep stable layer flag.
+- `rolling_stats` feature: mean, median, MAD, min, max, standard deviation and the local robust z-score over configurable centred windows.
+- `profile_summary_stats` accepts `mad`, computed per profile from the input since the step 2 summary table does not carry it.
+- `common.utils.profile_signal`: Savitzky-Golay smoothing and derivatives, neighbour differences, central gradients, the shared RTQC9 spike stencil, and centred rolling, MAD and robust z statistics, all partitioned per profile.
+- `common.utils.seawater`: `gravity`, `depth_from_pressure` and `brunt_vaisala_squared`.
+- Feature entries accept an `outputs` list naming which columns of a feature group to emit.
+- Documentation: a page per new feature group under Features, and a how-to, `Building a Feature Set from the Profile Shape`, on choosing among them.
+
 ## [0.12.2] - 2026-09-21
 ### Fixed
 - The density inversion test (RTQC14) no longer computes a density from values that cannot be measurements. A netCDF fill value or a placeholder such as -999 used to run through the equation of state, raising numpy overflow and invalid-value `RuntimeWarning`s during a run, and, where it did not overflow, producing a finite density far outside sea water that made the good observation next to it read as an inversion. Such inputs are now treated as missing, which the test already counts as a pass; the accepted ranges are much wider than the global range test, so no real measurement changes

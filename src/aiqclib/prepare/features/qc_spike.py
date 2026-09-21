@@ -12,6 +12,7 @@ from typing import Dict
 
 import polars as pl
 
+from aiqclib.common.utils.profile_signal import spike_index_expr
 from aiqclib.prepare.features.qc_item_base import QCNeighborStencilBase
 
 
@@ -35,6 +36,11 @@ class QCSpike(QCNeighborStencilBase):
         """
         The spike test value: ``|V2 - (V3 + V1)/2| - |(V3 - V1)/2|``.
 
+        The formula lives in
+        :func:`~aiqclib.common.utils.profile_signal.spike_index_expr`, so
+        that this flag item and the continuous ``spike_index`` feature
+        cannot drift apart.
+
         :param v1: The neighbouring value above V2.
         :type v1: pl.Expr
         :param v2: The value being tested.
@@ -44,4 +50,4 @@ class QCSpike(QCNeighborStencilBase):
         :return: The spike test value expression.
         :rtype: pl.Expr
         """
-        return (v2 - (v3 + v1) / 2).abs() - ((v3 - v1) / 2).abs()
+        return spike_index_expr(v1, v2, v3)

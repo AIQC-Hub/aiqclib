@@ -66,11 +66,14 @@ Feature                       Why profile-level
 ============================ =========================================
 
 All other features are observation-level: ``basic_values``,
-``flank_up``/``flank_down`` and the remaining ``qc_*`` items (including
-``qc_pressure_increasing``, whose flag varies within a profile). At profile
-level they **must** carry an ``agg`` list naming per-profile aggregations of
-their columns; an observation-level feature without ``agg`` is rejected with an
-error naming the feature:
+``flank_up``/``flank_down``, the seven profile-shape groups
+(``geo_context``, ``derived_values``, ``stratification``,
+``profile_smooth``, ``neighbor_diff``, ``rolling_stats`` and
+``regime_flags``; see :doc:`profile_signal_features`) and the remaining
+``qc_*`` items (including ``qc_pressure_increasing``, whose flag varies
+within a profile). At profile level they **must** carry an ``agg`` list
+naming per-profile aggregations of their columns; an observation-level
+feature without ``agg`` is rejected with an error naming the feature:
 
 .. code-block:: yaml
 

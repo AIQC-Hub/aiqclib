@@ -87,6 +87,15 @@ These two sections are critical for ensuring that the new input data is transfor
 *   **feature_sets**: Lists the names of the feature engineering methods to re-apply to the new input data.
 *   **feature_param_sets**: Provides the specific parameters for each feature method listed in ``feature_sets``. These parameters (e.g., ``stats_set`` references for normalization) are usually copied directly from the ``prepare_config.yaml`` used for training.
 
+.. note::
+   The seven profile-shape feature groups (``geo_context``, ``derived_values``,
+   ``stratification``, ``profile_smooth``, ``neighbor_diff``,
+   ``rolling_stats`` and ``regime_flags``) are configured here exactly as they
+   are for training, and the ``outputs`` list and ``params`` object must match
+   the ones used then. They read a whole profile, so the input being
+   classified has to carry every level of it, not a subset of rows. See
+   :doc:`../how-to/profile_signal_features`.
+
 .. code-block:: yaml
 
    # A list of features to apply for classification

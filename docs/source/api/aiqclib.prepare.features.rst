@@ -25,6 +25,14 @@ aiqclib.prepare.features.day\_of\_year module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.derived\_values module
+-----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.derived_values
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.flank\_down module
 -------------------------------------------
 
@@ -41,10 +49,42 @@ aiqclib.prepare.features.flank\_up module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.geo\_context module
+--------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.geo_context
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.location module
 ----------------------------------------
 
 .. automodule:: aiqclib.prepare.features.location
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.neighbor\_diff module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.neighbor_diff
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.profile\_feature\_base module
+------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.profile_feature_base
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.profile\_smooth module
+-----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.profile_smooth
    :members:
    :show-inheritance:
    :undoc-members:
@@ -157,6 +197,30 @@ aiqclib.prepare.features.qc\_temp\_to\_psal module
 --------------------------------------------------
 
 .. automodule:: aiqclib.prepare.features.qc_temp_to_psal
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.regime\_flags module
+---------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.regime_flags
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.rolling\_stats module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.rolling_stats
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.stratification module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.stratification
    :members:
    :show-inheritance:
    :undoc-members:

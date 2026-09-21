@@ -1,7 +1,7 @@
 Profile Summary Statistics
 =======================================
 
-The ``profile_summary_stats`` feature is a profile-level feature that represents the summary statistics of specified variables. All observations belonging to the same profile generally have the same ``profile_summary_stats`` feature values. The ``profile_summary_stats`` feature can contain the following nine statistics:
+The ``profile_summary_stats`` feature is a profile-level feature that represents the summary statistics of specified variables. All observations belonging to the same profile generally have the same ``profile_summary_stats`` feature values. The ``profile_summary_stats`` feature can contain the following ten statistics:
 
 1.  **min**: minimum
 2.  **max**: maximum
@@ -12,6 +12,16 @@ The ``profile_summary_stats`` feature is a profile-level feature that represents
 7.  **pct2.5**: 2.5th percentile
 8.  **pct97.5**: 97.5th percentile
 9.  **sd**: standard deviation
+10. **mad**: median absolute deviation
+
+The first nine are read from the summary table built in step 2. ``mad`` is not
+in that table, so it is computed per profile from the input when the feature
+runs. It behaves like the others as a feature, but it has no summary row to
+fit a normalization from, so it supports ``raw`` and an explicit ``min_max``
+only. It is the profile-level counterpart of the window-level ``mad`` in
+:doc:`rolling_stats`, and it is the robust alternative to ``sd``: one bad
+level inflates a standard deviation, while a median absolute deviation barely
+notices it.
 
 Configuration: Summary Statistics
 -------------------------------------
