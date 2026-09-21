@@ -57,10 +57,26 @@ aiqclib.prepare.features.location module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.neighbor\_diff module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.neighbor_diff
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.profile\_feature\_base module
 ------------------------------------------------------
 
 .. automodule:: aiqclib.prepare.features.profile_feature_base
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.profile\_smooth module
+-----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.profile_smooth
    :members:
    :show-inheritance:
    :undoc-members:
@@ -173,6 +189,14 @@ aiqclib.prepare.features.qc\_temp\_to\_psal module
 --------------------------------------------------
 
 .. automodule:: aiqclib.prepare.features.qc_temp_to_psal
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.regime\_flags module
+---------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.regime_flags
    :members:
    :show-inheritance:
    :undoc-members:

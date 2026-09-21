@@ -317,6 +317,35 @@ def central_difference_expr(
     return _over(gradient, keys, order_by)
 
 
+def index_spacing_expr(
+    column: str,
+    keys: Sequence[str] = PROFILE_KEYS,
+    order_by: Optional[str] = "observation_no",
+) -> pl.Expr:
+    """
+    How far apart consecutive levels are, in the units of a column.
+
+    A Savitzky-Golay derivative is per sample index, which is only a
+    per-decibar gradient if the profile is sampled at one decibar per
+    level. Dividing by this turns one into the other. It is the half of a
+    centred difference, so it is the average step across the level rather
+    than the step to either neighbour, which is the right correction for a
+    filter centred on that level.
+
+    :param column: The coordinate column, usually pressure or depth.
+    :type column: str
+    :param keys: The columns identifying a profile.
+    :type keys: Sequence[str]
+    :param order_by: The column giving the order within a profile.
+    :type order_by: Optional[str]
+    :return: The per-level step as an expression, null at profile ends.
+    :rtype: pl.Expr
+    """
+    return _over(
+        (pl.col(column).shift(-1) - pl.col(column).shift(1)) / 2.0, keys, order_by
+    )
+
+
 def spike_index_expr(v1: pl.Expr, v2: pl.Expr, v3: pl.Expr) -> pl.Expr:
     """
     The Argo spike test value for a level and its two neighbours.

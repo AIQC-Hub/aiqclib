@@ -25,9 +25,43 @@ SIGNAL_FEATURES = [
         "outputs": ["n2", "n2_abs", "unstable_flag"],
         "stats_set": {"type": "raw"},
     },
+    {
+        "feature": "profile_smooth",
+        "col_names": ["temp", "psal"],
+        "outputs": ["residual", "robust_z", "spike_index", "outlier_frac"],
+        "params": {"window": 5, "windows": [5]},
+        "stats_set": {"type": "raw"},
+    },
+    {
+        "feature": "neighbor_diff",
+        "col_names": ["temp", "psal"],
+        "outputs": ["diff"],
+        "params": {"lags": [1, 2], "directions": ["up", "down"]},
+        "stats_set": {"type": "raw"},
+    },
+    {
+        "feature": "regime_flags",
+        "col_names": ["temp"],
+        "stats_set": {"type": "raw"},
+    },
 ]
 
-NEW_COLUMNS = ["sigma0", "depth", "n2", "n2_abs", "unstable_flag"]
+NEW_COLUMNS = [
+    "sigma0",
+    "depth",
+    "n2",
+    "n2_abs",
+    "unstable_flag",
+    "temp_residual",
+    "temp_robust_z",
+    "temp_spike_index",
+    "temp_w5_outlier_frac",
+    "temp_diff_up_1",
+    "psal_diff_down_2",
+    "in_mixed_layer",
+    "temp_in_gradient_layer",
+    "temp_normalized_depth_to_peak_gradient",
+]
 
 
 def with_signal_features(config, agg=None):
@@ -79,9 +113,7 @@ class TestObservationLevelPipeline:
 
     def test_magnitude_matches_the_value(self, features):
         frame = next(iter(features.values())).drop_nulls(["n2", "n2_abs"])
-        assert frame["n2_abs"].to_list() == pytest.approx(
-            frame["n2"].abs().to_list()
-        )
+        assert frame["n2_abs"].to_list() == pytest.approx(frame["n2"].abs().to_list())
 
     def test_depth_is_never_null_where_pressure_is_not(self, features):
         """Depth needs only pressure and latitude, which every row has."""
