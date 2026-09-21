@@ -132,6 +132,15 @@ These two interconnected sections are dedicated to configuring your feature engi
 *   **feature_sets**: This block lists the *names* of the specific feature engineering methods you want to apply to your data.
 *   **feature_param_sets**: This block provides the detailed parameters and configurations for each of the feature methods listed in your chosen ``feature_sets`` block. This allows for fine-grained control over how each feature is generated.
 
+.. note::
+   Besides the features documented below, ``aiqclib`` provides seven groups
+   that read a whole profile: ``geo_context``, ``derived_values``,
+   ``stratification``, ``profile_smooth``, ``neighbor_diff``,
+   ``rolling_stats`` and ``regime_flags``. Each takes an ``outputs`` list
+   naming the columns to emit and a free-form ``params`` object holding its
+   thresholds and window sizes. See
+   :doc:`../how-to/profile_signal_features` for how to choose among them.
+
 .. code-block:: yaml
 
    # A list of features to apply

@@ -239,10 +239,31 @@ This is the one deliberate asymmetry in the feature set: a statistic computed
 this way has no row in the summary table, so it cannot be normalised with
 `auto_min_max` or `standard`.
 
-### Later phases
+### `geo_context` (phase 4, observation level)
 
-`geo_context` (phase 4). Its parameter table is added to this document when
-the phase lands.
+None of these are per variable.
+
+| Output | Meaning |
+| --- | --- |
+| `bathymetry` | Sea floor depth at the position, metres positive downward whatever convention the input uses. |
+| `coast_distance` | Passed through from its input column. |
+| `normalized_depth` | Level depth divided by sea floor depth: 0 at the surface, 1 at the bottom. |
+| `distance_to_bottom` | Metres of water beneath the level. |
+| `deep_stable_layer` | 1 where the level is deeper than `deep_threshold` and the column there is stable but weakly stratified. |
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `bathymetry_column` | `bathymetry` | Sea floor depth column. |
+| `coast_distance_column` | `coast_distance` | Coast distance column. |
+| `positive_depth` | `true` | Whether larger values mean deeper. |
+| `deep_threshold` | `1000.0` | Metres below which a level counts as deep. |
+| `stability_threshold` | `0.005` | kg/m⁴ gradient below which a stable column is weakly stratified. |
+| `required` | `true` | Whether a missing input column is an error. |
+
+A sea floor at or above sea level is not a sea floor, so reading the wrong sign
+convention yields null rather than an inverted answer. With `required: false` a
+missing column emits its dependent outputs as null and warns, which keeps the
+training frame's schema the same across regions whose inputs differ.
 
 ## Deliberate omissions
 

@@ -17,6 +17,7 @@ from aiqclib.prepare.features.day_of_year import DayOfYearFeat
 from aiqclib.prepare.features.derived_values import DerivedValues
 from aiqclib.prepare.features.flank_down import FlankDown
 from aiqclib.prepare.features.flank_up import FlankUp
+from aiqclib.prepare.features.geo_context import GeoContext
 from aiqclib.prepare.features.location import LocationFeat
 from aiqclib.prepare.features.neighbor_diff import NeighborDiff
 from aiqclib.prepare.features.profile_smooth import ProfileSmooth
@@ -57,6 +58,7 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "neighbor_diff": NeighborDiff,
     "regime_flags": RegimeFlags,
     "rolling_stats": RollingStats,
+    "geo_context": GeoContext,
     "flank_up": FlankUp,
     "flank_down": FlankDown,
     "qc_impossible_date": QCImpossibleDate,

@@ -133,3 +133,21 @@ contains a complete ``min_max`` example for every feature.
 Unlike the automatic methods, ``min_max`` values are read from each
 configuration directly (no file is written), so set the same values in both
 the ``prepare`` and ``classify`` configurations.
+Features without data-derived normalization
+-------------------------------------------
+
+``auto_min_max`` and ``standard`` are fitted from the step 2 summary table,
+which holds one row per raw input variable. The feature groups that read a
+whole profile (see :doc:`profile_signal_features`) produce derived columns
+that have no row there, so those two types cannot be used for them. They
+support ``raw`` and an explicit ``min_max``.
+
+In practice the outputs worth reaching for first are scale free by
+construction: every robust z-score, every fraction and every flag is already
+comparable across datasets, and ``raw`` is the right answer for them. Supply
+explicit bounds only for the columns carried in a variable's own units, such
+as a smoothed value, a derivative or a residual.
+
+The same applies to the ``mad`` statistic of ``profile_summary_stats``, which
+is computed per profile from the input rather than read from the summary
+table.
