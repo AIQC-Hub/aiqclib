@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.13.0] - 2026-09-22
 ### Added
 - `derived_values` feature: sigma-0, depth and potential temperature computed from the measured variables, or passed through when the input already carries them.
 - `stratification` feature: the vertical density gradient, N squared, its magnitude and an unstable-layer flag.
