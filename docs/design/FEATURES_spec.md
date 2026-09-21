@@ -1,6 +1,6 @@
 # Signal and context feature groups: specification
 
-Status: in progress (phase 1 of 4).
+Status: complete (all four phases merged to develop).
 
 This document specifies the feature groups added to `aiqclib` from the
 `features.pptx` proposal. It is the contract: what each feature class emits,
