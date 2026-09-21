@@ -18,6 +18,8 @@ from aiqclib.prepare.features.derived_values import DerivedValues
 from aiqclib.prepare.features.flank_down import FlankDown
 from aiqclib.prepare.features.flank_up import FlankUp
 from aiqclib.prepare.features.location import LocationFeat
+from aiqclib.prepare.features.neighbor_diff import NeighborDiff
+from aiqclib.prepare.features.profile_smooth import ProfileSmooth
 from aiqclib.prepare.features.profile_summary import ProfileSummaryStats
 from aiqclib.prepare.features.qc_density_inversion import QCDensityInversion
 from aiqclib.prepare.features.qc_digit_rollover import QCDigitRollover
@@ -31,6 +33,7 @@ from aiqclib.prepare.features.qc_regional_range import QCRegionalRange
 from aiqclib.prepare.features.qc_spike import QCSpike
 from aiqclib.prepare.features.qc_stuck_value import QCStuckValue
 from aiqclib.prepare.features.qc_temp_to_psal import QCTempToPsal
+from aiqclib.prepare.features.regime_flags import RegimeFlags
 from aiqclib.prepare.features.stratification import Stratification
 
 #: A dictionary mapping feature identifiers (str) to classes that inherit
@@ -49,6 +52,9 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "basic_values": BasicValues,
     "derived_values": DerivedValues,
     "stratification": Stratification,
+    "profile_smooth": ProfileSmooth,
+    "neighbor_diff": NeighborDiff,
+    "regime_flags": RegimeFlags,
     "flank_up": FlankUp,
     "flank_down": FlankDown,
     "qc_impossible_date": QCImpossibleDate,

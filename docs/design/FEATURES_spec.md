@@ -150,11 +150,76 @@ rather than measured.
 | `unstable_n2` | `0.0` | The threshold below which a level counts as unstable. |
 | `min_depth_separation` | `0.01` | Metres. A centred difference over a smaller separation is null rather than a division by nearly zero. |
 
+### `profile_smooth` (phase 2, observation level)
+
+Per variable in `col_names`.
+
+| Output | Column | Meaning |
+| --- | --- | --- |
+| `smooth` | `{v}_smooth` | The Savitzky-Golay fit at the level. |
+| `d1`, `d2` | `{v}_d1`, `{v}_d2` | Slope and curvature of the fit, per unit of `spacing_column`. |
+| `residual` | `{v}_residual` | The measurement less the fit. |
+| `robust_z` | `{v}_robust_z` | The residual standardised against the profile's own median and MAD. |
+| `curvature_ratio` | `{v}_curvature_ratio` | `abs(d2) / abs(residual)`: high for a real sharp feature, low for a spike. |
+| `spike_index` | `{v}_spike_index` | The RTQC9 stencil value, unthresholded. |
+| `outlier_frac` | `{v}_w{n}_outlier_frac` | Fraction of the window whose `robust_z` exceeds `outlier_z`. |
+| `high_curvature_frac` | `{v}_w{n}_high_curvature_frac` | The same for the robust score of the curvature. |
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `window` | `11` | Points in the smoothing window (odd). |
+| `polyorder` | `2` | Degree of the fitted polynomial. |
+| `spacing_column` | `pres` | Derivatives are per unit of this column; `null` keeps them per level. |
+| `min_spacing` | `1e-6` | Below this step the derivative conversion is null. |
+| `windows` | `[5, 11, 21, 41]` | Windows for the fraction outputs. |
+| `outlier_z`, `high_curvature_z` | `3.0` | What counts as an outlier or high curvature. |
+| `ratio_floor` | `1e-9` | Residual magnitude below which `curvature_ratio` is null. |
+
+### `neighbor_diff` (phase 2, observation level)
+
+| Output | Column | Meaning |
+| --- | --- | --- |
+| `diff` | `{v}_diff_{direction}_{lag}` | The level less its neighbour that many levels up or down. |
+| `large_diff_frac` | `{v}_w{n}_large_diff_frac` | Fraction of the window whose reference difference is large. |
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `lags` | `[1, 2, 3, 4, 5]` | Neighbour distances. |
+| `directions` | `["up", "down"]` | Shallower, deeper, or both. |
+| `windows` | `[5, 11, 21, 41]` | Windows for the fraction. |
+| `reference_lag`, `reference_direction` | `1`, `up` | The difference the fraction counts. |
+| `large_diff_z` | `3.0` | Robust score above which a difference is large. |
+| `large_diff_threshold` | none | An absolute magnitude instead, as one number or a per-variable mapping. |
+
+### `regime_flags` (phase 2, observation level)
+
+| Output | Column | Meaning |
+| --- | --- | --- |
+| `in_mixed_layer` | `in_mixed_layer` | 1 above the mixed layer depth. Not per variable. |
+| `in_gradient_layer` | `{v}_in_gradient_layer` | 1 in the steepest part of the variable's gradient: the thermocline for temperature, the halocline for salinity. |
+| `normalized_depth_to_peak_gradient` | `{v}_normalized_depth_to_peak_gradient` | Signed position relative to the steepest gradient, divided by the profile's pressure range. |
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `mixed_layer_criterion` | `density` | Or `temperature`. |
+| `density_threshold` | `0.03` | kg/m³ departure that ends the mixed layer. |
+| `temperature_threshold` | `0.2` | °C departure, for the temperature criterion. |
+| `reference_pressure` | `10.0` | dbar the criterion measures from, below the diurnal surface layer. |
+| `gradient_percentile` | `0.9` | Quantile of gradient magnitude that counts as the steep part. |
+| `min_pressure_separation` | `0.01` | Guards the gradient division. |
+
+Two rules here are worth stating because they are judgement calls rather than
+consequences of the arithmetic. A profile that never crosses the mixed layer
+criterion is mixed all the way down, so every level gets 1 rather than null:
+that is an answer, not a missing value. And `in_gradient_layer` additionally
+requires a non-zero gradient, because a profile that is uniform over most of
+its length has a zero percentile, and "at or above zero" would flag the flat
+part as the steepest part of the water column.
+
 ### Later phases
 
-`profile_smooth`, `neighbor_diff`, `regime_flags` (phase 2), `rolling_stats`
-and profile MAD (phase 3), `geo_context` (phase 4). Their parameter tables are
-added to this document as each phase lands.
+`rolling_stats` and profile MAD (phase 3), `geo_context` (phase 4). Their
+parameter tables are added to this document as each phase lands.
 
 ## Deliberate omissions
 
