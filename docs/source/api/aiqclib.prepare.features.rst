@@ -201,6 +201,14 @@ aiqclib.prepare.features.regime\_flags module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.rolling\_stats module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.rolling_stats
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.stratification module
 ----------------------------------------------
 

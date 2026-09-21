@@ -216,10 +216,33 @@ requires a non-zero gradient, because a profile that is uniform over most of
 its length has a zero percentile, and "at or above zero" would flag the flat
 part as the steepest part of the water column.
 
+### `rolling_stats` (phase 3, observation level)
+
+Every output is produced per variable and per window, named
+`{v}_w{n}_{output}`: `mean`, `median`, `mad`, `min`, `max`, `std` and
+`robust_z` (the level measured against its own window's median and MAD).
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `windows` | `[5, 11, 21, 41]` | Window sizes, odd. |
+| `min_samples` | none | Non-null values a window needs; the default is the full window, which makes profile edges null. |
+
+### Profile MAD (phase 3)
+
+`profile_summary_stats` accepts `mad` in its `summary_stats_names`
+alongside the statistics the step 2 table carries. A name the table does not
+have is computed per profile from the input instead of raising, which is how
+`mad` is served without widening the table; an unknown name still raises,
+naming both sets.
+
+This is the one deliberate asymmetry in the feature set: a statistic computed
+this way has no row in the summary table, so it cannot be normalised with
+`auto_min_max` or `standard`.
+
 ### Later phases
 
-`rolling_stats` and profile MAD (phase 3), `geo_context` (phase 4). Their
-parameter tables are added to this document as each phase lands.
+`geo_context` (phase 4). Its parameter table is added to this document when
+the phase lands.
 
 ## Deliberate omissions
 

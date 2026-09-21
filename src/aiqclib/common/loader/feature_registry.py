@@ -34,6 +34,7 @@ from aiqclib.prepare.features.qc_spike import QCSpike
 from aiqclib.prepare.features.qc_stuck_value import QCStuckValue
 from aiqclib.prepare.features.qc_temp_to_psal import QCTempToPsal
 from aiqclib.prepare.features.regime_flags import RegimeFlags
+from aiqclib.prepare.features.rolling_stats import RollingStats
 from aiqclib.prepare.features.stratification import Stratification
 
 #: A dictionary mapping feature identifiers (str) to classes that inherit
@@ -55,6 +56,7 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "profile_smooth": ProfileSmooth,
     "neighbor_diff": NeighborDiff,
     "regime_flags": RegimeFlags,
+    "rolling_stats": RollingStats,
     "flank_up": FlankUp,
     "flank_down": FlankDown,
     "qc_impossible_date": QCImpossibleDate,
