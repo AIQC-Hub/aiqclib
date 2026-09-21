@@ -5,7 +5,7 @@ ones.
 
 For every configured variable that carries an existing flag column (the
 ``flag`` entry of its ``qc_variable_set`` definition, e.g. ``temp_qc``),
-a summary report is built with three sections:
+a summary report is built with four sections:
 
 1. ``contingency``: the cross-tabulation of existing flag value and new
    NRT flag value with counts and percentages. Works with any existing
@@ -17,6 +17,9 @@ a summary report is built with three sections:
 3. ``item_breakdown``: per enabled QC item, how many observations the
    item flagged within each existing flag value, showing which items
    drive agreement or disagreement.
+4. ``item_breakdown_contingency``: the same pairing counted per flag
+   value rather than as pass/fail, so an item using more than one
+   failing value (suspect vs bad) is not collapsed into a single count.
 
 Variables without a configured flag are silently skipped; a configured
 flag column that is absent from the data raises an error (no silent skip
@@ -24,7 +27,7 @@ on typos).
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import polars as pl
 from polars.exceptions import ColumnNotFoundError
@@ -140,6 +143,7 @@ class CompareFlagsBase(DataSetBase):
         rows += self._contingency_rows(work)
         rows += self._agreement_rows(work, target_name)
         rows += self._item_breakdown_rows(work, target_name)
+        rows += self._item_breakdown_contingency_rows(work, target_name)
         return pl.DataFrame(rows, schema=REPORT_SCHEMA)
 
     @staticmethod
@@ -224,6 +228,36 @@ class CompareFlagsBase(DataSetBase):
             for name, value in metrics.items()
         ]
 
+    def _item_columns(
+        self, work: pl.DataFrame, target_name: str
+    ) -> List[Tuple[str, str]]:
+        """
+        Resolve each enabled QC item to its flag column in the frame.
+
+        An item is written either per variable (``temp_qc_spike``) or once
+        for the whole profile (``qc_impossible_date``); the first form that
+        is present wins. Items with neither column produce no rows, which
+        is how an item that does not apply to this variable stays out of
+        the report.
+
+        :param work: The frame produced by :meth:`compare`.
+        :type work: pl.DataFrame
+        :param target_name: The variable being compared.
+        :type target_name: str
+        :return: One ``(item name, column name)`` pair per reportable item.
+        :rtype: List[Tuple[str, str]]
+        """
+        pairs: List[Tuple[str, str]] = []
+        for item_name in self.config.get_qc_item_names():
+            for candidate in (
+                f"{target_name}_qc_{item_name}",
+                f"qc_{item_name}",
+            ):
+                if candidate in work.columns:
+                    pairs.append((item_name, candidate))
+                    break
+        return pairs
+
     def _item_breakdown_rows(self, work: pl.DataFrame, target_name: str) -> List[Dict]:
         """
         Count per-item failures within each existing flag value.
@@ -236,31 +270,68 @@ class CompareFlagsBase(DataSetBase):
         :rtype: List[Dict]
         """
         rows: List[Dict] = []
-        for item_name in self.config.get_qc_item_names():
-            for candidate in (
-                f"{target_name}_qc_{item_name}",
-                f"qc_{item_name}",
-            ):
-                if candidate not in work.columns:
-                    continue
-                breakdown = (
-                    work.group_by("_existing")
-                    .agg(
-                        (pl.col(candidate) > FLAG_GOOD).sum().alias("count"),
-                        pl.len().alias("group_total"),
-                    )
-                    .sort("_existing", nulls_last=True)
+        for item_name, column in self._item_columns(work, target_name):
+            breakdown = (
+                work.group_by("_existing")
+                .agg(
+                    (pl.col(column) > FLAG_GOOD).sum().alias("count"),
+                    pl.len().alias("group_total"),
                 )
-                rows += [
-                    {
-                        "section": "item_breakdown",
-                        "item": item_name,
-                        "existing_flag": row["_existing"],
-                        "count": row["count"],
-                        "percent": 100.0 * row["count"] / row["group_total"],
-                    }
-                    for row in breakdown.iter_rows(named=True)
-                ]
+                .sort("_existing", nulls_last=True)
+            )
+            rows += [
+                {
+                    "section": "item_breakdown",
+                    "item": item_name,
+                    "existing_flag": row["_existing"],
+                    "count": row["count"],
+                    "percent": 100.0 * row["count"] / row["group_total"],
+                }
+                for row in breakdown.iter_rows(named=True)
+            ]
+        return rows
+
+    def _item_breakdown_contingency_rows(
+        self, work: pl.DataFrame, target_name: str
+    ) -> List[Dict]:
+        """
+        Cross-tabulate existing flag against each item's own flag value.
+
+        The same pairs of observations as ``item_breakdown``, counted
+        without binarising the item: an item that emits 3 for a suspect
+        value and 4 for a bad one gets a row for each, where the breakdown
+        would have merged them into one "failed" count. Percentages are of
+        the whole variable, as in ``contingency``, so each item's rows sum
+        to 100.
+
+        :param work: The frame with the ``_existing`` column.
+        :type work: pl.DataFrame
+        :param target_name: The variable being compared.
+        :type target_name: str
+        :return: One ``item_breakdown_contingency`` row per item and pair
+                 of flag values.
+        :rtype: List[Dict]
+        """
+        total = work.height
+        rows: List[Dict] = []
+        for item_name, column in self._item_columns(work, target_name):
+            contingency = (
+                work.with_columns(pl.col(column).cast(pl.Int64).alias("_item"))
+                .group_by(["_existing", "_item"])
+                .len()
+                .sort(["_existing", "_item"], nulls_last=True)
+            )
+            rows += [
+                {
+                    "section": "item_breakdown_contingency",
+                    "item": item_name,
+                    "existing_flag": row["_existing"],
+                    "new_flag": row["_item"],
+                    "count": row["len"],
+                    "percent": 100.0 * row["len"] / total,
+                }
+                for row in contingency.iter_rows(named=True)
+            ]
         return rows
 
     def write_reports(self) -> None:
