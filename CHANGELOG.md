@@ -6,6 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-09-21
+### Fixed
+- The density inversion test (RTQC14) no longer computes a density from values that cannot be measurements. A netCDF fill value or a placeholder such as -999 used to run through the equation of state, raising numpy overflow and invalid-value `RuntimeWarning`s during a run, and, where it did not overflow, producing a finite density far outside sea water that made the good observation next to it read as an inversion. Such inputs are now treated as missing, which the test already counts as a pass; the accepted ranges are much wider than the global range test, so no real measurement changes
+
 ## [0.12.1] - 2026-09-21
 ### Added
 - NRT QC comparison report gains an `item_breakdown_contingency` section: per item, the cross-tabulation of existing flag value against the item's own flag value, so an item using more than one failing value is not collapsed into a single count as in `item_breakdown`

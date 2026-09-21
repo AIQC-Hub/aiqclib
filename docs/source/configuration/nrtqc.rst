@@ -145,7 +145,11 @@ Notes:
     ``depth_threshold`` (in decibars) and ``deep`` at or beyond it.
 *   **density_inversion** computes the potential density anomaly sigma-0
     (UNESCO 1983) and allows inversions up to ``threshold`` (kg/m³); it
-    flags temperature and salinity jointly.
+    flags temperature and salinity jointly. Observations whose temperature,
+    salinity or pressure is outside the range the equation of state is
+    defined for (a negative salinity, a placeholder such as -999) have no
+    density and pass, as missing values do; see the
+    :doc:`../how-to/nrt_qc` guide.
 *   **temp_to_psal** propagates the final temperature flag onto salinity
     (see the :doc:`../how-to/nrt_qc` guide); omit it for independently
     measured salinity.

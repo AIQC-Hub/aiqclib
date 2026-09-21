@@ -107,6 +107,22 @@ class TestDensityInversion:
         flags = run_item(QCDensityInversion, df)
         assert flags["temp_qc_density_inversion"].to_list() == [1, 1, 1]
 
+    def test_placeholder_values_untestable(self):
+        """A placeholder temperature is as untestable as a missing one.
+
+        -999 degrees has a density hundreds of units off any sea water, so
+        computing it would make the good level above read as an inversion.
+        """
+        df = make_profile(temp=[10.0, -999.0, 12.0])
+        flags = run_item(QCDensityInversion, df)
+        assert flags["temp_qc_density_inversion"].to_list() == [1, 1, 1]
+
+    def test_negative_salinity_untestable(self):
+        """A negative salinity has no density and drags in no neighbour."""
+        df = make_profile(temp=[10.0, 11.0, 12.0], psal=[35.0, -9.0, 35.0])
+        flags = run_item(QCDensityInversion, df)
+        assert flags["psal_qc_density_inversion"].to_list() == [1, 1, 1]
+
     def test_profiles_independent(self):
         """Densities are not compared across profile boundaries."""
         df = pl.concat(
