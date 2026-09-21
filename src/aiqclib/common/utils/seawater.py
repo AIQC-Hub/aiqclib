@@ -1,16 +1,23 @@
 """
-EOS-80 seawater routines (UNESCO 1983) for the NRT QC module.
+EOS-80 seawater routines (UNESCO 1983).
 
 Implements the equation of state of seawater from Fofonoff & Millard (1983),
 UNESCO Technical Papers in Marine Science #44: the adiabatic lapse rate,
 potential temperature, density at atmospheric pressure, and the potential
-density anomaly sigma-0 used by the RTQC14 density inversion test.
+density anomaly sigma-0 used by the RTQC14 density inversion test, plus the
+gravity, depth and stability relations the feature classes need.
 
 All functions follow the UNESCO argument order (salinity, temperature,
 pressure) with practical salinity (PSS-78), in-situ temperature in degrees
 Celsius (IPTS-68), and pressure in decibars. Inputs may be scalars, numpy
 arrays, or polars Series; computation is vectorised with numpy and NaN
 values propagate through the results.
+
+Everything here is **elementwise**: a routine sees one water parcel at a
+time and never a neighbouring level. Anything that compares levels, such as
+the density gradient that :func:`brunt_vaisala_squared` takes as an
+argument, belongs in :mod:`aiqclib.common.utils.profile_signal`, where the
+profile boundaries are respected.
 
 Inputs outside :data:`SALINITY_LIMITS`, :data:`TEMPERATURE_LIMITS` or
 :data:`PRESSURE_LIMITS` are treated as missing and yield NaN. See
@@ -52,6 +59,9 @@ TEMPERATURE_LIMITS: Tuple[float, float] = (-10.0, 60.0)
 #: Pressure in decibars accepted by the EOS-80 routines (the deepest ocean
 #: is near 11,000 dbar).
 PRESSURE_LIMITS: Tuple[float, float] = (-10.0, 20000.0)
+
+#: Latitude in degrees accepted by the depth and gravity routines.
+LATITUDE_LIMITS: Tuple[float, float] = (-90.0, 90.0)
 
 
 def _to_array(values: ArrayLike) -> np.ndarray:
@@ -252,3 +262,84 @@ def sigma0(s: ArrayLike, t: ArrayLike, p: ArrayLike) -> np.ndarray:
     """
     theta = potential_temperature(s, t, p, p_ref=0.0)
     return density_at_surface(s, theta) - 1000.0
+
+
+def gravity(lat: ArrayLike) -> np.ndarray:
+    """
+    Acceleration due to gravity at the sea surface (UNESCO 1983).
+
+    The international gravity formula, varying with latitude because the
+    Earth is neither spherical nor uniform.
+
+    Check values: ``gravity(0)`` = 9.780318 m/s², ``gravity(90)`` =
+    9.832177 m/s².
+
+    :param lat: Latitude in degrees.
+    :type lat: ArrayLike
+    :return: Gravity in m/s², NaN where the latitude is missing or outside
+             :data:`LATITUDE_LIMITS`.
+    :rtype: numpy.ndarray
+    """
+    x = np.sin(np.radians(_in_domain(lat, LATITUDE_LIMITS))) ** 2
+    return 9.780318 * (1.0 + (5.2788e-3 + 2.36e-5 * x) * x)
+
+
+def depth_from_pressure(p: ArrayLike, lat: ArrayLike) -> np.ndarray:
+    """
+    Depth from pressure and latitude (UNESCO 1983).
+
+    Converts a pressure measurement into metres below the surface,
+    accounting for the latitude dependence of gravity and for the
+    compression of the water column with depth.
+
+    Check value: ``depth_from_pressure(10000, 30)`` = 9712.653 m.
+
+    :param p: Pressure in decibars.
+    :type p: ArrayLike
+    :param lat: Latitude in degrees.
+    :type lat: ArrayLike
+    :return: Depth in metres, positive downward, NaN where an input is
+             missing or outside the accepted domain.
+    :rtype: numpy.ndarray
+    """
+    p = _in_domain(p, PRESSURE_LIMITS)
+    # The local gravity used by the depth integral includes a small
+    # correction for the pressure itself.
+    g = gravity(lat) + 1.092e-6 * p
+    column = (((-1.82e-15 * p + 2.279e-10) * p - 2.2512e-5) * p + 9.72659) * p
+    return column / g
+
+
+def brunt_vaisala_squared(
+    sigma_theta: ArrayLike, d_sigma_d_depth: ArrayLike, lat: ArrayLike
+) -> np.ndarray:
+    """
+    Brunt-Vaisala (buoyancy) frequency squared from a density gradient.
+
+    ``N² = g / rho * d(sigma_theta)/dz`` with depth positive downward, so a
+    water column whose potential density increases with depth is stable and
+    gives a positive result, and an inversion gives a negative one. This is
+    the "vertical density stability" of the feature proposal.
+
+    The vertical gradient is an argument rather than something computed
+    here: it is a property of the profile, not of the water parcel, and the
+    profile is the caller's to walk (see
+    :mod:`aiqclib.common.utils.profile_signal`). Keeping it out also keeps
+    this module elementwise, so nothing here can reach across the boundary
+    between two profiles.
+
+    :param sigma_theta: Potential density anomaly in kg/m³, as returned by
+                        :func:`sigma0`.
+    :type sigma_theta: ArrayLike
+    :param d_sigma_d_depth: Its vertical gradient in kg/m⁴, positive where
+                            density increases downward.
+    :type d_sigma_d_depth: ArrayLike
+    :param lat: Latitude in degrees.
+    :type lat: ArrayLike
+    :return: N² in 1/s², NaN where an input is missing, the latitude is out
+             of domain, or the implied density is not positive.
+    :rtype: numpy.ndarray
+    """
+    rho = 1000.0 + _to_array(sigma_theta)
+    rho = np.where(rho > 0.0, rho, np.nan)
+    return gravity(lat) / rho * _to_array(d_sigma_d_depth)

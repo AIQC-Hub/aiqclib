@@ -13,7 +13,10 @@ import pytest
 
 from aiqclib.common.utils.seawater import (
     adiabatic_lapse_rate,
+    brunt_vaisala_squared,
     density_at_surface,
+    depth_from_pressure,
+    gravity,
     potential_temperature,
     sigma0,
 )
@@ -170,3 +173,79 @@ class TestInputDomain:
     def test_extremes_of_the_qc_ranges_still_compute(self, s, t, p):
         """The bounds are wider than the QC range tests, so nothing real is lost."""
         assert np.isfinite(sigma0(s, t, p))
+
+
+class TestGravityAndDepth:
+    """Gravity and the pressure-to-depth conversion (UNESCO 1983)."""
+
+    def test_gravity_at_the_equator(self):
+        assert gravity(0.0) == pytest.approx(9.780318, abs=1e-6)
+
+    def test_gravity_at_the_pole(self):
+        assert gravity(90.0) == pytest.approx(9.832177, abs=1e-6)
+
+    def test_gravity_is_symmetric_about_the_equator(self):
+        assert gravity(-45.0) == pytest.approx(gravity(45.0))
+
+    def test_depth_check_value(self):
+        """DEPTH(10000 dbar, 30 deg) = 9712.653 m."""
+        assert depth_from_pressure(10000.0, 30.0) == pytest.approx(9712.653, abs=1e-3)
+
+    def test_surface_pressure_is_the_surface(self):
+        assert depth_from_pressure(0.0, 45.0) == pytest.approx(0.0)
+
+    def test_depth_is_close_to_pressure_in_the_upper_ocean(self):
+        """A decibar is very nearly a metre, which is why the two get mixed up."""
+        assert depth_from_pressure(1000.0, 45.0) == pytest.approx(989.5, abs=1.0)
+
+    @pytest.mark.parametrize(
+        "p, lat",
+        [(-9999.0, 45.0), (1000.0, -999.0), (1000.0, 91.0), (9.96921e36, 45.0)],
+    )
+    def test_out_of_domain_is_nan(self, p, lat):
+        assert np.isnan(depth_from_pressure(p, lat))
+
+    def test_out_of_domain_is_quiet(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = depth_from_pressure(np.array([9.96921e36]), np.array([45.0]))
+            assert np.isnan(result[0])
+
+
+class TestBruntVaisala:
+    """Vertical density stability."""
+
+    def test_stable_column_is_positive(self):
+        """Density increasing downward resists being moved, so N^2 > 0."""
+        assert brunt_vaisala_squared(27.0, 0.01, 45.0) > 0.0
+
+    def test_inverted_column_is_negative(self):
+        assert brunt_vaisala_squared(27.0, -0.01, 45.0) < 0.0
+
+    def test_mixed_layer_is_zero(self):
+        assert brunt_vaisala_squared(27.0, 0.0, 45.0) == pytest.approx(0.0)
+
+    def test_magnitude_is_oceanographically_plausible(self):
+        """A strong thermocline is of order 1e-4 per second squared."""
+        value = brunt_vaisala_squared(27.0, 0.01, 45.0)
+        assert 1e-5 < value < 1e-3
+
+    def test_sign_flips_with_the_gradient_only(self):
+        up = brunt_vaisala_squared(27.0, 0.01, 45.0)
+        down = brunt_vaisala_squared(27.0, -0.01, 45.0)
+        assert up == pytest.approx(-down)
+
+    @pytest.mark.parametrize(
+        "sigma, gradient, lat",
+        [(np.nan, 0.01, 45.0), (27.0, np.nan, 45.0), (27.0, 0.01, 999.0)],
+    )
+    def test_missing_input_is_nan(self, sigma, gradient, lat):
+        assert np.isnan(brunt_vaisala_squared(sigma, gradient, lat))
+
+    def test_impossible_density_is_nan_not_a_division_by_zero(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = brunt_vaisala_squared(
+                np.array([-2000.0]), np.array([0.01]), np.array([45.0])
+            )
+            assert np.isnan(result[0])

@@ -25,6 +25,14 @@ aiqclib.prepare.features.day\_of\_year module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.derived\_values module
+-----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.derived_values
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.flank\_down module
 -------------------------------------------
 
@@ -45,6 +53,14 @@ aiqclib.prepare.features.location module
 ----------------------------------------
 
 .. automodule:: aiqclib.prepare.features.location
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.profile\_feature\_base module
+------------------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.profile_feature_base
    :members:
    :show-inheritance:
    :undoc-members:
@@ -157,6 +173,14 @@ aiqclib.prepare.features.qc\_temp\_to\_psal module
 --------------------------------------------------
 
 .. automodule:: aiqclib.prepare.features.qc_temp_to_psal
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+aiqclib.prepare.features.stratification module
+----------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.stratification
    :members:
    :show-inheritance:
    :undoc-members:
