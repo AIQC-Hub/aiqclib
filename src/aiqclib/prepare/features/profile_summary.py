@@ -4,12 +4,18 @@ extracting and scaling statistical features from Polars DataFrames by merging
 row-level data with summary statistics.
 """
 
-from typing import Optional, Dict
+from typing import Dict, Optional, Tuple
 
 import polars as pl
 
 from aiqclib.common.base.feature_base import FeatureBase
+from aiqclib.common.constants import PROFILE_KEYS
 from aiqclib.common.utils.normalization import is_scaling_type, scale_nested_columns
+from aiqclib.common.utils.profile_signal import with_profile_mad
+
+#: Statistics that are not in the step 2 summary table and are computed
+#: per profile from the input instead.
+COMPUTED_SUMMARY_STATS: Tuple[str, ...] = ("mad",)
 
 
 class ProfileSummaryStats(FeatureBase):
@@ -89,13 +95,17 @@ class ProfileSummaryStats(FeatureBase):
         """
         self._filter_selected_rows_cols()
 
+        available = set(self.summary_stats.columns)
         variables_and_metrics = [
             (variable_name, metric_name)
             for variable_name in self.feature_info["col_names"]
             for metric_name in self.feature_info["summary_stats_names"]
         ]
         for variable_name, metric_name in variables_and_metrics:
-            self._extract_single_summary(variable_name, metric_name)
+            if metric_name in available:
+                self._extract_single_summary(variable_name, metric_name)
+            else:
+                self._extract_computed_summary(variable_name, metric_name)
 
         self.features = self.features.drop(["platform_code", "profile_no"])
 
@@ -124,6 +134,46 @@ class ProfileSummaryStats(FeatureBase):
                 pl.col(metric_name).alias(f"{variable_name}_{metric_name}"),
             ),
             on=["platform_code", "profile_no"],
+            maintain_order="left",
+        )
+
+    def _extract_computed_summary(self, variable_name: str, metric_name: str) -> None:
+        """
+        Join a statistic the step 2 summary table does not carry.
+
+        The summary table holds a fixed set of statistics, and its column
+        list is a persisted artefact, so widening it is a change of its own
+        (see ``docs/design/FEATURES_spec.md``). The statistics named here
+        are computed per profile from :attr:`filtered_input` instead. They
+        are therefore not available for data-derived normalization, which
+        is fitted from the summary table.
+
+        :param variable_name: The variable to summarise (e.g. ``"temp"``).
+        :type variable_name: str
+        :param metric_name: The statistic to compute.
+        :type metric_name: str
+        :raises ValueError: If the statistic is neither in the summary
+                            table nor computable here.
+        :raises KeyError: If the variable is not a column of the input.
+        """
+        if metric_name not in COMPUTED_SUMMARY_STATS:
+            raise ValueError(
+                f"Unknown summary statistic '{metric_name}' for feature "
+                f"'profile_summary_stats'. The summary table provides "
+                f"{sorted(set(self.summary_stats.columns) - set(PROFILE_KEYS) - {'variable'})}, "
+                f"and {sorted(COMPUTED_SUMMARY_STATS)} are computed from the "
+                f"input."
+            )
+
+        alias = f"{variable_name}_{metric_name}"
+        per_profile = with_profile_mad(
+            self.filtered_input.select([*PROFILE_KEYS, variable_name]),
+            variable_name,
+            alias,
+        )
+        self.features = self.features.join(
+            per_profile.select([*PROFILE_KEYS, alias]).unique(subset=PROFILE_KEYS),
+            on=PROFILE_KEYS,
             maintain_order="left",
         )
 

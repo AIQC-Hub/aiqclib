@@ -44,6 +44,13 @@ SIGNAL_FEATURES = [
         "col_names": ["temp"],
         "stats_set": {"type": "raw"},
     },
+    {
+        "feature": "rolling_stats",
+        "col_names": ["temp"],
+        "outputs": ["median", "mad", "robust_z"],
+        "params": {"windows": [5]},
+        "stats_set": {"type": "raw"},
+    },
 ]
 
 NEW_COLUMNS = [
@@ -61,6 +68,9 @@ NEW_COLUMNS = [
     "in_mixed_layer",
     "temp_in_gradient_layer",
     "temp_normalized_depth_to_peak_gradient",
+    "temp_w5_median",
+    "temp_w5_mad",
+    "temp_w5_robust_z",
 ]
 
 

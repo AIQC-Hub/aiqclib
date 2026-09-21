@@ -11,6 +11,8 @@ As this project is still in active development, it does not yet strictly adhere 
 - `profile_smooth` feature: Savitzky-Golay smoothed value, first and second derivative, residual, robust z-score of the residual, curvature-to-residual ratio, Argo spike index, and the window fractions of outliers and high curvature.
 - `neighbor_diff` feature: differences against the levels above and below at configurable lags, plus the window fraction of large differences.
 - `regime_flags` feature: in-mixed-layer, in-gradient-layer (thermocline or halocline) and normalized depth to the peak gradient.
+- `rolling_stats` feature: mean, median, MAD, min, max, standard deviation and the local robust z-score over configurable centred windows.
+- `profile_summary_stats` accepts `mad`, computed per profile from the input since the step 2 summary table does not carry it.
 - `common.utils.profile_signal`: Savitzky-Golay smoothing and derivatives, neighbour differences, central gradients, the shared RTQC9 spike stencil, and centred rolling, MAD and robust z statistics, all partitioned per profile.
 - `common.utils.seawater`: `gravity`, `depth_from_pressure` and `brunt_vaisala_squared`.
 - Feature entries accept an `outputs` list naming which columns of a feature group to emit.
