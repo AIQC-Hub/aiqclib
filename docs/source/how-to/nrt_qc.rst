@@ -127,6 +127,19 @@ Observation-level tests produce one result per measurement:
    pair are flagged. Density combines temperature and salinity, so the two
    variables are flagged jointly.
 
+   An observation whose temperature, salinity or pressure is missing has no
+   density and passes. So does one whose values are impossible rather than
+   merely wrong, such as a negative salinity or a placeholder like -999 or a
+   netCDF fill value: the equation of state is a fit to measurements of sea
+   water and returns nothing meaningful for them. Treating those as missing
+   also keeps the observation **next to** them honest, since a density
+   hundreds of units off would otherwise read as an inversion at the good
+   level. The accepted ranges are far wider than the global range test, so
+   no real measurement is affected; they are
+   :data:`~aiqclib.common.utils.seawater.SALINITY_LIMITS`,
+   :data:`~aiqclib.common.utils.seawater.TEMPERATURE_LIMITS` and
+   :data:`~aiqclib.common.utils.seawater.PRESSURE_LIMITS`.
+
 ``temp_to_psal``
    Not a test but a propagation rule: where the aggregated temperature flag
    is 3 or 4, salinity inherits it at the same severity. See
