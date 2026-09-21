@@ -6,6 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-09-21
+### Added
+- NRT QC comparison report gains an `item_breakdown_contingency` section: per item, the cross-tabulation of existing flag value against the item's own flag value, so an item using more than one failing value is not collapsed into a single count as in `item_breakdown`
+
 ## [0.12.0] - 2026-08-25
 ### Added
 - Profile-level pipeline: `LocateDataSetProfile` / `ExtractDataSetProfile` / `SplitDataSetProfile` (prepare) and `LocateDataSetProfile` / `ExtractDataSetProfile` / `ConcatDataSetProfile` (classify) produce, train on, and classify one row per profile instead of one per observation
