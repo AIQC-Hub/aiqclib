@@ -204,10 +204,21 @@ give each variable its ``flag`` column in the ``qc_variable_sets`` section:
 ``run_nrt_qc`` then writes one comparison report per variable
 (``nrt_qc_flag_comparison_{variable}.tsv``) containing a contingency table
 of existing vs new flag values, binary agreement metrics (accuracy,
-precision, recall; only when the pos/neg flag values are given), and a
-per-item breakdown showing which items drive the disagreements. Variables
+precision, recall; only when the pos/neg flag values are given), and two
+per-item breakdowns showing which items drive the disagreements. Variables
 without a ``flag`` are skipped; omit all flags to skip the comparison step
 entirely.
+
+The two breakdowns count the same pairs of observations in different ways.
+``item_breakdown`` asks whether the item failed at all, giving one row per
+item and existing flag value, with the percentage taken within that value
+("the item flagged 3% of the observations the input calls good").
+``item_breakdown_contingency`` keeps the item's own flag value instead of
+reducing it to pass or fail, giving one row per item and pair of values,
+with the percentage taken over the whole variable as in the main
+contingency table. Use the second when an item distinguishes suspect from
+bad, or when the first shows a disagreement and the question is how severe
+the item called it.
 
 The existing flag column may hold integers, strings or floats, and the
 configured values may be written as ``4`` or as ``"4"`` (see

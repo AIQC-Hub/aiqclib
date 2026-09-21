@@ -186,8 +186,9 @@ aggressive to gate on, or one you are still evaluating.
    untouched.
 
 The comparison report of step 4 covers every item regardless, so an excluded
-item keeps its ``item_breakdown`` rows. That is deliberate: those rows are
-the evidence for deciding whether to exclude it in the first place.
+item keeps its ``item_breakdown`` and ``item_breakdown_contingency`` rows.
+That is deliberate: those rows are the evidence for deciding whether to
+exclude it in the first place.
 
 `step_class_sets`
 ^^^^^^^^^^^^^^^^^

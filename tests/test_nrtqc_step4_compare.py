@@ -1,7 +1,7 @@
 """Unit tests for the NRT QC module's step 4 (flag comparison report).
 
 Uses a synthetic merged frame with known existing and new flags so the
-contingency counts, agreement metrics, and item breakdown can be checked
+contingency counts, agreement metrics, and item breakdowns can be checked
 against hand-computed values, plus an integration run on the CTD fixture.
 """
 
@@ -160,6 +160,59 @@ class TestItemBreakdown:
 
         breakdown = get_section(ds.reports["temp"], "item_breakdown")
         assert "global_range" in set(breakdown["item"].unique().to_list())
+
+
+class TestItemBreakdownContingency:
+    """Section 4: per-item existing x item-flag cross-tabulation."""
+
+    def test_contingency_counts(self, temp_report):
+        breakdown = get_section(temp_report, "item_breakdown_contingency").filter(
+            pl.col("item") == "global_range"
+        )
+        rows = [
+            (r["existing_flag"], r["new_flag"], r["count"], r["percent"])
+            for r in breakdown.iter_rows(named=True)
+        ]
+        # The item flags obs 3 (existing good) and obs 5 (existing bad).
+        assert rows == [
+            (1, 1, 5, 62.5),
+            (1, 4, 1, 12.5),
+            (4, 1, 1, 12.5),
+            (4, 4, 1, 12.5),
+        ]
+
+    def test_counts_sum_to_total_per_item(self, temp_report):
+        breakdown = get_section(temp_report, "item_breakdown_contingency")
+        for item in breakdown["item"].unique().to_list():
+            assert breakdown.filter(pl.col("item") == item)["count"].sum() == 8
+
+    def test_multiple_failing_values_not_collapsed(self, nrtqc_config_001):
+        """An item using 3 and 4 gets a row for each, unlike item_breakdown."""
+        frame = make_merged_frame().with_columns(
+            pl.Series("temp_qc_global_range", [1, 1, 3, 1, 4, 1, 1, 1], dtype=pl.Int64)
+        )
+        ds = load_nrtqc_step4_compare_dataset(nrtqc_config_001, frame)
+        ds.compare_targets()
+        report = ds.reports["temp"]
+
+        contingency = get_section(report, "item_breakdown_contingency").filter(
+            pl.col("item") == "global_range"
+        )
+        assert (3, 1) in list(zip(contingency["new_flag"], contingency["count"]))
+        assert (4, 1) in list(zip(contingency["new_flag"], contingency["count"]))
+
+        # The binarised section merges both into the existing-flag totals.
+        breakdown = get_section(report, "item_breakdown").filter(
+            pl.col("item") == "global_range"
+        )
+        assert dict(zip(breakdown["existing_flag"], breakdown["count"])) == {1: 1, 4: 1}
+
+    def test_same_items_as_item_breakdown(self, temp_report):
+        items = set(get_section(temp_report, "item_breakdown")["item"].to_list())
+        contingency_items = set(
+            get_section(temp_report, "item_breakdown_contingency")["item"].to_list()
+        )
+        assert contingency_items == items
 
 
 class TestComparableTargets:

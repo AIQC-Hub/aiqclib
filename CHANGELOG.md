@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- NRT QC comparison report gains an `item_breakdown_contingency` section: per item, the cross-tabulation of existing flag value against the item's own flag value, so an item using more than one failing value is not collapsed into a single count as in `item_breakdown`
 
 ## [0.12.0] - 2026-08-25
 ### Added
