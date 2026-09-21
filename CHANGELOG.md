@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- The density inversion test (RTQC14) no longer computes a density from values that cannot be measurements. A netCDF fill value or a placeholder such as -999 used to run through the equation of state, raising numpy overflow and invalid-value `RuntimeWarning`s during a run, and, where it did not overflow, producing a finite density far outside sea water that made the good observation next to it read as an inversion. Such inputs are now treated as missing, which the test already counts as a pass; the accepted ranges are much wider than the global range test, so no real measurement changes
 
 ## [0.12.1] - 2026-09-21
 ### Added

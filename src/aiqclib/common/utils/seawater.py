@@ -11,14 +11,47 @@ pressure) with practical salinity (PSS-78), in-situ temperature in degrees
 Celsius (IPTS-68), and pressure in decibars. Inputs may be scalars, numpy
 arrays, or polars Series; computation is vectorised with numpy and NaN
 values propagate through the results.
+
+Inputs outside :data:`SALINITY_LIMITS`, :data:`TEMPERATURE_LIMITS` or
+:data:`PRESSURE_LIMITS` are treated as missing and yield NaN. See
+`Input domain`_.
+
+.. _Input domain:
+
+Input domain
+------------
+
+The routines are polynomial fits to measurements of sea water, so outside
+the range of the ocean they produce a number that means nothing. The bounds
+below are deliberately far wider than any measurement, so they reject only
+what cannot be one: a negative salinity, a placeholder such as -999, or a
+netCDF fill value of 9.96921e36.
+
+Rejecting them matters twice over. An unreachable value like the fill value
+overflows the fifth-power terms of the density polynomial, which used to
+raise a stream of numpy ``RuntimeWarning`` messages during a QC run; and a
+merely impossible one like -999 degrees does not overflow, so it used to
+yield a finite density hundreds of times denser than sea water, which made
+the density inversion test flag the good observation next to it. NaN says
+"this cannot be density-checked", which the test already counts as a pass.
 """
 
-from typing import Union
+from typing import Tuple, Union
 
 import numpy as np
 import polars as pl
 
 ArrayLike = Union[float, list, np.ndarray, pl.Series]
+
+#: Practical salinity accepted by the EOS-80 routines (inclusive bounds).
+SALINITY_LIMITS: Tuple[float, float] = (0.0, 60.0)
+
+#: Temperature in degrees Celsius accepted by the EOS-80 routines.
+TEMPERATURE_LIMITS: Tuple[float, float] = (-10.0, 60.0)
+
+#: Pressure in decibars accepted by the EOS-80 routines (the deepest ocean
+#: is near 11,000 dbar).
+PRESSURE_LIMITS: Tuple[float, float] = (-10.0, 20000.0)
 
 
 def _to_array(values: ArrayLike) -> np.ndarray:
@@ -35,25 +68,42 @@ def _to_array(values: ArrayLike) -> np.ndarray:
     return np.asarray(values, dtype=np.float64)
 
 
-def adiabatic_lapse_rate(s: ArrayLike, t: ArrayLike, p: ArrayLike) -> np.ndarray:
+def _in_domain(values: ArrayLike, limits: Tuple[float, float]) -> np.ndarray:
     """
-    Adiabatic temperature gradient of seawater (Bryden 1973, UNESCO 1983).
+    Convert an input to an array, replacing out-of-range values with NaN.
 
-    Check value: ``adiabatic_lapse_rate(40, 40, 10000)`` = 3.255976e-4 °C/dbar.
+    Infinities and values already NaN fail the comparison too, so the
+    result holds only numbers the polynomials can be evaluated for.
+
+    :param values: A scalar, list, numpy array, or polars Series.
+    :type values: ArrayLike
+    :param limits: The inclusive ``(low, high)`` bounds to keep.
+    :type limits: Tuple[float, float]
+    :return: The values as a float64 numpy array, out of range as NaN.
+    :rtype: numpy.ndarray
+    """
+    array = _to_array(values)
+    low, high = limits
+    return np.where((array >= low) & (array <= high), array, np.nan)
+
+
+def _lapse_rate(s: np.ndarray, t: np.ndarray, p: np.ndarray) -> np.ndarray:
+    """
+    Evaluate the adiabatic lapse rate polynomial without checking the domain.
+
+    Used by :func:`potential_temperature`, whose Runge-Kutta march feeds
+    back intermediate temperatures and pressures: those are results rather
+    than inputs and are not range-checked again.
 
     :param s: Practical salinity (PSS-78).
-    :type s: ArrayLike
+    :type s: numpy.ndarray
     :param t: In-situ temperature in °C (IPTS-68).
-    :type t: ArrayLike
+    :type t: numpy.ndarray
     :param p: Pressure in decibars.
-    :type p: ArrayLike
+    :type p: numpy.ndarray
     :return: Adiabatic lapse rate in °C/dbar.
     :rtype: numpy.ndarray
     """
-    s = _to_array(s)
-    t = _to_array(t)
-    p = _to_array(p)
-
     ds = s - 35.0
     return (
         (((-2.1687e-16 * t + 1.8676e-14) * t - 4.6206e-13) * p) * p
@@ -66,6 +116,29 @@ def adiabatic_lapse_rate(s: ArrayLike, t: ArrayLike, p: ArrayLike) -> np.ndarray
         + (-4.2393e-8 * t + 1.8932e-6) * ds
         + ((6.6228e-10 * t - 6.836e-8) * t + 8.5258e-6) * t
         + 3.5803e-5
+    )
+
+
+def adiabatic_lapse_rate(s: ArrayLike, t: ArrayLike, p: ArrayLike) -> np.ndarray:
+    """
+    Adiabatic temperature gradient of seawater (Bryden 1973, UNESCO 1983).
+
+    Check value: ``adiabatic_lapse_rate(40, 40, 10000)`` = 3.255976e-4 °C/dbar.
+
+    :param s: Practical salinity (PSS-78).
+    :type s: ArrayLike
+    :param t: In-situ temperature in °C (IPTS-68).
+    :type t: ArrayLike
+    :param p: Pressure in decibars.
+    :type p: ArrayLike
+    :return: Adiabatic lapse rate in °C/dbar, NaN where an input is missing
+             or outside the accepted domain.
+    :rtype: numpy.ndarray
+    """
+    return _lapse_rate(
+        _in_domain(s, SALINITY_LIMITS),
+        _in_domain(t, TEMPERATURE_LIMITS),
+        _in_domain(p, PRESSURE_LIMITS),
     )
 
 
@@ -89,26 +162,27 @@ def potential_temperature(
     :type p: ArrayLike
     :param p_ref: Reference pressure in decibars, defaults to 0 (surface).
     :type p_ref: float
-    :return: Potential temperature in °C referenced to ``p_ref``.
+    :return: Potential temperature in °C referenced to ``p_ref``, NaN where
+             an input is missing or outside the accepted domain.
     :rtype: numpy.ndarray
     """
-    s = _to_array(s)
-    t = np.array(_to_array(t), copy=True)
-    p = np.array(_to_array(p), copy=True)
+    s = _in_domain(s, SALINITY_LIMITS)
+    t = _in_domain(t, TEMPERATURE_LIMITS)
+    p = _in_domain(p, PRESSURE_LIMITS)
 
     h = p_ref - p
-    xk = h * adiabatic_lapse_rate(s, t, p)
+    xk = h * _lapse_rate(s, t, p)
     t = t + 0.5 * xk
     q = xk
     p = p + 0.5 * h
-    xk = h * adiabatic_lapse_rate(s, t, p)
+    xk = h * _lapse_rate(s, t, p)
     t = t + 0.29289322 * (xk - q)
     q = 0.58578644 * xk + 0.121320344 * q
-    xk = h * adiabatic_lapse_rate(s, t, p)
+    xk = h * _lapse_rate(s, t, p)
     t = t + 1.707106781 * (xk - q)
     q = 3.414213562 * xk - 4.121320344 * q
     p = p + 0.5 * h
-    xk = h * adiabatic_lapse_rate(s, t, p)
+    xk = h * _lapse_rate(s, t, p)
     return t + (xk - 2.0 * q) / 6.0
 
 
@@ -127,11 +201,12 @@ def density_at_surface(s: ArrayLike, t: ArrayLike) -> np.ndarray:
     :type s: ArrayLike
     :param t: Temperature in °C (IPTS-68).
     :type t: ArrayLike
-    :return: Density in kg/m³.
+    :return: Density in kg/m³, NaN where an input is missing or outside the
+             accepted domain.
     :rtype: numpy.ndarray
     """
-    s = _to_array(s)
-    t = _to_array(t)
+    s = _in_domain(s, SALINITY_LIMITS)
+    t = _in_domain(t, TEMPERATURE_LIMITS)
 
     # Density of Standard Mean Ocean Water (pure water, Bigg 1967).
     rho_w = (
@@ -171,7 +246,8 @@ def sigma0(s: ArrayLike, t: ArrayLike, p: ArrayLike) -> np.ndarray:
     :type t: ArrayLike
     :param p: Pressure in decibars.
     :type p: ArrayLike
-    :return: Potential density anomaly in kg/m³.
+    :return: Potential density anomaly in kg/m³, NaN where an input is
+             missing or outside the accepted domain.
     :rtype: numpy.ndarray
     """
     theta = potential_temperature(s, t, p, p_ref=0.0)

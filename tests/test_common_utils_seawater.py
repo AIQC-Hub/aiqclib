@@ -5,6 +5,8 @@ check values plus a handful of oceanographic sanity checks for the three
 target regions of the NRT QC module (Arctic, Baltic, Mediterranean).
 """
 
+import warnings
+
 import numpy as np
 import polars as pl
 import pytest
@@ -111,3 +113,60 @@ class TestVectorisation:
         potential_temperature(np.array([35.0, 35.0]), t, p)
         assert t.tolist() == [5.0, 10.0]
         assert p.tolist() == [1000.0, 2000.0]
+
+
+class TestInputDomain:
+    """Values that cannot be measurements are rejected rather than computed."""
+
+    @pytest.mark.parametrize(
+        "s, t, p",
+        [
+            (-9.0, 5.0, 10.0),  # negative salinity
+            (-999.0, 5.0, 10.0),  # placeholder salinity
+            (35.0, -999.0, 10.0),  # placeholder temperature
+            (35.0, 9999.0, 10.0),  # placeholder temperature, positive
+            (9.96921e36, 9.96921e36, 10.0),  # netCDF fill value
+            (35.0, 5.0, -9999.0),  # placeholder pressure
+            (35.0, np.inf, 10.0),  # infinity
+        ],
+    )
+    def test_out_of_domain_is_nan(self, s, t, p):
+        """An impossible input yields NaN, not a finite density."""
+        assert np.isnan(sigma0(s, t, p))
+
+    @pytest.mark.parametrize(
+        "s, t, p",
+        [
+            (-999.0, 5.0, 10.0),
+            (35.0, -999.0, 10.0),
+            (9.96921e36, 9.96921e36, 10.0),
+        ],
+    )
+    def test_out_of_domain_is_quiet(self, s, t, p):
+        """Rejecting an input raises no numpy overflow or invalid warning."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert np.isnan(sigma0(np.array([s]), np.array([t]), np.array([p]))[0])
+
+    def test_only_the_bad_element_is_lost(self):
+        """Neighbouring observations in the same array are unaffected."""
+        result = sigma0(
+            np.array([35.0, -999.0, 35.0]),
+            np.array([5.0, 5.0, 25.0]),
+            np.zeros(3),
+        )
+        assert result[0] == pytest.approx(27.67547, abs=1e-5)
+        assert np.isnan(result[1])
+        assert result[2] == pytest.approx(23.34306, abs=1e-5)
+
+    @pytest.mark.parametrize(
+        "s, t, p",
+        [
+            (0.0, -2.5, 0.0),  # fresh water below the global range minimum
+            (41.0, 40.0, 0.0),  # the global range extremes
+            (34.9, -1.9, 11000.0),  # the deepest cold ocean
+        ],
+    )
+    def test_extremes_of_the_qc_ranges_still_compute(self, s, t, p):
+        """The bounds are wider than the QC range tests, so nothing real is lost."""
+        assert np.isfinite(sigma0(s, t, p))
