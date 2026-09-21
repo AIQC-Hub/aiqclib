@@ -81,6 +81,14 @@ aiqclib.common.utils.normalization module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.common.utils.profile\_signal module
+-------------------------------------------
+
+.. automodule:: aiqclib.common.utils.profile_signal
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.common.utils.progress module
 ------------------------------------
 

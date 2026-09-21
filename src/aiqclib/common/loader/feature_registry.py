@@ -14,6 +14,7 @@ from typing import Dict, Type
 from aiqclib.common.base.feature_base import FeatureBase
 from aiqclib.prepare.features.basic_values import BasicValues
 from aiqclib.prepare.features.day_of_year import DayOfYearFeat
+from aiqclib.prepare.features.derived_values import DerivedValues
 from aiqclib.prepare.features.flank_down import FlankDown
 from aiqclib.prepare.features.flank_up import FlankUp
 from aiqclib.prepare.features.location import LocationFeat
@@ -30,6 +31,7 @@ from aiqclib.prepare.features.qc_regional_range import QCRegionalRange
 from aiqclib.prepare.features.qc_spike import QCSpike
 from aiqclib.prepare.features.qc_stuck_value import QCStuckValue
 from aiqclib.prepare.features.qc_temp_to_psal import QCTempToPsal
+from aiqclib.prepare.features.stratification import Stratification
 
 #: A dictionary mapping feature identifiers (str) to classes that inherit
 #: from :class:`FeatureBase`. These classes are dynamically loaded based
@@ -45,6 +47,8 @@ FEATURE_REGISTRY: Dict[str, Type[FeatureBase]] = {
     "day_of_year": DayOfYearFeat,
     "profile_summary_stats": ProfileSummaryStats,
     "basic_values": BasicValues,
+    "derived_values": DerivedValues,
+    "stratification": Stratification,
     "flank_up": FlankUp,
     "flank_down": FlankDown,
     "qc_impossible_date": QCImpossibleDate,

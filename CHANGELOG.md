@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `derived_values` feature: sigma-0, depth and potential temperature computed from the measured variables, or passed through when the input already carries them.
+- `stratification` feature: the vertical density gradient, N squared, its magnitude and an unstable-layer flag.
+- `common.utils.profile_signal`: Savitzky-Golay smoothing and derivatives, neighbour differences, central gradients, the shared RTQC9 spike stencil, and centred rolling, MAD and robust z statistics, all partitioned per profile.
+- `common.utils.seawater`: `gravity`, `depth_from_pressure` and `brunt_vaisala_squared`.
+- Feature entries accept an `outputs` list naming which columns of a feature group to emit.
 
 ## [0.12.2] - 2026-09-21
 ### Fixed

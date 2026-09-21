@@ -204,6 +204,10 @@ properties:
                 type: array
                 items:
                   type: string
+              outputs:
+                type: array
+                items:
+                  type: string
               params:
                 type: object
               fail_flag:
@@ -851,6 +855,10 @@ properties:
               stats:
                 type: object
               agg:
+                type: array
+                items:
+                  type: string
+              outputs:
                 type: array
                 items:
                   type: string
