@@ -49,6 +49,14 @@ aiqclib.prepare.features.flank\_up module
    :show-inheritance:
    :undoc-members:
 
+aiqclib.prepare.features.geo\_context module
+--------------------------------------------
+
+.. automodule:: aiqclib.prepare.features.geo_context
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 aiqclib.prepare.features.location module
 ----------------------------------------
 

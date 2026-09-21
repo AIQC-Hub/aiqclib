@@ -79,6 +79,7 @@ This section provides practical examples and solutions for common tasks related 
    how-to/prediction_threshold
    how-to/classification_labels
    how-to/profile_level_pipeline
+   how-to/profile_signal_features
    how-to/nrt_qc
    how-to/qc_items_as_features
    how-to/performance_evaluation
@@ -113,6 +114,13 @@ Understanding the input features is crucial for building effective models. This 
    features/basic_values
    features/profile_summary_stats
    features/neigbouring_values
+   features/derived_values
+   features/stratification
+   features/profile_smooth
+   features/neighbor_diff
+   features/rolling_stats
+   features/regime_flags
+   features/geo_context
 
 ----------
 

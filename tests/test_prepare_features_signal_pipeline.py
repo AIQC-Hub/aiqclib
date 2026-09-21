@@ -45,6 +45,12 @@ SIGNAL_FEATURES = [
         "stats_set": {"type": "raw"},
     },
     {
+        "feature": "geo_context",
+        "outputs": ["normalized_depth", "distance_to_bottom"],
+        "params": {"required": False},
+        "stats_set": {"type": "raw"},
+    },
+    {
         "feature": "rolling_stats",
         "col_names": ["temp"],
         "outputs": ["median", "mad", "robust_z"],
@@ -71,11 +77,19 @@ NEW_COLUMNS = [
     "temp_w5_median",
     "temp_w5_mad",
     "temp_w5_robust_z",
+    "normalized_depth",
+    "distance_to_bottom",
 ]
 
 
 def with_signal_features(config, agg=None):
-    """Append the new feature groups to a dataset configuration."""
+    """Append the new feature groups to a dataset configuration.
+
+    ``geo_context`` runs with ``required: false``, because the fixture
+    input carries no bathymetry column; that path is exercised here on
+    purpose, since it is how one configuration is run over regions whose
+    inputs differ.
+    """
     for entry in SIGNAL_FEATURES:
         param = dict(entry)
         if agg is not None:
