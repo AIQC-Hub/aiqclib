@@ -281,6 +281,29 @@ class TestNRTQCMode:
         assert phase.runner is run_nrt_qc
         assert phase.in_all is False
 
+    @pytest.mark.parametrize(
+        ("phase_name", "module_name", "function_name"),
+        [
+            ("train", "aiqclib.interface.train", "train_and_evaluate"),
+            ("classify", "aiqclib.interface.classify", "classify_dataset"),
+        ],
+    )
+    def test_lazy_runners_call_the_public_entry_point(
+        self, monkeypatch, phase_name, module_name, function_name
+    ):
+        """Train and classify are imported on first use, then called as is."""
+        import importlib
+
+        received = []
+        monkeypatch.setattr(
+            importlib.import_module(module_name),
+            function_name,
+            lambda config, verbose=False: received.append((config, verbose)),
+        )
+        phase = next(p for p in batch_module.PHASES if p.name == phase_name)
+        phase.runner("config", verbose=True)
+        assert received == [("config", True)]
+
 
 class TestConfigSelection:
     """Each phase reads its own config file and selects its own set name."""

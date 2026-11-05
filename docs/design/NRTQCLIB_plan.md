@@ -80,18 +80,21 @@ changes without a CHANGELOG entry.
 
 | Module | Names |
 | --- | --- |
-| `aiqclib.common.base.config_base` | `ConfigBase` |
+| `aiqclib.common.base.config_base` | `ConfigBase` (incl. the `get_yaml_schema` / `get_template_text` hooks) |
 | `aiqclib.common.base.dataset_base` | `DataSetBase` |
 | `aiqclib.prepare.step1_read_input.input_base` | `InputDataSetBase` |
 | `aiqclib.common.loader.feature_registry` | `FEATURE_REGISTRY` |
 | `aiqclib.prepare.features.qc_item_base` | `QCItemFeatureBase`, `OBSERVATION_KEYS` |
 | `aiqclib.common.utils.qc_flags` | `FLAG_GOOD`, `FLAG_BAD`, `worst_flag`, `flag_as_int`, `normalize_flag_values` |
-| `aiqclib.common.utils.config` | `get_config_item`, `read_config` |
+| `aiqclib.common.utils.config` | `get_config_item`, `get_config_file`, `read_config` |
+| `aiqclib.common.utils.file` | `ensure_output_file` |
+| `aiqclib.common.utils.input_validation` | `REQUIRED_INPUT_COLUMNS` (tests) |
 | `aiqclib.common.utils.progress` | `report_progress` |
-| `aiqclib.interface.batch` | `Phase` and the batch runner hook from Phase 1 |
+| `aiqclib.interface.batch` | `Phase` (incl. `config_reader`), `run_phases`, `SUMMARY_SCHEMA` |
 
-The exact list is fixed in Phase 1 by grepping the moved code for
-`from aiqclib` imports.
+The list was fixed in Phase 1 by grepping the copied code for `from aiqclib`
+imports, plus what `nrtqclib`'s own `read_config` / `write_config_template`
+need. `tests/test_common_public_api.py` holds it as `CONTRACT`.
 
 ## Phases
 
@@ -108,6 +111,14 @@ ruff and the relevant tests passing before merge. Release steps follow
 | 5 | both | n/a | Cross-repo CI and release routine | ongoing |
 
 ### Phase 1: prepare `aiqclib` (no behaviour change)
+
+Implemented on `feature/nrtqc-extension-points` (2026-11-05). Where it
+differs from the steps below: batch phases carry their own config reader
+(`Phase.config_reader`, default `aiqclib.read_config`), because the engine
+reads each phase's config file and `aiqclib.read_config` cannot know
+`nrtqclib`'s config class; the engine is public as `run_phases`; and the
+train and classify runners in `interface/batch.py` are imported lazily too,
+so that importing the batch engine does not load the training stack either.
 
 1. **Pluggable config sections.** `ConfigBase.__init__`
    (`common/base/config_base.py:88`) hardcodes a `yaml_schemas` dict that

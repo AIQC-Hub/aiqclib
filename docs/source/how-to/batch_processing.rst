@@ -128,6 +128,10 @@ takes part in some phases but not others is expressed.
 NRT QC Is Not Part of ``"all"``
 -------------------------------
 
+.. deprecated:: 0.14.0
+   ``mode="nrt_qc"`` is moving to ``nrtqclib.run_batch`` together with the
+   rest of the NRT QC module, and will be removed from ``aiqclib`` in 0.15.0.
+
 ``"all"`` runs prepare, train and classify. It does **not** run ``nrt_qc``,
 which has to be asked for by name:
 
