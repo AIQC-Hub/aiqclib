@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.15.0] - 2026-11-05
 ### Removed
 - NRT QC pipeline (`run_nrt_qc`, `NRTQCConfig`, the `nrt_qc` config stage and template, `run_batch(mode="nrt_qc")` and `nrt_qc_config`), its docs and tests: moved to [`nrtqclib`](https://github.com/AIQC-Hub/nrtqclib). The QC items (`qc_*` features) stay in `aiqclib`.
 
