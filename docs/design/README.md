@@ -12,6 +12,12 @@ they live here as a durable record of *why* and *how* a feature was built.
 | [`NRTQC_spec.md`](NRTQC_spec.md) | Module specification: QC items, flag scheme, config layout, outputs. |
 | [`NRTQC_plan.md`](NRTQC_plan.md) | The 8-phase implementation plan followed to build the module. |
 
+## Moving NRT QC to `nrtqclib` (planned)
+
+| File | What it is |
+| --- | --- |
+| [`NRTQCLIB_plan.md`](NRTQCLIB_plan.md) | Plan for moving the NRT QC pipeline, config, docs and tests into a new `nrtqclib` package that depends on `aiqclib`. |
+
 ## Profile-level mode
 
 | File | What it is |
