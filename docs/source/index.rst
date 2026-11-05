@@ -119,6 +119,7 @@ Understanding the input features is crucial for building effective models. This 
    features/rolling_stats
    features/regime_flags
    features/geo_context
+   features/qc_items
 
 ----------
 

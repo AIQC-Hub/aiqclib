@@ -6,6 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-05
+### Added
+- Docs: QC items reference page in the Features section (what each `qc_*` item checks, its defaults and output columns).
+
 ## [0.15.0] - 2026-11-05
 ### Removed
 - NRT QC pipeline (`run_nrt_qc`, `NRTQCConfig`, the `nrt_qc` config stage and template, `run_batch(mode="nrt_qc")` and `nrt_qc_config`), its docs and tests: moved to [`nrtqclib`](https://github.com/AIQC-Hub/nrtqclib). The QC items (`qc_*` features) stay in `aiqclib`.

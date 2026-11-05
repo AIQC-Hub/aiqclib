@@ -60,9 +60,8 @@ The available item names are the ``qc_``-prefixed registry names:
 ``qc_impossible_date``, ``qc_impossible_location``, ``qc_position_on_land``,
 ``qc_global_range``, ``qc_regional_range``, ``qc_pressure_increasing``,
 ``qc_spike``, ``qc_gradient``, ``qc_digit_rollover``, ``qc_stuck_value``,
-``qc_density_inversion`` and ``qc_temp_to_psal``. For what each one checks, see
-the `QC items section of the nrtqclib guide`_; for their default thresholds,
-see the `nrtqclib configuration reference`_.
+``qc_density_inversion`` and ``qc_temp_to_psal``. For what each one checks and
+its default thresholds, see :doc:`../features/qc_items`.
 
 The three settings
 ------------------
@@ -248,13 +247,12 @@ is the way to check whether the added columns are earning their place.
 Next Steps
 ----------
 
-*   `nrtqclib`_: running the QC items as a standalone NRT QC pipeline, and
-    what each item checks.
+*   `nrtqclib`_: running the QC items as a standalone NRT QC pipeline.
+*   :doc:`../features/qc_items`: what each item checks, its defaults and its
+    output columns.
 *   :doc:`../configuration/preparation`: the full ``feature_sets`` and
     ``feature_param_sets`` reference.
 *   :doc:`shap_values`: checking whether the added features actually
     contribute to the model.
 
 .. _nrtqclib: https://github.com/AIQC-Hub/nrtqclib
-.. _QC items section of the nrtqclib guide: https://github.com/AIQC-Hub/nrtqclib/blob/main/docs/source/how-to/nrt_qc.rst#the-qc-items
-.. _nrtqclib configuration reference: https://github.com/AIQC-Hub/nrtqclib/blob/main/docs/source/configuration/nrtqc.rst
