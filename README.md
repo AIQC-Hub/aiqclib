@@ -48,7 +48,7 @@ The library is designed around a three-stage machine learning workflow:
 2.  **Training & Evaluation:** Train machine learning models and evaluate their performance using cross-validation.
 3.  **Classification:** Apply a trained model to classify new, unseen data.
 
-In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable.
+The automated real-time QC tests (Argo/CTD RTQC tests) are built in as `qc_*` features, so their flags can be used as training features. The **Near-Real Time Quality Control (NRT QC)** pipeline that runs them on their own and writes a final NRT flag per variable is the separate [`nrtqclib`](https://github.com/AIQC-Hub/nrtqclib) package, which builds on `aiqclib` (it was `aiqclib.run_nrt_qc` up to 0.14.0).
 
 All three stages run at the **observation level** (one row per observation) by default, or at the **profile level** (one labeled row per profile/cast, with binary or bad-fraction *proportion* labels) via the `profile` step classes and configuration templates (`extension="profile"`); see the *Profile-Level Pipeline* guide in the documentation.
 
@@ -147,9 +147,8 @@ This workflow processes a dataset using a trained model and generates:
 
 ### Running several datasets at once
 
-`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`, `"nrt_qc"`) or
-`"all"` of the first three over a table of dataset names, returning a summary of
-every run:
+`run_batch` runs one phase (`"prepare"`, `"train"`, `"classify"`) or `"all"` of
+them over a table of dataset names, returning a summary of every run:
 
 ```python
 import aiqclib as aq
@@ -164,39 +163,7 @@ summary = aq.run_batch(
 )
 ```
 
-NRT QC is run the same way, with `mode="nrt_qc"` and `nrt_qc_config=...`. It is
-deliberately not part of `"all"`, because its flags are an input to the prepare
-phase rather than a step of it.
-
 See the batch guide in the documentation for the table format and options.
-
-### 4. Near-Real Time Quality Control (NRT QC)
-
-This workflow applies automated real-time QC tests to a dataset without needing a trained model.
-
-**Step 1: Generate an NRT QC configuration template.**
-
-```python
-import aiqclib as aq
-
-aq.write_config_template(file_name="/path/to/nrt_qc_config.yaml", stage="nrt_qc")
-```
-
-**Step 2: Customize `nrt_qc_config.yaml`.**
-Edit the file to point to the input data and select the QC items and their thresholds. Prepare one configuration file per region (the regional ranges differ).
-
-**Step 3: Run the NRT QC process.**
-```python
-import aiqclib as aq
-
-config = aq.read_config("/path/to/nrt_qc_config.yaml")
-aq.run_nrt_qc(config)
-```
-
-This generates:
-- **qc**: The input data with one flag column per QC item.
-- **nrt_qc**: The final output parquet (input columns + item columns + `temp_nrt_flag` / `psal_nrt_flag`).
-- **compare**: Optional per-variable reports comparing existing NRT QC flags with the newly computed ones.
 
 ## Configuration
 

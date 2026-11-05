@@ -80,7 +80,7 @@ changes without a CHANGELOG entry.
 
 | Module | Names |
 | --- | --- |
-| `aiqclib.common.base.config_base` | `ConfigBase` (incl. the `get_yaml_schema` / `get_template_text` hooks) |
+| `aiqclib.common.base.config_base` | `ConfigBase` (incl. the `get_yaml_schema` / `get_template_text` hooks and the `_summary_extra` summary hook) |
 | `aiqclib.common.base.dataset_base` | `DataSetBase` |
 | `aiqclib.prepare.step1_read_input.input_base` | `InputDataSetBase` |
 | `aiqclib.common.loader.feature_registry` | `FEATURE_REGISTRY` |
@@ -197,6 +197,15 @@ and a `CLAUDE.md`. Imports still point at `aiqclib.*` until Phase 3.
 7. Release `nrtqclib` 0.1.0.
 
 ### Phase 4: remove NRT QC from `aiqclib`
+
+Implemented on `feature/remove-nrtqc` (2026-11-05), after `nrtqclib` 0.1.0
+reached PyPI. The `nrtqclib` 0.1.0 suite (144 tests) passes against this
+branch (`uv run --with-editable ../aiqclib pytest`). Two additions to the steps
+below: `test_summary_lists_qc_items` became a `_summary_extra` hook test in
+`test_common_public_api.py` (the hook is now only overridden by `nrtqclib`),
+and the per-item descriptions that lived in `how-to/nrt_qc.rst` are linked
+from `qc_items_as_features.rst` to the `nrtqclib` copy on GitHub until
+`nrtqclib` has hosted docs to point intersphinx at.
 
 1. Delete the files in the "Moves" table and the NRT QC entries in
    `yaml_schema.py`, `yaml_templates.py` (`"template:nrt_qc_sets"`),

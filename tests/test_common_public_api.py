@@ -6,7 +6,7 @@ caught here first: when ``nrtqclib`` starts importing a new ``aiqclib`` name,
 add it to :data:`CONTRACT`. See ``docs/design/NRTQCLIB_plan.md``.
 
 The tests also cover the extension points ``nrtqclib`` relies on (the
-:class:`ConfigBase` schema and template hooks, and
+:class:`ConfigBase` schema, template and summary hooks, and
 :func:`aiqclib.interface.batch.run_phases`) and check that importing the
 contract modules does not load the training stack.
 """
@@ -131,6 +131,9 @@ class MyConfig(ConfigBase):
             return TEMPLATE_TEXT
         return super().get_template_text(template_name)
 
+    def _summary_extra(self, width):
+        return [("my items", ["item_a", "item_b"])]
+
 
 class TestConfigHooks:
     def test_subclass_serves_its_own_section_and_template(self):
@@ -148,6 +151,12 @@ class TestConfigHooks:
     def test_subclass_still_reaches_the_built_in_registries(self):
         assert "data_sets:" in MyConfig.get_template_text("template:data_sets")
         assert "properties" in MyConfig.get_yaml_schema("data_sets")
+
+    def test_subclass_adds_summary_rows(self):
+        """``nrtqclib`` lists its QC items through this hook."""
+        text = MyConfig("template:my_sets", auto_select=True).summary()
+        assert "my items" in text
+        assert "item_a" in text and "item_b" in text
 
     def test_unknown_section_is_rejected(self):
         with pytest.raises(ValueError, match="no_sets is not supported"):
@@ -199,6 +208,15 @@ class TestRunPhases:
         )
         assert log == [{"file": "my.yaml", "set": None}]
         assert summary["status"].to_list() == ["ok"]
+
+    def test_all_skips_phases_outside_all(self, my_phase):
+        """A phase with ``in_all=False`` runs only when named."""
+        phase, log = my_phase
+        summary = run_phases(
+            (phase,), mode="all", config_files={"my_qc_config": "my.yaml"}
+        )
+        assert log == []
+        assert summary.height == 0
 
     def test_unknown_mode_lists_the_given_phases(self, my_phase):
         phase, _ = my_phase

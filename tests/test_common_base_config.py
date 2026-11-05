@@ -224,14 +224,6 @@ class TestConfigSummary:
         assert "\n  input " not in text
         assert "KFoldValidation" in text
 
-    def test_summary_lists_qc_items(self, nrtqc_config_001):
-        """An NRT QC config reports its enabled items where features would be."""
-        text = nrtqc_config_001.summary()
-
-        assert "qc items" in text
-        for item_name in nrtqc_config_001.get_qc_item_names():
-            assert item_name in text
-
     def test_summary_reports_an_invalid_schema(self, config_dir):
         """A config that fails validation says so instead of hiding it."""
         conf = DataSetConfig(str(config_dir / "test_dataset_invalid.yaml"))

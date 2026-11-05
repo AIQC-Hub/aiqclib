@@ -148,10 +148,10 @@ configuration; nothing else in the workflow changes:
            pos_flag_values: [ 4, 6, 7 ]
            neg_flag_values: [ 1 ]
 
-A related but separate module is available if what you want is to *compute* NRT
-QC flags rather than learn from them: see the :doc:`../how-to/nrt_qc` guide,
-which applies the standard RTQC tests directly and can compare its results
-against the flags already in your file.
+A related but separate package is available if what you want is to *compute*
+NRT QC flags rather than learn from them: `nrtqclib
+<https://github.com/AIQC-Hub/nrtqclib>`_ applies the standard RTQC tests
+directly and can compare its results against the flags already in your file.
 
 Generating Input Files with ``ctddump``
 ----------------------------------------
@@ -235,7 +235,8 @@ Parquet file per platform, per profile, or as a whole:
    period you convert must therefore actually contain flagged-bad observations:
    if every ``temp_qc`` in your extract is ``1``, the preparation step will find
    no positive profiles and produce an empty training set. ``ctddump report``
-   and the flag comparison report of the :doc:`../how-to/nrt_qc` module are both
+   and the flag comparison report of `nrtqclib
+   <https://github.com/AIQC-Hub/nrtqclib>`_ are both
    useful for checking this before you invest in a full run.
 
 For the complete command reference, see the

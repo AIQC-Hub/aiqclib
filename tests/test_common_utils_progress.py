@@ -89,7 +89,7 @@ class TestProgressReporterEnabled:
     def test_skip_counts_but_is_marked(self):
         """A skipped step keeps the numbering honest and says it was skipped."""
         stream = io.StringIO()
-        reporter = ProgressReporter("nrt_qc", 2, enabled=True, stream=stream)
+        reporter = ProgressReporter("classify", 2, enabled=True, stream=stream)
         reporter.step("Running QC items")
         reporter.skip("Comparing flags")
         last = stream.getvalue().splitlines()[-1]
@@ -201,17 +201,16 @@ class TestNotice:
 
 
 class TestEntryPointSignatures:
-    """All four workflows expose the option identically."""
+    """All three workflows expose the option identically."""
 
     @pytest.mark.parametrize(
         "function",
         [
             aq.create_training_dataset,
             aq.train_and_evaluate,
-            aq.run_nrt_qc,
             aq.classify_dataset,
         ],
-        ids=["prepare", "train", "nrt_qc", "classify"],
+        ids=["prepare", "train", "classify"],
     )
     def test_verbose_defaults_to_false(self, function):
         """Adding the option must not change what existing callers see."""
