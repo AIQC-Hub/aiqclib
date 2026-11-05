@@ -6,6 +6,18 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-05
+### Added
+- `ConfigBase.get_yaml_schema` / `get_template_text` class-method hooks, so config classes outside `aiqclib` can serve their own sections and templates.
+- `interface.batch.run_phases` and `Phase.config_reader`, so other packages can run their own phases on the batch engine.
+- `tests/test_common_public_api.py`: contract test for the `aiqclib` names `nrtqclib` imports.
+
+### Changed
+- `aiqclib` and `interface.batch` import the train and classify entry points lazily; importing a QC item no longer loads xgboost, scikit-learn or matplotlib.
+
+### Deprecated
+- NRT QC module (`run_nrt_qc`, `NRTQCConfig`, the `nrt_qc` config stage, `run_batch(mode="nrt_qc")`): moving to `nrtqclib`, removed in 0.15.0. These now emit a `DeprecationWarning`.
+
 ## [0.13.0] - 2026-09-22
 ### Added
 - `derived_values` feature: sigma-0, depth and potential temperature computed from the measured variables, or passed through when the input already carries them.

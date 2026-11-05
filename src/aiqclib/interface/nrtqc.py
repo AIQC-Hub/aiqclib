@@ -16,6 +16,7 @@ from aiqclib.common.loader.nrtqc_loader import (
     load_nrtqc_step3_concat_dataset,
     load_nrtqc_step4_compare_dataset,
 )
+from aiqclib.nrtqc.deprecation import warn_moved
 
 
 def run_nrt_qc(config: ConfigBase, verbose: bool = False) -> None:
@@ -34,6 +35,10 @@ def run_nrt_qc(config: ConfigBase, verbose: bool = False) -> None:
          the per-variable flag comparison reports; otherwise the step is
          skipped.
 
+    .. deprecated:: 0.14.0
+       The NRT QC module is moving to the ``nrtqclib`` package and will be
+       removed from ``aiqclib`` in 0.15.0. Use ``nrtqclib.run_nrt_qc``.
+
     :param config: A configuration object specifying the classes and
                    parameters for each step of the NRT QC pipeline.
     :type config: ConfigBase
@@ -44,6 +49,7 @@ def run_nrt_qc(config: ConfigBase, verbose: bool = False) -> None:
              configuration but does not return a value.
     :rtype: None
     """
+    warn_moved("aiqclib.run_nrt_qc", "nrtqclib.run_nrt_qc")
     with report_progress(
         stage="nrt_qc",
         total_steps=4,

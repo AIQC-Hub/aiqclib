@@ -16,6 +16,7 @@ from aiqclib.common.config.yaml_templates import get_template_text
 from aiqclib.common.utils.config import get_config_file
 from aiqclib.common.utils.config import read_config as utils_read_config
 from aiqclib.common.utils.file import ensure_output_file
+from aiqclib.nrtqc.deprecation import warn_moved
 
 
 #: Maps a ``"<stage>_<extension>"`` key to the built-in template that serves
@@ -105,6 +106,11 @@ def write_config_template(
       >>> #                  overwrite=True to replace it, ...
     """
     template_name, _ = _get_stage_template(stage, extension)
+    if stage == "nrt_qc":
+        warn_moved(
+            "write_config_template(stage='nrt_qc')",
+            "nrtqclib.write_config_template",
+        )
 
     yaml_text = get_template_text(template_name)
     file_name = ensure_output_file(
@@ -164,6 +170,11 @@ def read_config_template(
       >>> config.data["path_info"]["common"]["base_path"] = "~/aiqc_project/data"
     """
     template_name, config_class = _get_stage_template(stage, extension)
+    if stage == "nrt_qc":
+        warn_moved(
+            "read_config_template(stage='nrt_qc')",
+            "nrtqclib.read_config_template",
+        )
 
     return config_class(template_name, auto_select)
 
@@ -213,6 +224,8 @@ def read_config(
     matching_key = next((key for key in config_classes.keys() if key in config), None)
     if matching_key is None:
         raise ValueError("No valid 'set' name found in the provided YAML file.")
+    if matching_key == "nrt_qc_sets":
+        warn_moved("read_config() on an nrt_qc_sets file", "nrtqclib.read_config")
 
     # Auto-selection only makes sense when the caller did not name a set: it
     # rejects a file holding several sets, which is precisely the file a caller
