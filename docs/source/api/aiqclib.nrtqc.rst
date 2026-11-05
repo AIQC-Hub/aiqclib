@@ -16,3 +16,14 @@ Subpackages
    aiqclib.nrtqc.step2_run_qc
    aiqclib.nrtqc.step3_concat_flags
    aiqclib.nrtqc.step4_compare_flags
+
+Submodules
+----------
+
+aiqclib.nrtqc.deprecation module
+--------------------------------
+
+.. automodule:: aiqclib.nrtqc.deprecation
+   :members:
+   :show-inheritance:
+   :undoc-members:
