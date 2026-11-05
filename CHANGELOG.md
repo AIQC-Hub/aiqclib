@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.15.2] - 2026-11-05
 ### Fixed
 - QC items treat floating-point NaN as missing, like null; a NaN value (and, for `qc_spike`, `qc_gradient` and `qc_digit_rollover`, its neighbours) no longer fails.
 
