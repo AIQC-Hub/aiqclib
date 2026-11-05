@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 As this project is still in active development, it does not yet strictly adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.14.0] - 2026-11-05
 ### Added
 - `ConfigBase.get_yaml_schema` / `get_template_text` class-method hooks, so config classes outside `aiqclib` can serve their own sections and templates.
 - `interface.batch.run_phases` and `Phase.config_reader`, so other packages can run their own phases on the batch engine.
