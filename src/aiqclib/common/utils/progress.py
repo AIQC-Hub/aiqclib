@@ -1,8 +1,8 @@
 """
 Opt-in progress reporting for the pipeline entry points.
 
-The four workflows (``create_training_dataset``, ``train_and_evaluate``,
-``run_nrt_qc``, ``classify_dataset``) run for minutes on real datasets while
+The workflows (``create_training_dataset``, ``train_and_evaluate``,
+``classify_dataset``) run for minutes on real datasets while
 printing nothing, so there is no way to tell a slow step from a hung one. Each
 accepts ``verbose=True`` to report its main steps through this module.
 

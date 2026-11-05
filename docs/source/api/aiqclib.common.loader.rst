@@ -73,22 +73,6 @@ aiqclib.common.loader.model\_registry module
    :show-inheritance:
    :undoc-members:
 
-aiqclib.common.loader.nrtqc\_loader module
-------------------------------------------
-
-.. automodule:: aiqclib.common.loader.nrtqc_loader
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-aiqclib.common.loader.nrtqc\_registry module
---------------------------------------------
-
-.. automodule:: aiqclib.common.loader.nrtqc_registry
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 aiqclib.common.loader.single\_model\_loader module
 --------------------------------------------------
 

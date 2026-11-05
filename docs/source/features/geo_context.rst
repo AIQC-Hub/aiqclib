@@ -77,7 +77,9 @@ The grids are inputs, not lookups
 
 ``aiqclib`` does not read GEBCO or GSHHG. ``bathymetry`` and
 ``coast_distance`` are expected as columns of the input, exactly as the
-:ref:`position_on_land <nrt-qc-items>` QC item expects the sea floor depth.
+``position_on_land`` QC item
+(:class:`~aiqclib.prepare.features.qc_position_on_land.QCPositionOnLand`)
+expects the sea floor depth.
 Sampling the grids is an upstream job, done where the input is assembled.
 
 That keeps netCDF and shapefile libraries, their data files, and their

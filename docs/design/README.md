@@ -4,19 +4,16 @@ Internal design and planning documents for `aiqclib` features. These are
 **not** part of the Sphinx/Read the Docs build (that is `docs/source/` only);
 they live here as a durable record of *why* and *how* a feature was built.
 
-## NRT QC module (v0.5.0)
+## NRT QC module (moved to `nrtqclib`)
+
+The NRT QC pipeline was built here in v0.5.0 and moved to
+[`nrtqclib`](https://github.com/AIQC-Hub/nrtqclib) in 0.15.0. Its design docs
+(`NRTQC_doc.md`, `NRTQC_spec.md`, `NRTQC_plan.md`) now live in that repo's
+`docs/design/`. The QC items themselves stay in `aiqclib`.
 
 | File | What it is |
 | --- | --- |
-| [`NRTQC_doc.md`](NRTQC_doc.md) | RTQC recommendation reference: the source material the module was based on. |
-| [`NRTQC_spec.md`](NRTQC_spec.md) | Module specification: QC items, flag scheme, config layout, outputs. |
-| [`NRTQC_plan.md`](NRTQC_plan.md) | The 8-phase implementation plan followed to build the module. |
-
-## Moving NRT QC to `nrtqclib` (planned)
-
-| File | What it is |
-| --- | --- |
-| [`NRTQCLIB_plan.md`](NRTQCLIB_plan.md) | Plan for moving the NRT QC pipeline, config, docs and tests into a new `nrtqclib` package that depends on `aiqclib`. |
+| [`NRTQCLIB_plan.md`](NRTQCLIB_plan.md) | Plan for moving the NRT QC pipeline, config, docs and tests into `nrtqclib`, which depends on `aiqclib`. |
 
 ## Profile-level mode
 
