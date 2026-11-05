@@ -9,7 +9,7 @@ It uses JSON schemas for validation and supports template-based configuration lo
 import os
 import textwrap
 from abc import ABC
-from typing import List, Dict, Optional, Tuple
+from typing import Callable, List, Dict, Optional, Tuple
 
 import jsonschema
 import yaml
@@ -21,10 +21,23 @@ from aiqclib.common.config.yaml_schema import (
     get_classification_config_schema,
     get_nrtqc_config_schema,
 )
-from aiqclib.common.config.yaml_templates import get_template_text
+from aiqclib.common.config import yaml_templates
 from aiqclib.common.utils.config import get_config_item
 from aiqclib.common.utils.config import read_config
 from aiqclib.common.utils.file import expand_path
+
+#: The built-in configuration sections, each mapped to the function returning
+#: its JSON schema as YAML text. :meth:`ConfigBase.get_yaml_schema` reads it;
+#: a subclass serving a section of its own extends that method instead of
+#: this registry.
+_YAML_SCHEMAS: Dict[str, Callable[[], str]] = {
+    "data_sets": get_data_set_config_schema,
+    "data_sets_with_norm": get_data_set_config_schema,
+    "training_sets": get_training_config_schema,
+    "classification_sets": get_classification_config_schema,
+    "classification_sets_with_norm": get_classification_config_schema,
+    "nrt_qc_sets": get_nrtqc_config_schema,
+}
 
 
 class ConfigBase(ABC):
@@ -84,25 +97,16 @@ class ConfigBase(ABC):
                 "Child class must define 'expected_class_name' attribute"
             )
 
-        yaml_schemas = {
-            "data_sets": get_data_set_config_schema,
-            "data_sets_with_norm": get_data_set_config_schema,
-            "training_sets": get_training_config_schema,
-            "classification_sets": get_classification_config_schema,
-            "classification_sets_with_norm": get_classification_config_schema,
-            "nrt_qc_sets": get_nrtqc_config_schema,
-        }
-        if section_name not in yaml_schemas:
-            raise ValueError(f"Section name {section_name} is not supported.")
+        schema_text = self.get_yaml_schema(section_name)
 
         if str(config_file).startswith("template:"):
-            full_config = yaml.safe_load(get_template_text(str(config_file)))
+            full_config = yaml.safe_load(self.get_template_text(str(config_file)))
         else:
             full_config = read_config(config_file)
 
         self.section_name: str = section_name
         self.config_file: str = str(config_file)
-        self.yaml_schema: Dict = yaml.safe_load(yaml_schemas.get(section_name)())
+        self.yaml_schema: Dict = yaml.safe_load(schema_text)
         self.full_config: Dict = full_config
         self.valid_yaml: bool = False
         self.data: Optional[Dict] = None
@@ -110,6 +114,44 @@ class ConfigBase(ABC):
 
         if auto_select:
             self.auto_select()
+
+    @classmethod
+    def get_yaml_schema(cls, section_name: str) -> str:
+        """
+        Return the JSON schema, as YAML text, that validates a section.
+
+        This is the hook for configuration classes defined outside
+        ``aiqclib`` (for example in ``nrtqclib``): a subclass managing a
+        section of its own overrides it, returns its schema for that section
+        and defers to ``super()`` for the rest.
+
+        :param section_name: The top-level configuration section.
+        :type section_name: str
+        :raises ValueError: If no schema is known for the section.
+        :return: The schema as YAML text.
+        :rtype: str
+        """
+        if section_name not in _YAML_SCHEMAS:
+            raise ValueError(f"Section name {section_name} is not supported.")
+        return _YAML_SCHEMAS[section_name]()
+
+    @classmethod
+    def get_template_text(cls, template_name: str) -> str:
+        """
+        Return the YAML text of a built-in template.
+
+        Called when ``config_file`` is a ``template:`` identifier. Like
+        :meth:`get_yaml_schema`, a subclass serving templates of its own
+        overrides it and defers to ``super()`` for the built-in ones.
+
+        :param template_name: A ``template:``-prefixed name, e.g.
+                              ``"template:data_sets_full"``.
+        :type template_name: str
+        :raises ValueError: If no template goes by that name.
+        :return: The template's YAML text.
+        :rtype: str
+        """
+        return yaml_templates.get_template_text(template_name)
 
     def auto_select(self) -> None:
         """

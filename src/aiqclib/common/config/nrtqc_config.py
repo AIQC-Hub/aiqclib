@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.utils.config import get_config_item
+from aiqclib.nrtqc.deprecation import warn_moved
 
 
 class NRTQCConfig(ConfigBase):
@@ -27,6 +28,10 @@ class NRTQCConfig(ConfigBase):
     key so the target helpers inherited from :class:`ConfigBase`
     (e.g. :meth:`get_target_names`, :meth:`get_target_file_names`) work
     unchanged for QC variables.
+
+    .. deprecated:: 0.14.0
+       The NRT QC module is moving to the ``nrtqclib`` package and will be
+       removed from ``aiqclib`` in 0.15.0.
     """
 
     expected_class_name: str = "NRTQCConfig"
@@ -48,6 +53,10 @@ class NRTQCConfig(ConfigBase):
         :raises ValueError: If the YAML is invalid or missing the
                             "nrt_qc_sets" section.
         """
+        warn_moved(
+            "aiqclib.common.config.nrtqc_config.NRTQCConfig",
+            "nrtqclib.config.nrtqc_config.NRTQCConfig",
+        )
         super().__init__(
             section_name="nrt_qc_sets",
             config_file=config_file,

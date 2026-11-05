@@ -12,6 +12,14 @@ and writes the original parquet enriched with:
 
 Flags follow the IOC/Argo scheme: 1 (good), 3 (probably bad), 4 (bad).
 
+.. deprecated:: 0.14.0
+   The NRT QC module is moving to the separate ``nrtqclib`` package, which
+   uses the QC items from ``aiqclib``. ``aq.run_nrt_qc``, the ``nrt_qc``
+   configuration stage and ``run_batch(mode="nrt_qc")`` now emit a
+   :class:`DeprecationWarning` and will be removed from ``aiqclib`` in
+   0.15.0. The QC items stay in ``aiqclib``, so using them as training
+   features (:doc:`qc_items_as_features`) is not affected.
+
 Quick start
 -----------
 

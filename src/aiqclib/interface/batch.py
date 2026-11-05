@@ -26,23 +26,26 @@ The NRT QC module is available the same way, as ``mode="nrt_qc"`` reading an
 Every run returns a summary frame, one row per dataset and phase, recording
 whether it succeeded and how long it took. New phases are added by extending
 :data:`PHASES`; nothing else in the module is phase-specific.
+
+A package building on ``aiqclib`` (for example ``nrtqclib``) can drive the
+same engine with phases of its own by calling :func:`run_phases` with its own
+:class:`Phase` objects, each carrying the reader for its configuration files.
 """
 
 import os
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import polars as pl
 
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.utils.file import expand_path
 from aiqclib.common.utils.progress import PREFIX
-from aiqclib.interface.classify import classify_dataset
 from aiqclib.interface.config import read_config
 from aiqclib.interface.nrtqc import run_nrt_qc
 from aiqclib.interface.prepare import create_training_dataset
-from aiqclib.interface.train import train_and_evaluate
+from aiqclib.nrtqc.deprecation import warn_moved
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,14 @@ class Phase:
     :ivar in_all: Whether ``mode="all"`` runs this phase. Defaults to
                   :obj:`True`.
     :vartype in_all: bool
+    :ivar config_reader: Reads the phase's config file, called as
+                         ``config_reader(config_file)`` or
+                         ``config_reader(config_file, set_name=...)``.
+                         :obj:`None` (the default) means
+                         :func:`aiqclib.interface.config.read_config`; a phase
+                         whose configuration class lives outside ``aiqclib``
+                         passes its own package's reader.
+    :vartype config_reader: Optional[Callable[..., ConfigBase]]
     """
 
     name: str
@@ -68,6 +79,41 @@ class Phase:
     config_argument: str
     runner: Callable[[ConfigBase, bool], None]
     in_all: bool = True
+    config_reader: Optional[Callable[..., ConfigBase]] = None
+
+
+def _train_and_evaluate(config: ConfigBase, verbose: bool = False) -> None:
+    """
+    Run :func:`aiqclib.interface.train.train_and_evaluate`, imported on first
+    use so that importing this module does not load the training stack.
+
+    :param config: The selected training configuration.
+    :type config: ConfigBase
+    :param verbose: Passed on to the entry point.
+    :type verbose: bool
+    :return: None
+    :rtype: None
+    """
+    from aiqclib.interface.train import train_and_evaluate
+
+    train_and_evaluate(config, verbose=verbose)
+
+
+def _classify_dataset(config: ConfigBase, verbose: bool = False) -> None:
+    """
+    Run :func:`aiqclib.interface.classify.classify_dataset`, imported on first
+    use so that importing this module does not load the training stack.
+
+    :param config: The selected classification configuration.
+    :type config: ConfigBase
+    :param verbose: Passed on to the entry point.
+    :type verbose: bool
+    :return: None
+    :rtype: None
+    """
+    from aiqclib.interface.classify import classify_dataset
+
+    classify_dataset(config, verbose=verbose)
 
 
 #: The phases a batch can run, in the order ``mode="all"`` runs them.
@@ -79,12 +125,12 @@ class Phase:
 #: retrain, so it is available on demand as ``mode="nrt_qc"``.
 PHASES: Tuple[Phase, ...] = (
     Phase("prepare", "prepare_set_name", "prepare_config", create_training_dataset),
-    Phase("train", "training_set_name", "training_config", train_and_evaluate),
+    Phase("train", "training_set_name", "training_config", _train_and_evaluate),
     Phase(
         "classify",
         "classification_set_name",
         "classification_config",
-        classify_dataset,
+        _classify_dataset,
     ),
     Phase(
         "nrt_qc",
@@ -112,20 +158,25 @@ SUMMARY_SCHEMA: Dict = {
 }
 
 
-def available_modes() -> List[str]:
+def available_modes(phases: Optional[Sequence[Phase]] = None) -> List[str]:
     """
     Return the accepted ``mode`` values.
 
     Every phase can be named individually, including the ones ``"all"``
     leaves out (see :data:`PHASES`).
 
+    :param phases: The phases to list. Defaults to the built-in
+                   :data:`PHASES`.
+    :type phases: Optional[Sequence[Phase]]
     :return: Each phase name, followed by ``"all"``.
     :rtype: List[str]
     """
-    return [phase.name for phase in PHASES] + [ALL_MODE]
+    if phases is None:
+        phases = PHASES
+    return [phase.name for phase in phases] + [ALL_MODE]
 
 
-def _resolve_phases(mode: str) -> Tuple[Phase, ...]:
+def _resolve_phases(mode: str, phases: Sequence[Phase]) -> Tuple[Phase, ...]:
     """
     Map a mode onto the phases it runs.
 
@@ -134,17 +185,19 @@ def _resolve_phases(mode: str) -> Tuple[Phase, ...]:
 
     :param mode: A phase name or ``"all"``.
     :type mode: str
+    :param phases: The phases to choose from.
+    :type phases: Sequence[Phase]
     :raises ValueError: If the mode is not one of :func:`available_modes`.
     :return: The phases to run, in order.
     :rtype: Tuple[Phase, ...]
     """
     if mode == ALL_MODE:
-        return tuple(phase for phase in PHASES if phase.in_all)
-    for phase in PHASES:
+        return tuple(phase for phase in phases if phase.in_all)
+    for phase in phases:
         if phase.name == mode:
             return (phase,)
     raise ValueError(
-        f"Unknown mode '{mode}'. Expected one of: {', '.join(available_modes())}."
+        f"Unknown mode '{mode}'. Expected one of: {', '.join(available_modes(phases))}."
     )
 
 
@@ -278,15 +331,15 @@ def _validate_columns(frame: pl.DataFrame, phases: Sequence[Phase]) -> None:
 
 
 def _resolve_config_files(
-    phases: Sequence[Phase], config_files: Dict[str, Optional[str]]
+    phases: Sequence[Phase], config_files: Mapping[str, Optional[str]]
 ) -> None:
     """
     Check a config file was supplied for every phase being run.
 
     :param phases: The phases the run needs config files for.
     :type phases: Sequence[Phase]
-    :param config_files: The config arguments as passed to :func:`run_batch`.
-    :type config_files: Dict[str, Optional[str]]
+    :param config_files: The config files keyed by :attr:`Phase.config_argument`.
+    :type config_files: Mapping[str, Optional[str]]
     :raises ValueError: If a phase has no config file.
     :return: None
     :rtype: None
@@ -373,6 +426,9 @@ def run_batch(
     :param classification_config: The configuration file for the classify phase.
     :type classification_config: Optional[str]
     :param nrt_qc_config: The configuration file for the NRT QC phase.
+                          ``mode="nrt_qc"`` is deprecated since 0.14.0 and
+                          will be removed in 0.15.0; use
+                          ``nrtqclib.run_batch``.
     :type nrt_qc_config: Optional[str]
     :param names: Run only these datasets, instead of every row. Requires a
                   table, since there are no names to choose from without one.
@@ -407,13 +463,79 @@ def run_batch(
         )
         print(summary.filter(pl.col("status") == "failed"))
     """
-    phases = _resolve_phases(mode)
-    config_files = {
-        "prepare_config": prepare_config,
-        "training_config": training_config,
-        "classification_config": classification_config,
-        "nrt_qc_config": nrt_qc_config,
-    }
+    if mode == "nrt_qc":
+        warn_moved("aiqclib.run_batch(mode='nrt_qc')", "nrtqclib.run_batch")
+    return run_phases(
+        PHASES,
+        mode=mode,
+        config_files={
+            "prepare_config": prepare_config,
+            "training_config": training_config,
+            "classification_config": classification_config,
+            "nrt_qc_config": nrt_qc_config,
+        },
+        table=table,
+        names=names,
+        verbose=verbose,
+        continue_on_error=continue_on_error,
+    )
+
+
+def run_phases(
+    phases: Sequence[Phase],
+    mode: str,
+    config_files: Mapping[str, Optional[str]],
+    table: Optional[Union[str, pl.DataFrame]] = None,
+    names: Optional[Sequence[str]] = None,
+    verbose: bool = False,
+    continue_on_error: bool = False,
+) -> pl.DataFrame:
+    """
+    Run a mode from an arbitrary set of phases over a dataset table.
+
+    This is the engine behind :func:`run_batch`, which calls it with the
+    built-in :data:`PHASES`. A package building on ``aiqclib`` calls it with
+    its own :class:`Phase` objects to get the same table handling, skipping,
+    error handling and summary frame.
+
+    :param phases: The phases ``mode`` chooses from, in run order.
+    :type phases: Sequence[Phase]
+    :param mode: A phase name from ``available_modes(phases)``, or ``"all"``
+                 for every phase marked :attr:`Phase.in_all`.
+    :type mode: str
+    :param config_files: The config file for each phase, keyed by
+                         :attr:`Phase.config_argument`. Phases the mode does
+                         not run need no entry.
+    :type config_files: Mapping[str, Optional[str]]
+    :param table: As for :func:`run_batch`.
+    :type table: Optional[Union[str, polars.DataFrame]]
+    :param names: As for :func:`run_batch`.
+    :type names: Optional[Sequence[str]]
+    :param verbose: As for :func:`run_batch`.
+    :type verbose: bool
+    :param continue_on_error: As for :func:`run_batch`.
+    :type continue_on_error: bool
+    :raises ValueError: As for :func:`run_batch`.
+    :return: One row per dataset and phase (see :data:`SUMMARY_SCHEMA`).
+    :rtype: polars.DataFrame
+
+    :Example:
+
+    .. code-block:: python
+
+        from aiqclib.interface.batch import Phase, run_phases
+
+        my_phase = Phase(
+            "my_qc", "my_qc_set_name", "my_qc_config", run_my_qc,
+            config_reader=read_my_config,
+        )
+        summary = run_phases(
+            (my_phase,), mode="my_qc",
+            config_files={"my_qc_config": "my_qc.yaml"},
+            table="datasets.tsv",
+        )
+    """
+    phases = _resolve_phases(mode, phases)
     _resolve_config_files(phases, config_files)
 
     if table is None:
@@ -532,15 +654,16 @@ def _run_one(
             flush=True,
         )
 
+    reader = phase.config_reader or read_config
     started = perf_counter()
     try:
         if auto_select:
-            config = read_config(config_file)
+            config = reader(config_file)
             # Record what the config file actually selected, so the summary
             # says which set ran even though the caller did not name one.
             set_name = getattr(config, "dataset_name", None)
         else:
-            config = read_config(config_file, set_name=set_name)
+            config = reader(config_file, set_name=set_name)
         phase.runner(config, verbose=verbose)
     except Exception as error:  # noqa: BLE001 - recorded or re-raised below
         if not continue_on_error:
