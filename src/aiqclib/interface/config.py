@@ -1,8 +1,9 @@
 """
 Module providing utilities for writing YAML configuration templates, reading
 them as instantiated configuration objects, and building a configuration
-object directly from a built-in template. Supports "prepare", "train",
-"classify", and "nrt_qc" stages using corresponding registry lookups.
+object directly from a built-in template. Supports "prepare", "train" and
+"classify" stages using corresponding registry lookups. The NRT QC stage
+moved to ``nrtqclib`` in 0.15.0.
 """
 
 from typing import Dict, Optional, Tuple, Type
@@ -10,13 +11,11 @@ from typing import Dict, Optional, Tuple, Type
 from aiqclib.common.base.config_base import ConfigBase
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
-from aiqclib.common.config.nrtqc_config import NRTQCConfig
 from aiqclib.common.config.training_config import TrainingConfig
 from aiqclib.common.config.yaml_templates import get_template_text
 from aiqclib.common.utils.config import get_config_file
 from aiqclib.common.utils.config import read_config as utils_read_config
 from aiqclib.common.utils.file import ensure_output_file
-from aiqclib.nrtqc.deprecation import warn_moved
 
 
 #: Maps a ``"<stage>_<extension>"`` key to the built-in template that serves
@@ -33,7 +32,6 @@ _STAGE_TEMPLATES: Dict[str, Tuple[str, Type[ConfigBase]]] = {
     "classify_": ("template:classification_sets", ClassificationConfig),
     "classify_full": ("template:classification_sets_full", ClassificationConfig),
     "classify_profile": ("template:classification_sets_profile", ClassificationConfig),
-    "nrt_qc_": ("template:nrt_qc_sets", NRTQCConfig),
 }
 
 
@@ -41,7 +39,7 @@ def _get_stage_template(stage: str, extension: str) -> Tuple[str, Type[ConfigBas
     """
     Look up the template and configuration class for a stage.
 
-    :param stage: One of "prepare", "train", "classify" or "nrt_qc".
+    :param stage: One of "prepare", "train" or "classify".
     :type stage: str
     :param extension: The template variant; "", "full" or "reduced".
     :type extension: str
@@ -78,7 +76,7 @@ def write_config_template(
                       directory.
     :type file_name: str
     :param stage: Determines which template to write; must be one of "prepare",
-                  "train", "classify", or "nrt_qc".
+                  "train", or "classify".
     :type stage: str
     :param extension: Determines template extensions; must be one of "", "full", or "reduced".
     :type extension: str
@@ -106,11 +104,6 @@ def write_config_template(
       >>> #                  overwrite=True to replace it, ...
     """
     template_name, _ = _get_stage_template(stage, extension)
-    if stage == "nrt_qc":
-        warn_moved(
-            "write_config_template(stage='nrt_qc')",
-            "nrtqclib.write_config_template",
-        )
 
     yaml_text = get_template_text(template_name)
     file_name = ensure_output_file(
@@ -144,7 +137,7 @@ def read_config_template(
        edit it, and load it with :func:`read_config`.
 
     :param stage: Determines which template to read; must be one of "prepare",
-                  "train", "classify", or "nrt_qc".
+                  "train", or "classify".
     :type stage: str
     :param extension: Determines template extensions; must be one of "",
                       "full", or "reduced".
@@ -155,8 +148,7 @@ def read_config_template(
                         ``full_config`` before choosing.
     :type auto_select: bool
     :return: An instantiated configuration object (:class:`DataSetConfig`,
-             :class:`TrainingConfig`, :class:`ClassificationConfig`, or
-             :class:`NRTQCConfig`).
+             :class:`TrainingConfig` or :class:`ClassificationConfig`).
     :rtype: ConfigBase
     :raises ValueError: If the combined stage and extension is not found in
                         the registry.
@@ -170,11 +162,6 @@ def read_config_template(
       >>> config.data["path_info"]["common"]["base_path"] = "~/aiqc_project/data"
     """
     template_name, config_class = _get_stage_template(stage, extension)
-    if stage == "nrt_qc":
-        warn_moved(
-            "read_config_template(stage='nrt_qc')",
-            "nrtqclib.read_config_template",
-        )
 
     return config_class(template_name, auto_select)
 
@@ -189,8 +176,8 @@ def read_config(
     This function:
       1. Resolves the file path by calling :func:`aiqclib.common.utils.config.get_config_file`.
       2. Reads the specified YAML file and identifies the main key
-         (e.g., "data_sets", "training_sets", "classification_sets",
-         or "nrt_qc_sets") to map to the corresponding configuration class.
+         (e.g., "data_sets", "training_sets" or "classification_sets") to
+         map to the corresponding configuration class.
       3. Instantiates and returns the matched configuration class with the resolved path.
       4. If ``set_name`` is provided, it calls the ``select`` method on the instantiated
          configuration object.
@@ -207,8 +194,7 @@ def read_config(
                         Defaults to True.
     :type auto_select: bool
     :return: An instantiated configuration object (:class:`DataSetConfig`,
-             :class:`TrainingConfig`, :class:`ClassificationConfig`, or
-             :class:`NRTQCConfig`).
+             :class:`TrainingConfig` or :class:`ClassificationConfig`).
     :rtype: ConfigBase
     :raises ValueError: If no valid top-level configuration key is found in the YAML file.
     """
@@ -219,13 +205,10 @@ def read_config(
         "data_sets": DataSetConfig,
         "training_sets": TrainingConfig,
         "classification_sets": ClassificationConfig,
-        "nrt_qc_sets": NRTQCConfig,
     }
     matching_key = next((key for key in config_classes.keys() if key in config), None)
     if matching_key is None:
         raise ValueError("No valid 'set' name found in the provided YAML file.")
-    if matching_key == "nrt_qc_sets":
-        warn_moved("read_config() on an nrt_qc_sets file", "nrtqclib.read_config")
 
     # Auto-selection only makes sense when the caller did not name a set: it
     # rejects a file holding several sets, which is precisely the file a caller

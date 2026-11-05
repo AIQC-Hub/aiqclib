@@ -3,7 +3,8 @@ This module defines QCItemFeatureBase, the common base class for the NRT QC
 item feature classes (RTQC tests from the NRT QC recommendation document).
 
 Each QC item is an ordinary feature class registered in the feature registry,
-so its flag columns can be used both by the NRT QC module and as training
+so its flag columns can be used both by the NRT QC pipeline (the separate
+``nrtqclib`` package) and as training
 features in the dataset preparation pipeline. Subclasses implement
 :meth:`compute_flags`, which produces one flag column per checked variable
 (or a single profile-level column) for every observation of the input frame,
@@ -43,8 +44,8 @@ class QCItemFeatureBase(FeatureBase):
     - Inside the dataset preparation pipeline (``selected_rows`` given),
       :attr:`features` holds ``row_id`` plus the flag columns for the
       selected rows, like any other feature class.
-    - Inside the NRT QC module (no ``selected_rows``), :attr:`features`
-      holds the observation keys plus the flag columns for every row of
+    - Inside the ``nrtqclib`` pipeline (no ``selected_rows``),
+      :attr:`features` holds the observation keys plus the flag columns for every row of
       :attr:`filtered_input`.
 
     Flag columns follow the naming scheme ``{variable}_qc_{item_name}``
@@ -203,7 +204,7 @@ class QCItemFeatureBase(FeatureBase):
 
         With :attr:`selected_rows` present (preparation pipeline), the flags
         are joined onto the target's selected rows and keyed by ``row_id``;
-        otherwise (NRT QC module) the full flag frame is kept.
+        otherwise (``nrtqclib`` pipeline) the full flag frame is kept.
 
         In the profile-level pipeline the selected rows are one per profile
         (no ``observation_no`` column). Only items whose :attr:`level` is

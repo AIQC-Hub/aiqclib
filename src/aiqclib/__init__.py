@@ -32,7 +32,6 @@ _LAZY_ATTRIBUTES: Dict[str, str] = {
     "read_config": "aiqclib.interface.config",
     "read_config_template": "aiqclib.interface.config",
     "write_config_template": "aiqclib.interface.config",
-    "run_nrt_qc": "aiqclib.interface.nrtqc",
     "create_training_dataset": "aiqclib.interface.prepare",
     "read_shap_scores": "aiqclib.interface.shap_io",
     "format_summary_stats": "aiqclib.interface.stats",
@@ -51,7 +50,6 @@ __all__ = [
     "get_summary_stats",
     "read_shap_scores",
     "run_batch",
-    "run_nrt_qc",
     "train_and_evaluate",
 ]
 
@@ -61,7 +59,6 @@ if TYPE_CHECKING:  # pragma: no cover - for type checkers and IDEs only
     from aiqclib.interface.config import read_config
     from aiqclib.interface.config import read_config_template
     from aiqclib.interface.config import write_config_template
-    from aiqclib.interface.nrtqc import run_nrt_qc
     from aiqclib.interface.prepare import create_training_dataset
     from aiqclib.interface.shap_io import read_shap_scores
     from aiqclib.interface.stats import format_summary_stats

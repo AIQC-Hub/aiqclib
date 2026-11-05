@@ -15,6 +15,5 @@ Subpackages
    aiqclib.classify
    aiqclib.common
    aiqclib.interface
-   aiqclib.nrtqc
    aiqclib.prepare
    aiqclib.train

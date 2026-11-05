@@ -15,7 +15,7 @@ The library is designed around a three-stage machine learning workflow:
 2.  **Training & Evaluation:** Train machine learning models and evaluate their performance using cross-validation.
 3.  **Classification:** Apply a trained model to classify new, unseen data.
 
-In addition, a standalone **Near-Real Time Quality Control (NRT QC)** module applies automated real-time QC tests (Argo/CTD RTQC tests) to temperature and salinity profiles, producing per-item flag columns and a final NRT flag per variable; see the :doc:`how-to/nrt_qc` guide.
+The automated real-time QC tests (Argo/CTD RTQC tests) are built in as ``qc_*`` features, so their flags can be used as training features; see the :doc:`how-to/qc_items_as_features` guide. The **Near-Real Time Quality Control (NRT QC)** pipeline that runs them on their own and writes a final NRT flag per variable is the separate `nrtqclib <https://github.com/AIQC-Hub/nrtqclib>`_ package, which builds on ``aiqclib`` (it was ``aiqclib.run_nrt_qc`` up to 0.14.0).
 
 Each module is controlled by a YAML configuration file, allowing you to define and reproduce your entire workflow with ease. To run these workflows over several datasets in one call, see the :doc:`how-to/batch_processing` guide.
 
@@ -80,7 +80,6 @@ This section provides practical examples and solutions for common tasks related 
    how-to/classification_labels
    how-to/profile_level_pipeline
    how-to/profile_signal_features
-   how-to/nrt_qc
    how-to/qc_items_as_features
    how-to/performance_evaluation
    how-to/shap_values
@@ -99,7 +98,6 @@ This section provides detailed reference information for all parameters in the Y
    configuration/preparation
    configuration/training
    configuration/classification
-   configuration/nrtqc
 
 ----------
 

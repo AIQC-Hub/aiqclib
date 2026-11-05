@@ -2,7 +2,7 @@ Using NRT QC Items as Training Features
 =======================================
 
 Every NRT QC item is an ordinary feature class registered under a
-``qc_``-prefixed name, so the same tests the :doc:`nrt_qc` module runs can also
+``qc_``-prefixed name, so the same tests the `nrtqclib`_ pipeline runs can also
 be computed inside the Dataset Preparation pipeline and handed to the model as
 input features. Instead of only seeing the measurements, the model then also
 sees what the automated real-time tests made of them.
@@ -61,8 +61,8 @@ The available item names are the ``qc_``-prefixed registry names:
 ``qc_global_range``, ``qc_regional_range``, ``qc_pressure_increasing``,
 ``qc_spike``, ``qc_gradient``, ``qc_digit_rollover``, ``qc_stuck_value``,
 ``qc_density_inversion`` and ``qc_temp_to_psal``. For what each one checks, see
-:ref:`nrt-qc-items`; for their default thresholds, see
-:doc:`../configuration/nrtqc`.
+the `QC items section of the nrtqclib guide`_; for their default thresholds,
+see the `nrtqclib configuration reference`_.
 
 The three settings
 ------------------
@@ -103,9 +103,9 @@ is already a small integer flag, so there is nothing to normalize.
 The columns you get
 -------------------
 
-Item flags follow the same naming as the NRT QC module: variable-specific
-items produce ``{variable}_qc_{item}`` and profile-level items produce a single
-``qc_{item}`` column. The example above adds five columns to each target's
+Item flags follow the same naming as the ``nrtqclib`` pipeline:
+variable-specific items produce ``{variable}_qc_{item}`` and profile-level
+items produce a single ``qc_{item}`` column. The example above adds five columns to each target's
 feature table:
 
 .. code-block:: text
@@ -142,8 +142,9 @@ The QC items implement the Argo/CTD real-time tests. The ``temp_qc`` /
 ``psal_qc`` columns that these tutorials label from are **near-real-time QC
 flags** (see :ref:`which-qc-flags`), which the data provider produced by
 running largely those same tests. ``aiqclib`` treats the two as measuring the
-same thing elsewhere: the NRT QC module's comparison step scores its computed
-items against the input's existing flags with accuracy, precision and recall.
+same thing elsewhere: the ``nrtqclib`` pipeline's comparison step scores its
+computed items against the input's existing flags with accuracy, precision and
+recall.
 
 So if you label from an NRT flag column *and* feed in the QC items as
 features, you are partly giving the model the recipe that produced its own
@@ -224,14 +225,15 @@ Items that need extra configuration
 ``qc_regional_range``
    Has no built-in defaults, so it must be given the region's bounds through
    ``params`` or it raises an error rather than silently passing everything.
-   As in the NRT QC module, this means one configuration per region.
+   As in the ``nrtqclib`` pipeline, this means one configuration per region.
 
 ``qc_temp_to_psal``
    Reads an aggregated temperature flag column (``temp_nrt_flag`` by default),
-   which is produced by the NRT QC module, not by the preparation pipeline.
+   which is produced by the ``nrtqclib`` pipeline, not by the preparation
+   pipeline.
    Unless that column is already present in your input file, adding this item
    as a feature fails with ``ColumnNotFoundError: unable to find column
-   "temp_nrt_flag"``. Run :doc:`nrt_qc` first and prepare from its output, or
+   "temp_nrt_flag"``. Run `nrtqclib`_ first and prepare from its output, or
    point ``params.source_column`` at a flag column your input does have.
 
 Cost
@@ -246,9 +248,13 @@ is the way to check whether the added columns are earning their place.
 Next Steps
 ----------
 
-*   :doc:`nrt_qc`: running the QC items as a standalone module, and what each
-    item checks.
+*   `nrtqclib`_: running the QC items as a standalone NRT QC pipeline, and
+    what each item checks.
 *   :doc:`../configuration/preparation`: the full ``feature_sets`` and
     ``feature_param_sets`` reference.
 *   :doc:`shap_values`: checking whether the added features actually
     contribute to the model.
+
+.. _nrtqclib: https://github.com/AIQC-Hub/nrtqclib
+.. _QC items section of the nrtqclib guide: https://github.com/AIQC-Hub/nrtqclib/blob/main/docs/source/how-to/nrt_qc.rst#the-qc-items
+.. _nrtqclib configuration reference: https://github.com/AIQC-Hub/nrtqclib/blob/main/docs/source/configuration/nrtqc.rst

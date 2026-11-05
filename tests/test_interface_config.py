@@ -23,7 +23,6 @@ import yaml
 
 from aiqclib.common.config.classify_config import ClassificationConfig
 from aiqclib.common.config.dataset_config import DataSetConfig
-from aiqclib.common.config.nrtqc_config import NRTQCConfig
 from aiqclib.common.config.training_config import TrainingConfig
 from aiqclib.interface.config import (
     read_config,
@@ -156,7 +155,6 @@ STAGE_SPECS = [
     ("train", "", TrainingConfig),
     ("classify", "", ClassificationConfig),
     ("classify", "full", ClassificationConfig),
-    ("nrt_qc", "", NRTQCConfig),
 ]
 
 

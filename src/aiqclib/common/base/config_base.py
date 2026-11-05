@@ -19,7 +19,6 @@ from aiqclib.common.config.yaml_schema import (
     get_data_set_config_schema,
     get_training_config_schema,
     get_classification_config_schema,
-    get_nrtqc_config_schema,
 )
 from aiqclib.common.config import yaml_templates
 from aiqclib.common.utils.config import get_config_item
@@ -36,7 +35,6 @@ _YAML_SCHEMAS: Dict[str, Callable[[], str]] = {
     "training_sets": get_training_config_schema,
     "classification_sets": get_classification_config_schema,
     "classification_sets_with_norm": get_classification_config_schema,
-    "nrt_qc_sets": get_nrtqc_config_schema,
 }
 
 
@@ -121,9 +119,9 @@ class ConfigBase(ABC):
         Return the JSON schema, as YAML text, that validates a section.
 
         This is the hook for configuration classes defined outside
-        ``aiqclib`` (for example in ``nrtqclib``): a subclass managing a
-        section of its own overrides it, returns its schema for that section
-        and defers to ``super()`` for the rest.
+        ``aiqclib`` (for example ``nrtqclib``'s ``NRTQCConfig``): a subclass
+        managing a section of its own overrides it, returns its schema for
+        that section and defers to ``super()`` for the rest.
 
         :param section_name: The top-level configuration section.
         :type section_name: str
@@ -823,8 +821,9 @@ class ConfigBase(ABC):
         """
         Supply subclass-specific summary rows.
 
-        Subclasses override this to report what only they have, such as the NRT QC
-        items, for instance. Rows are inserted after the features row.
+        Subclasses override this to report what only they have, such as the QC
+        items of ``nrtqclib``'s ``NRTQCConfig``. Rows are inserted after the
+        features row.
 
         :param width: The total line width the summary is formatted to.
         :type width: int

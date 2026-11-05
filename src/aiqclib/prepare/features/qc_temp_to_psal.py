@@ -6,8 +6,8 @@ When salinity is computed from temperature and conductivity, a temperature
 flagged 4 (or 3) corrupts the salinity at the same observation, so the
 salinity is flagged 4 (or 3) as well. The item consumes an aggregated
 temperature flag column (``temp_nrt_flag`` by default, produced by the
-NRT QC flag aggregation step) and emits the propagated salinity flag in
-its own column so the propagation stays traceable. Datasets with
+NRT QC flag aggregation step in ``nrtqclib``) and emits the propagated
+salinity flag in its own column so the propagation stays traceable. Datasets with
 independently measured salinity simply omit this item from their
 configuration.
 """
