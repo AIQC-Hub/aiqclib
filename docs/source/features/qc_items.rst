@@ -92,7 +92,7 @@ others need an ``agg`` such as ``fail_frac`` there (see
    * - ``qc_impossible_location``
      - RTQC3
      - profile
-     - Latitude or longitude is null or outside its bounds.
+     - Latitude or longitude is missing or outside its bounds.
    * - ``qc_position_on_land``
      - RTQC4
      - profile
@@ -139,8 +139,12 @@ others need an ``agg`` such as ``fail_frac`` there (see
      - The aggregated temperature flag is 3 or 4; that flag is copied to
        salinity.
 
-A null measurement passes the observation-level tests, since it cannot be
-checked; only the date and location items fail on a null. Observations without
+A missing value passes, since it cannot be checked: a missing measurement
+passes the observation-level tests, a missing sea floor depth passes
+``qc_position_on_land``, and a variable with no values passes
+``qc_stuck_value``. Only the date and location items fail on a missing value.
+Every item treats a floating-point NaN exactly like null, so input that writes
+NaN for missing values (as ctddump does) needs no conversion. Observations without
 the neighbours a test needs (the ends of a profile for ``qc_spike`` and
 ``qc_gradient``, the first observation for ``qc_digit_rollover``) pass.
 

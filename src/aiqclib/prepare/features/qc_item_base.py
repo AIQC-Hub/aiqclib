@@ -15,6 +15,7 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple
 
 import polars as pl
+import polars.selectors as cs
 
 from aiqclib.common.base.feature_base import FeatureBase
 
@@ -51,6 +52,10 @@ class QCItemFeatureBase(FeatureBase):
     Flag columns follow the naming scheme ``{variable}_qc_{item_name}``
     for variable-specific items and ``qc_{item_name}`` for profile-level
     items, and are never null: 1 (good) or the item's fail flag.
+
+    Floating-point NaN in the input counts as missing, exactly like null:
+    :meth:`extract_features` converts NaN to null before calling
+    :meth:`compute_flags`.
     """
 
     #: Short item name used in output column names (e.g. "global_range").
@@ -189,7 +194,9 @@ class QCItemFeatureBase(FeatureBase):
 
         Must return the observation key columns plus one flag column per
         checked variable (or a single profile-level flag column), with the
-        same number of rows as ``df``.
+        same number of rows as ``df``. When called through
+        :meth:`extract_features`, ``df`` holds no NaN (see
+        :meth:`missing_as_null`).
 
         :param df: The observations to check.
         :type df: pl.DataFrame
@@ -198,9 +205,29 @@ class QCItemFeatureBase(FeatureBase):
         """
         pass  # pragma: no cover
 
+    @staticmethod
+    def missing_as_null(df: pl.DataFrame) -> pl.DataFrame:
+        """
+        Replace floating-point NaN with null in every float column.
+
+        Polars orders NaN above every number, so a NaN measurement would fail
+        range tests and poison the neighbour comparisons of the stencil
+        tests. As null it counts as missing and passes, like any other
+        missing value.
+
+        :param df: The observations to check.
+        :type df: pl.DataFrame
+        :return: ``df`` with NaN replaced by null.
+        :rtype: pl.DataFrame
+        """
+        return df.with_columns(cs.float().fill_nan(None))
+
     def extract_features(self) -> None:
         """
         Compute the flag columns and store them in :attr:`features`.
+
+        NaN in the input is first converted to null
+        (:meth:`missing_as_null`), so every item treats it as missing.
 
         With :attr:`selected_rows` present (preparation pipeline), the flags
         are joined onto the target's selected rows and keyed by ``row_id``;
@@ -215,7 +242,7 @@ class QCItemFeatureBase(FeatureBase):
                             item is observation-level (it must be aggregated
                             via the extract step's ``agg`` mechanism instead).
         """
-        flags = self.compute_flags(self.filtered_input)
+        flags = self.compute_flags(self.missing_as_null(self.filtered_input))
 
         if self.selected_rows is not None and self.target_name is not None:
             selected = self.selected_rows[self.target_name]
