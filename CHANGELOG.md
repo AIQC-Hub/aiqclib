@@ -6,6 +6,10 @@ As this project is still in active development, it does not yet strictly adhere 
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-11-05
+### Fixed
+- QC items treat floating-point NaN as missing, like null; a NaN value (and, for `qc_spike`, `qc_gradient` and `qc_digit_rollover`, its neighbours) no longer fails.
+
 ## [0.15.1] - 2026-11-05
 ### Added
 - Docs: QC items reference page in the Features section (what each `qc_*` item checks, its defaults and output columns).
